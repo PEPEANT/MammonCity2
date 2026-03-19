@@ -1,0 +1,745 @@
+body {
+  background: #08080f;
+  overflow: hidden;
+}
+
+/* ════════════════════════════════════════════════════
+   DEV PANEL — ?dev=1 일 때만 표시
+════════════════════════════════════════════════════ */
+#dev-panel {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  transform: none;
+  width: auto;
+  max-height: none;
+  overflow: visible;
+  background: rgba(8, 10, 18, 0.96);
+  border: 1px solid rgba(255, 200, 60, 0.35);
+  border-radius: 999px;
+  padding: 8px 12px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  font-size: 11px;
+  color: #ccc;
+  pointer-events: none;
+}
+
+.dev-title {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #ffc83c;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.dev-section {
+  position: fixed;
+  left: 18px;
+  top: 56px;
+  width: 228px;
+  max-height: min(72vh, 560px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(8, 10, 18, 0.96);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  z-index: 10020;
+}
+
+.dev-section.position-editor {
+  width: 286px;
+}
+
+.dev-section.narration-editor {
+  width: 320px;
+}
+
+.dev-section.event-replay {
+  width: 280px;
+}
+
+.dev-section.state-dump {
+  width: 240px;
+}
+
+.dev-window-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dev-window-handle {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f3f3f3;
+  text-transform: uppercase;
+  cursor: grab;
+  user-select: none;
+}
+
+.dev-section.is-window-dragging .dev-window-handle {
+  cursor: grabbing;
+}
+
+.dev-window-toggle {
+  flex: 0 0 auto;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d8d8d8;
+  cursor: pointer;
+}
+
+.dev-window-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dev-window-toggle-meta {
+  font-size: 9px;
+  color: inherit;
+}
+
+.dev-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  overflow: auto;
+  max-height: calc(min(72vh, 560px) - 44px);
+}
+
+.dev-section.is-collapsed .dev-section-body {
+  display: none;
+}
+
+.dev-section.days .dev-section-body {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dev-day-btn {
+  width: 28px;
+  height: 22px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #bbb;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.dev-day-btn:hover {
+  background: rgba(255, 200, 60, 0.18);
+  border-color: rgba(255, 200, 60, 0.5);
+  color: #ffc83c;
+}
+
+.dev-day-btn.active {
+  background: rgba(255, 200, 60, 0.28);
+  border-color: #ffc83c;
+  color: #ffc83c;
+}
+
+.dev-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.dev-stat-row span {
+  width: 36px;
+  flex-shrink: 0;
+  color: #aaa;
+  font-size: 10px;
+}
+
+.dev-stat-row input[type="number"] {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: #f0f0f0;
+  font-size: 10px;
+  padding: 2px 4px;
+  text-align: right;
+}
+
+.dev-stat-row button {
+  font-size: 9px;
+  padding: 2px 5px;
+  background: rgba(255, 200, 60, 0.2);
+  border: 1px solid rgba(255, 200, 60, 0.4);
+  border-radius: 3px;
+  color: #ffc83c;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dev-stat-row button:hover {
+  background: rgba(255, 200, 60, 0.35);
+}
+
+.dev-stat-row button:disabled,
+.dev-editor-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#dev-phone-toggle {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 10px;
+  background: rgba(100, 160, 255, 0.15);
+  border: 1px solid rgba(100, 160, 255, 0.35);
+  border-radius: 3px;
+  color: #8ab4ff;
+  cursor: pointer;
+}
+
+#dev-phone-toggle:hover {
+  background: rgba(100, 160, 255, 0.28);
+}
+
+#dev-state-dump {
+  font-size: 9px;
+  line-height: 1.6;
+  color: #888;
+  white-space: pre;
+}
+
+.dev-position-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.dev-editor-btn {
+  font-size: 9px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #d9d9d9;
+  cursor: pointer;
+}
+
+.dev-editor-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dev-editor-btn.is-active {
+  background: rgba(255, 200, 60, 0.26);
+  border-color: rgba(255, 200, 60, 0.55);
+  color: #ffc83c;
+}
+
+.dev-editor-btn.single {
+  grid-column: 1 / -1;
+}
+
+.dev-editor-line,
+.dev-editor-status,
+.dev-editor-note {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #9a9a9a;
+}
+
+.dev-editor-status {
+  color: #cdb06e;
+}
+
+.dev-editor-readout {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 9px;
+  line-height: 1.6;
+  color: #d3d3d3;
+  white-space: pre-wrap;
+}
+
+.dev-editor-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.dev-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 9px;
+  color: #9a9a9a;
+}
+
+.dev-editor-field.full {
+  margin-top: 4px;
+}
+
+.dev-editor-field input,
+.dev-editor-field select,
+.dev-editor-field textarea {
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: #f0f0f0;
+  font-size: 10px;
+  padding: 3px 4px;
+}
+
+.dev-editor-field textarea {
+  resize: vertical;
+  min-height: 76px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════
+   #game: 720×480 뷰포트 비율 유지
+   -- 씬이 전체를 채우고 HUD가 위에 float
+═══════════════════════════════════════════════════════ */
+#game {
+  --gw: min(720px, 100vw, calc(100vh * 1.5));
+  --phone-panel-width: 196px;
+  width: var(--gw);
+  height: calc(var(--gw) * 2 / 3);  /* 3:2 비율 */
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+}
+
+/* ── main-area: 씬 전체를 채움 ──────────────────── */
+#main-area {
+  position: absolute;
+  inset: 0;
+}
+
+/* ════════════════════════════════════════════════════
+   씬 레이어: 배경·건물·캐릭터
+════════════════════════════════════════════════════ */
+#bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  transition: background 0.4s ease;
+  z-index: 0;
+}
+
+#bg.room {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.30) 100%),
+    url('../assets/days/day01/room-04.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.day-1-room-01 {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
+    url('../assets/days/day01/room-01.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.day-1-room-02 {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
+    url('../assets/days/day01/room-02.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.day-1-room-04 {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
+    url('../assets/days/day01/room-04.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.day-1-cleanup {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%),
+    url('../assets/days/day01/cleanup.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.apartment-front {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
+    url('../assets/days/day01/room-05.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.morning {
+  background: linear-gradient(180deg, #ff9a56 0%, #ffcc80 40%, #87ceeb 100%);
+}
+#bg.noon {
+  background: linear-gradient(180deg, #87ceeb 0%, #b0e0ff 100%);
+}
+#bg.evening {
+  background: linear-gradient(180deg, #ff6b35 0%, #f7931e 40%, #2c1654 100%);
+}
+#bg.night {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+/* 건물 실루엣 */
+#buildings {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 110px;
+  display: none;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 0 8px;
+  z-index: 1;
+}
+
+.building {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 2px 2px 0 0;
+}
+
+/* 알바 게시판 표지판 */
+#outside-goal {
+  display: none;
+  position: absolute;
+  right: calc(var(--phone-panel-width) + 10px);
+  bottom: 120px;
+  padding: 7px 10px;
+  border-radius: 6px 6px 2px 2px;
+  background: rgba(10, 12, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffe08a;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  z-index: 6;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+
+#game.outside-mode #outside-goal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#game.phone-collapsed #outside-goal {
+  right: 16px;
+}
+
+#actors-layer {
+  position: absolute;
+  top: 38px;
+  left: 0;
+  right: var(--phone-panel-width);
+  bottom: 86px;
+  z-index: 7;
+  pointer-events: none;
+  overflow: visible;
+}
+
+#actors-layer.dev-position-active {
+  pointer-events: auto;
+}
+
+#game.phone-collapsed #actors-layer {
+  right: 0;
+}
+
+#actors-layer.is-hidden {
+  display: none;
+}
+
+/* 캐릭터 */
+#character {
+  position: absolute;
+  bottom: 120px;  /* 텍스트박스 위 */
+  left: calc(50% - (var(--phone-panel-width) / 2));
+  transform: translateX(-50%);
+  font-size: 68px;
+  z-index: 5;
+  transition: left 0.25s ease, transform 0.1s ease;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
+}
+
+#game.phone-collapsed #character {
+  left: 50%;
+}
+
+/* 돈 효과 */
+#money-effect {
+  position: absolute;
+  z-index: 50;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  opacity: 0;
+}
+
+#trash-game-layer {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: var(--phone-panel-width);
+  bottom: 112px;
+  z-index: 13;
+}
+
+#trash-game-layer.is-hidden {
+  display: none;
+}
+
+#game.phone-collapsed #trash-game-layer {
+  right: 0;
+}
+
+#trash-game-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(14, 18, 28, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+#trash-game-title {
+  color: #f5f5f5;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#trash-remaining {
+  color: #ffd98a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#trash-items {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+#trash-items.dev-position-active {
+  pointer-events: auto;
+}
+
+/* ════════════════════════════════════════════════════
+   HUD 레이어: 상태바 / 헤드라인 / 텍스트박스 / 선택지
+   모두 씬 위에 float, 폰 패널 폭만큼 피해서 배치
+════════════════════════════════════════════════════ */
+
+/* 1. 상태바: 최상단, 위→아래 그라디언트 */
+#statusbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 38px;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.75) 0%,
+    rgba(0,0,0,0.0) 100%
+  );
+  z-index: 20;
+}
+
+/* 2. 헤드라인: 텍스트박스 바로 위 floating */
+#headline-strip {
+  position: absolute;
+  bottom: 112px;
+  left: 10px;
+  right: calc(var(--phone-panel-width) + 8px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(4px);
+  z-index: 15;
+}
+
+#headline-strip.is-hidden {
+  display: none;
+}
+
+#game.phone-collapsed #headline-strip {
+  right: 10px;
+}
+
+/* 3. 텍스트박스: 반투명 RPG 대사창 */
+#textbox {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: var(--phone-panel-width);
+  min-height: 64px;
+  background: rgba(96, 102, 110, 0.62);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: none;
+  padding: 10px 16px 8px;
+  z-index: 15;
+}
+
+#game.phone-collapsed #textbox {
+  right: 0;
+}
+
+.textbox-top {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* 4. 선택지 바: 배경 없음, 버튼만 독립 float */
+#choice-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: var(--phone-panel-width);
+  height: 48px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 0;
+  z-index: 15;
+}
+
+#game.phone-collapsed #choice-bar {
+  right: 0;
+}
+
+/* ════════════════════════════════════════════════════
+   시작 화면 오버레이
+════════════════════════════════════════════════════ */
+#start-screen {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.62) 100%),
+    url('../assets/days/day00/intro.jpg') center / cover no-repeat;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: clamp(24px, 6vw, 48px);
+}
+
+#start-screen.is-hidden {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════
+   모바일: 세로 뷰포트 (≤ 600px 너비)
+   폰 패널이 인게임 하단으로 이동
+════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  #game {
+    --gw: 100vw;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* 모바일: 폰 패널이 하단 → 텍스트박스/선택지 right: 0 */
+  #textbox {
+    right: 0;
+    bottom: 44px;  /* phone-panel ??*/
+  }
+
+  #choice-bar {
+    right: 0;
+    bottom: 44px;  /* phone-panel 위 */
+    height: 48px;
+  }
+
+  #headline-strip {
+    right: 10px;
+    bottom: 156px;
+  }
+
+  #trash-game-layer {
+    right: 0;
+    bottom: 156px;
+  }
+
+  #outside-goal {
+    right: 16px;
+    bottom: 158px;
+  }
+
+  #actors-layer {
+    right: 0;
+    bottom: 128px;
+  }
+
+  #character {
+    left: 50%;
+    bottom: 158px;
+    font-size: 52px;
+  }
+
+  #statusbar {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 0 12px;
+  }
+
+  .progress-wrap {
+    grid-column: 1 / -1;
+  }
+}
+
+#game {
+  width: 100vw;
+  width: 100svw;
+  height: 100vh;
+  height: 100dvh;
+  border-radius: 0;
+  box-shadow: none;
+}

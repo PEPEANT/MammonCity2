@@ -1,0 +1,223 @@
+/* ─── 상점 오버레이 ─────────────────────────────────────────── */
+#shop-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 15, 0.97);
+  z-index: 150;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#shop-overlay.open {
+  display: flex;
+}
+
+/* 헤더 */
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.shop-title {
+  color: #e0e0e0;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.shop-wallet {
+  color: #7fff7f;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.shop-close-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #888;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.shop-close-btn:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+/* 탭 */
+.shop-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.shop-tab {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.shop-tab.active {
+  color: #ffd700;
+  border-bottom-color: #ffd700;
+}
+
+.shop-tab:hover:not(.active) {
+  color: #999;
+}
+
+/* 아이템 그리드 */
+.shop-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  align-content: start;
+}
+
+.shop-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.shop-grid::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+/* 아이템 카드 */
+.shop-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s;
+}
+
+.shop-item:hover {
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.shop-item.owned {
+  border-color: rgba(127, 255, 127, 0.3);
+  background: rgba(127, 255, 127, 0.04);
+}
+
+.shop-item.cant-afford {
+  opacity: 0.45;
+}
+
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.item-name {
+  color: #d0d0d0;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.item-effect {
+  color: #888;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.item-price {
+  color: #ffd700;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.item-buy-btn {
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #ffd700;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.item-buy-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+}
+
+.item-buy-btn:disabled,
+.item-buy-btn.owned {
+  background: rgba(127, 255, 127, 0.1);
+  border-color: rgba(127, 255, 127, 0.3);
+  color: #7fff7f;
+  cursor: default;
+}
+
+/* 인벤토리 탭 */
+.inventory-empty {
+  color: #444;
+  font-size: 13px;
+  text-align: center;
+  margin-top: 40px;
+  grid-column: 1 / -1;
+}
+
+/* 상점 열기 버튼 (게임 내 고정) */
+#shop-open-btn {
+  position: absolute;
+  top: 46px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ccc;
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+#shop-open-btn:hover {
+  border-color: #ffd700;
+  color: #ffd700;
+}

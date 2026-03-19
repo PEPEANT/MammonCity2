@@ -1,0 +1,5 @@
+const DAY_DATA = {
+  1: DAY01_DATA,
+  2: DAY02_DATA,
+  3: DAY03_DATA,
+};

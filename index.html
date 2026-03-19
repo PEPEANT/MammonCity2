@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>배금도시</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/phone.css">
+</head>
+<body>
+  <div id="dev-panel" style="display:none">
+    <div class="dev-title">DEV PANEL</div>
+
+    <div class="dev-section days">
+      <div class="dev-section-label">일차 점프</div>
+    </div>
+
+    <div class="dev-section stats">
+      <div class="dev-section-label">스탯 설정</div>
+    </div>
+
+    <div class="dev-section state-dump">
+      <div class="dev-section-label">현재 상태</div>
+    </div>
+  </div>
+
+  <div id="game">
+    <div id="main-area">
+      <div id="bg" class="room"></div>
+      <div id="buildings"></div>
+      <div id="outside-goal"></div>
+      <div id="actors-layer" aria-hidden="true"></div>
+      <div id="character"></div>
+      <div id="money-effect"></div>
+      <div id="trash-game-layer" class="is-hidden" aria-hidden="true">
+        <div id="trash-game-hud">
+          <span id="trash-game-title">방청소</span>
+          <span id="trash-remaining">0 / 0</span>
+        </div>
+        <div id="trash-items"></div>
+      </div>
+
+      <div id="statusbar">
+        <div class="status-block">
+          <span class="status-label">PLACE</span>
+          <span class="status-value" id="player-display">부모님집</span>
+        </div>
+        <div class="status-block center">
+          <span class="status-label">TODAY</span>
+          <span class="status-value" id="day-display">1일차</span>
+        </div>
+        <div class="progress-wrap">
+          <div id="progressbar"></div>
+        </div>
+        <div class="status-block end">
+          <span class="status-label">현금</span>
+          <span class="status-value money" id="money-display">0원</span>
+        </div>
+        <div class="status-block end">
+          <span class="status-label">체력</span>
+          <span class="status-value stamina" id="stamina-display">100</span>
+        </div>
+        <div class="status-block end">
+          <span class="status-label">에너지</span>
+          <span class="status-value energy" id="energy-display">100</span>
+        </div>
+        <div class="status-block end">
+          <span class="status-label">TIME</span>
+          <span class="status-value time" id="time-display">08:00</span>
+        </div>
+      </div>
+
+      <div id="headline-strip">
+        <span id="headline-badge" class="headline-badge">구인 속보</span>
+        <span id="headline-text" class="headline-text">동네 구인 앱이 오늘 공고를 다시 밀어 올린다.</span>
+      </div>
+
+      <div id="phone-panel">
+        <div class="phone-shell">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status-row">
+              <span id="phone-time-display" class="phone-status-time">08:00</span>
+              <span id="phone-status-signal" class="phone-status-signal">ONLINE</span>
+            </div>
+
+            <div id="phone-day-chip" class="phone-day-chip">DAY 01</div>
+
+            <div class="phone-hd">
+              <span class="phone-hd-icon">📱</span>
+              <div class="phone-hd-copy">
+                <span class="phone-hd-label">MAMMON PHONE</span>
+                <span id="phone-hd-sub" class="phone-hd-sub">앱을 눌러 바로 사용한다.</span>
+              </div>
+            </div>
+
+            <div id="phone-locked-badge" class="phone-locked-badge">앱 사용 가능</div>
+            <div class="phone-divider"></div>
+
+            <div class="phone-apps">
+              <button class="phone-app-btn" type="button" data-app="jobs">
+                <span class="phone-app-emoji">💼</span>
+                <span class="phone-app-name">공고</span>
+              </button>
+              <button class="phone-app-btn" type="button" data-app="stocks">
+                <span class="phone-app-emoji">📈</span>
+                <span class="phone-app-name">주식</span>
+              </button>
+              <button class="phone-app-btn" type="button" data-app="delivery">
+                <span class="phone-app-emoji">🍔</span>
+                <span class="phone-app-name">배달</span>
+              </button>
+              <button class="phone-app-btn" type="button" data-app="youtube">
+                <span class="phone-app-emoji">📺</span>
+                <span class="phone-app-name">영상</span>
+              </button>
+            </div>
+
+            <div id="phone-app-screen" class="phone-app-screen" hidden></div>
+
+            <div id="phone-preview" class="phone-preview">
+              <div class="phone-preview-top">
+                <span id="phone-preview-kicker" class="phone-preview-kicker">HOME</span>
+                <span id="phone-preview-state" class="phone-preview-state">READY</span>
+              </div>
+              <div id="phone-preview-title" class="phone-preview-title">오늘의 폰 화면</div>
+              <div id="phone-preview-body" class="phone-preview-body">스마트폰으로 오늘 공고와 생활 앱을 바로 확인할 수 있다.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="phone-toggle-btn" type="button" aria-expanded="false">폰 열기</button>
+
+      <div id="textbox">
+        <div class="textbox-top">
+          <div id="speaker">구인 속보</div>
+          <div id="scene-tags" class="scene-tags"></div>
+        </div>
+        <div id="message"></div>
+        <div id="choices"></div>
+      </div>
+    </div>
+
+    <div id="start-screen">
+      <div class="start-card">
+        <div class="start-title">배금도시</div>
+        <div class="start-sub">
+          30일동안 돈을 모으세요.
+        </div>
+        <input id="name-input" class="name-input" type="text" maxlength="10" placeholder="닉네임">
+        <div class="start-actions">
+          <button id="continue-button" class="start-btn start-btn-secondary" type="button" hidden>이어하기</button>
+          <button id="start-button" class="start-btn" type="button">시작하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data/jobs/jobs-data.js"></script>
+  <script src="js/data/jobs/job-headlines-data.js"></script>
+  <script src="js/data/jobs/service-job-events-data.js"></script>
+  <script src="js/data/jobs/labor-job-events-data.js"></script>
+  <script src="js/data/jobs/advanced-job-events-data.js"></script>
+  <script src="js/data/jobs/job-events-data.js"></script>
+  <script src="js/data/constants.js"></script>
+  <script src="js/data/characters.js"></script>
+  <script src="js/data/days/day01/story.js"></script>
+  <script src="js/data/days/day01/events.js"></script>
+  <script src="js/data/days/day01/world.js"></script>
+  <script src="js/data/days/day01/index.js"></script>
+  <script src="js/data/days/day02/index.js"></script>
+  <script src="js/data/days/day03/index.js"></script>
+  <script src="js/data/days/index.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/dev.js"></script>
+</body>
+</html>
