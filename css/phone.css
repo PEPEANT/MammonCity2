@@ -1,97 +1,496 @@
-/* ═══════════════════════════════════════════════════════
-   스마트폰 HUD 패널
-   실제 폰 기기처럼 보이는 우측 오버레이
-═══════════════════════════════════════════════════════ */
-
 #phone-panel {
   position: absolute;
-  top: 42px;
-  right: 8px;
-  bottom: 8px;
-  width: calc(var(--phone-panel-width) - 16px);
-  z-index: 15;
+  top: 44px;
+  right: 10px;
+  bottom: 10px;
+  width: var(--phone-panel-width);
+  z-index: 16;
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
   justify-content: center;
-  pointer-events: auto;
-  transition: transform 0.28s ease, opacity 0.28s ease;
+  overflow: visible;
+  transition: transform 0.28s ease, opacity 0.28s ease, filter 0.28s ease;
 }
 
 #phone-panel.is-hidden-panel {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(calc(100% + 18px));
+  opacity: 1;
+  transform: translateX(74px) scale(0.78);
+  transform-origin: right bottom;
+  filter: saturate(0.88);
+}
+
+#phone-panel.is-hidden-panel .phone-shell {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#phone-panel.is-hidden-panel .phone-shell::before,
+#phone-panel.is-hidden-panel .phone-shell::after,
+#phone-panel.is-hidden-panel .phone-notch,
+#phone-panel.is-hidden-panel .phone-screen {
+  display: none;
 }
 
 .phone-shell {
   position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 28px;
+  width: var(--phone-shell-width);
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 9 / 19.5;
+  border-radius: 34px;
   padding: 8px;
   background:
-    linear-gradient(180deg, rgba(41, 49, 66, 0.98) 0%, rgba(17, 22, 32, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+    linear-gradient(180deg, rgba(52, 62, 81, 0.98) 0%, rgba(19, 23, 33, 0.98) 62%, rgba(8, 11, 19, 1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+    0 26px 60px rgba(0, 0, 0, 0.42),
+    0 10px 18px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  overflow: visible;
+}
+
+.phone-shell::before,
+.phone-shell::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(116, 126, 147, 0.95) 0%, rgba(34, 40, 54, 0.98) 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.phone-shell::before {
+  left: -2px;
+  top: 112px;
+  height: 54px;
+}
+
+.phone-shell::after {
+  right: -2px;
+  top: 92px;
+  height: 80px;
 }
 
 #phone-toggle-btn {
-  position: absolute;
-  right: 12px;
-  bottom: 14px;
-  z-index: 18;
-  min-width: 84px;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(9, 14, 24, 0.88);
-  color: #f7fbff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
-  transition: background 0.14s ease, transform 0.14s ease, opacity 0.14s ease;
+  display: none;
 }
 
-#phone-toggle-btn:hover {
-  background: rgba(17, 26, 42, 0.94);
+#main-area > #phone-controls {
+  display: none !important;
+}
+
+#phone-controls {
+  display: none;
+}
+
+.phone-shell > #phone-controls {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(7, 12, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.phone-shell > #phone-controls.is-collapsed {
+  position: static;
+  left: auto;
+  width: auto;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.phone-shell > #phone-controls.is-collapsed .phone-control-btn:not(#phone-home-btn) {
+  display: none;
+}
+
+.phone-control-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f4f8ff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s ease, transform 0.14s ease, opacity 0.14s ease, box-shadow 0.14s ease;
+}
+
+.phone-control-btn::before {
+  content: none !important;
+  display: none !important;
+}
+
+.phone-control-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: #f7fbff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.phone-control-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#phone-home-btn {
+  flex: 0 0 58px;
+  padding: 6px;
+  gap: 0;
+}
+
+#phone-home-btn .phone-control-label {
+  display: none;
+}
+
+#phone-home-btn .phone-control-icon {
+  position: relative;
+  width: 16px;
+  height: 24px;
+  border-radius: 5px;
+  border: 2px solid currentColor;
+  font-size: 0;
+  color: #f7fbff;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+#phone-home-btn .phone-control-icon::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 8px;
+  height: 13px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.18;
+}
+
+#phone-home-btn .phone-control-icon::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: currentColor;
+}
+
+#phone-stage-btn::before {
+  content: "⛶";
+}
+
+#phone-home-btn::before {
+  content: "◎";
+}
+
+#phone-back-btn::before {
+  content: "↩";
+  font-size: 17px;
+}
+
+.phone-control-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
 }
 
-#phone-toggle-btn.is-active {
-  background: rgba(36, 76, 174, 0.92);
+.phone-control-btn.is-active {
+  background: linear-gradient(180deg, rgba(88, 142, 255, 0.98) 0%, rgba(48, 102, 240, 0.98) 100%);
+}
+
+.phone-control-btn.is-active .phone-control-icon,
+.phone-control-btn.is-active .phone-control-label {
+  color: #ffffff;
+}
+
+.phone-control-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+#phone-panel.is-hidden-panel .phone-control-btn {
+  opacity: 0.92;
+}
+
+#phone-panel.is-hidden-panel #phone-home-btn {
+  background: linear-gradient(180deg, rgba(88, 142, 255, 0.98) 0%, rgba(48, 102, 240, 0.98) 100%);
+}
+
+#phone-stage {
+  position: absolute;
+  top: 52px;
+  left: 16px;
+  right: calc(var(--phone-panel-width) + 18px);
+  bottom: 122px;
+  z-index: 14;
+  pointer-events: auto;
+}
+
+.phone-stage-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top, rgba(151, 210, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(29, 49, 96, 0.96) 0%, rgba(24, 34, 58, 0.97) 56%, rgba(12, 18, 29, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.phone-stage-top,
+.phone-stage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.phone-stage-day {
+  align-self: flex-start;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #f7fbff;
+}
+
+.phone-stage-time {
+  font-size: 24px;
+  font-weight: 800;
+  color: #f8fbff;
+  letter-spacing: 0.06em;
+}
+
+.phone-stage-signal {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(9, 14, 24, 0.34);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.82);
+  text-transform: uppercase;
+}
+
+.phone-stage-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.phone-stage-app-btn {
+  min-height: 92px;
+  border-radius: 20px;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.phone-stage-app-btn .phone-app-emoji {
+  font-size: 28px;
+}
+
+.phone-stage-home-fill,
+.phone-stage-app-screen {
+  min-height: 0;
+  flex: 1;
+  border-radius: 22px;
+  background: rgba(6, 10, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 16px;
+  overflow: auto;
+}
+
+.phone-stage-home-fill {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.14), transparent 26%),
+    radial-gradient(circle at 20% 78%, rgba(103, 140, 255, 0.26), transparent 28%),
+    linear-gradient(180deg, rgba(86, 129, 255, 0.12) 0%, rgba(13, 21, 36, 0.22) 100%);
+}
+
+.phone-stage-home-fill::before {
+  content: "MAMMON OS";
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.28);
+}
+
+#phone-stage .phone-app-screen-top {
+  margin-bottom: 14px;
+}
+
+#phone-stage .phone-app-screen-title {
+  font-size: 22px;
+}
+
+#phone-stage .phone-app-screen-note,
+#phone-stage .phone-job-status-body,
+#phone-stage .phone-job-card-body,
+#phone-stage .phone-app-card-body {
+  font-size: 13px;
+}
+
+#phone-stage .phone-job-status-card,
+#phone-stage .phone-job-card,
+#phone-stage .phone-app-card {
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+}
+
+#phone-stage .phone-job-status-title,
+#phone-stage .phone-job-card-title,
+#phone-stage .phone-app-card-title {
+  font-size: 16px;
+}
+
+#phone-stage .phone-job-pay,
+#phone-stage .phone-job-status-label,
+#phone-stage .phone-app-card-label {
+  font-size: 11px;
 }
 
 .phone-notch {
   position: absolute;
   top: 8px;
   left: 50%;
-  width: 54px;
-  height: 12px;
+  width: 68px;
+  height: 18px;
   transform: translateX(-50%);
-  border-radius: 0 0 12px 12px;
-  background: rgba(3, 6, 12, 0.96);
-  z-index: 2;
+  border-radius: 0 0 14px 14px;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 1) 0%, rgba(14, 18, 26, 1) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  z-index: 4;
 }
 
 .phone-screen {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 22px;
-  padding: 20px 10px 12px;
+  border-radius: 26px;
+  padding: 18px 12px 72px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   background:
-    radial-gradient(circle at top, rgba(151, 210, 255, 0.26), transparent 34%),
-    linear-gradient(180deg, #7fc8ff 0%, #4e7dff 44%, #253046 100%);
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.4), transparent 18%),
+    radial-gradient(circle at 84% 10%, rgba(255, 255, 255, 0.18), transparent 16%),
+    linear-gradient(180deg, #86d6ff 0%, #5e8cff 44%, #26345a 100%);
   color: #f8fbff;
   overflow: hidden;
+  transition: opacity 0.22s ease, transform 0.22s ease, filter 0.22s ease;
+}
+
+.phone-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 74%, rgba(255, 255, 255, 0.18), transparent 22%),
+    radial-gradient(circle at 80% 66%, rgba(158, 197, 255, 0.26), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08));
+  pointer-events: none;
+}
+
+.phone-status-row,
+.phone-day-chip,
+.phone-apps,
+.phone-app-screen {
+  position: relative;
+  z-index: 1;
+}
+
+#phone-panel.is-hidden-panel .phone-screen {
+  opacity: 0.44;
+  filter: grayscale(0.3) saturate(0.78);
+  transform: translateY(8px);
+}
+
+#phone-panel.is-hidden-panel .phone-screen::after {
+  content: "SLEEP";
+  position: absolute;
+  right: 14px;
+  bottom: 90px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(10, 14, 22, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+#phone-panel.is-hidden-panel .phone-apps,
+#phone-panel.is-hidden-panel .phone-app-screen {
+  pointer-events: none;
+}
+
+#phone-panel.is-hidden-panel .phone-app-screen {
+  display: none !important;
 }
 
 .phone-status-row {
@@ -101,16 +500,16 @@
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.94);
 }
 
 .phone-status-signal {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 6px;
+  padding: 4px 7px;
   border-radius: 999px;
-  background: rgba(6, 10, 18, 0.28);
+  background: rgba(6, 10, 18, 0.26);
   backdrop-filter: blur(6px);
   font-size: 8px;
 }
@@ -128,69 +527,20 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
-.phone-hd {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 16px;
-  background: rgba(9, 14, 24, 0.24);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(6px);
-}
-
-.phone-hd-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.18);
-  font-size: 18px;
-}
-
-.phone-hd-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.phone-hd-label {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.phone-hd-sub {
-  font-size: 9px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.82);
-}
-
+.phone-hd,
+.phone-hd-sub,
+.phone-preview,
+.phone-divider,
 .phone-locked-badge {
-  align-self: flex-start;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: rgba(7, 12, 20, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.phone-divider {
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.18) 50%, transparent 100%);
+  display: none !important;
 }
 
 .phone-apps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  align-content: start;
+  gap: 10px;
+  flex: 1;
 }
 
 .phone-app-btn {
@@ -198,24 +548,32 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: 64px;
-  padding: 8px 4px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.96);
+  gap: 6px;
+  min-height: 76px;
+  padding: 10px 4px 8px;
+  border-radius: 20px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.14) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: #fff;
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 14px rgba(8, 15, 28, 0.14);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20);
+  backdrop-filter: blur(10px);
   transition: transform 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .phone-app-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 12px 18px rgba(8, 15, 28, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.31) 0%, rgba(255, 255, 255, 0.16) 100%);
+  box-shadow:
+    0 16px 22px rgba(8, 15, 28, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .phone-app-btn:disabled {
@@ -223,73 +581,38 @@
 }
 
 .phone-app-btn.is-selected {
-  background: rgba(8, 18, 34, 0.34);
-  border-color: rgba(255, 255, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(15, 28, 54, 0.4) 0%, rgba(8, 18, 34, 0.54) 100%);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow:
+    0 12px 24px rgba(7, 12, 22, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .phone-app-emoji {
-  font-size: 20px;
+  font-size: 23px;
   line-height: 1;
 }
 
 .phone-app-name {
+  font-size: 11px;
   line-height: 1;
-}
-
-.phone-preview {
-  margin-top: auto;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(8, 14, 24, 0.34);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(7px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.phone-preview-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.phone-preview-kicker,
-.phone-preview-state {
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-}
-
-.phone-preview-state {
-  color: rgba(255, 243, 168, 0.95);
-}
-
-.phone-preview-title {
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.3;
-}
-
-.phone-preview-body {
-  font-size: 10px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.84);
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .phone-app-screen {
   margin-top: auto;
   min-height: 0;
   flex: 1;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(8, 14, 24, 0.38);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(7px);
+  padding: 12px 10px;
+  border-radius: 20px;
+  background: rgba(6, 10, 20, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   overflow: auto;
 }
 
@@ -302,6 +625,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .phone-app-screen-copy {
@@ -312,64 +637,83 @@
 }
 
 .phone-app-screen-kicker {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.18em;
+  color: rgba(180, 200, 255, 0.72);
+  text-transform: uppercase;
 }
 
 .phone-app-screen-title {
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.3;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #fff;
 }
 
 .phone-app-screen-note {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(200, 210, 230, 0.78);
 }
 
 .phone-app-mini-btn {
   flex: 0 0 auto;
-  padding: 4px 8px;
-  border: 0;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.96);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .phone-app-mini-btn:hover {
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .phone-job-status-card,
-.phone-job-card {
+.phone-job-card,
+.phone-app-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 9px;
+  gap: 8px;
+  padding: 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .phone-job-status-card.is-success {
-  background: rgba(66, 164, 106, 0.22);
-  border-color: rgba(170, 255, 196, 0.24);
+  background: rgba(22, 80, 44, 0.70);
+  border-color: rgba(80, 200, 120, 0.45);
 }
 
 .phone-job-status-card.is-fail {
-  background: rgba(151, 69, 69, 0.22);
-  border-color: rgba(255, 187, 187, 0.22);
+  background: rgba(80, 14, 14, 0.70);
+  border-color: rgba(220, 80, 80, 0.45);
 }
 
 .phone-job-status-card.is-booked {
-  background: rgba(50, 96, 190, 0.24);
-  border-color: rgba(189, 216, 255, 0.22);
+  background: rgba(18, 52, 120, 0.70);
+  border-color: rgba(80, 150, 255, 0.45);
+}
+
+.phone-app-card.is-success {
+  background: rgba(22, 80, 44, 0.70);
+  border-color: rgba(80, 200, 120, 0.45);
+}
+
+.phone-app-card.is-fail {
+  background: rgba(80, 14, 14, 0.70);
+  border-color: rgba(220, 80, 80, 0.45);
+}
+
+.phone-app-card.is-accent {
+  background: rgba(18, 52, 120, 0.70);
+  border-color: rgba(80, 150, 255, 0.45);
 }
 
 .phone-job-status-label,
@@ -381,32 +725,55 @@
 }
 
 .phone-job-status-label {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.76);
+  color: rgba(200, 220, 255, 0.82);
+  text-transform: uppercase;
 }
 
 .phone-job-status-title,
 .phone-job-card-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.phone-app-card-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(200, 220, 255, 0.78);
+  text-transform: uppercase;
+}
+
+.phone-app-card-title {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #fff;
 }
 
 .phone-job-status-body,
 .phone-job-card-body {
-  font-size: 10px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.84);
+  font-size: 11px;
+  line-height: 1.55;
+  color: rgba(220, 230, 245, 0.88);
+}
+
+.phone-app-card-body {
+  font-size: 11px;
+  line-height: 1.55;
+  color: rgba(220, 230, 245, 0.88);
 }
 
 .phone-job-pay {
   flex: 0 0 auto;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: rgba(255, 247, 173, 0.95);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffe87a;
 }
 
 .phone-job-meta {
@@ -416,56 +783,864 @@
   gap: 8px;
 }
 
+.phone-app-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.phone-app-card-footer-copy {
+  font-size: 10px;
+  line-height: 1.5;
+  color: rgba(200, 215, 240, 0.78);
+}
+
 .phone-job-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 5px;
 }
 
 .phone-job-tag {
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 999px;
-  background: rgba(6, 10, 18, 0.24);
-  font-size: 8px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 9px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(220, 230, 255, 0.92);
 }
 
 .phone-job-apply {
   flex: 0 0 auto;
-  padding: 6px 10px;
+  padding: 7px 13px;
   border: 0;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.88);
-  color: #182238;
-  font-size: 10px;
+  background: #fff;
+  color: #0f1c38;
+  font-size: 11px;
   font-weight: 800;
   cursor: pointer;
+  letter-spacing: 0.02em;
 }
 
 .phone-job-apply:disabled {
-  background: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.50);
   cursor: not-allowed;
 }
 
 .phone-job-empty {
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(200, 215, 240, 0.72);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.phone-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.phone-gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.phone-gallery-thumb {
+  aspect-ratio: 1 / 0.8;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top, rgba(255, 220, 177, 0.22) 0%, rgba(255, 220, 177, 0) 48%),
+    linear-gradient(180deg, rgba(69, 114, 206, 0.58) 0%, rgba(21, 34, 60, 0.82) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.phone-gallery-title {
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.phone-gallery-note {
+  font-size: 8px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ═══════════════════════════════════════════
+   증권 앱 — 리디자인
+   상승 = 빨강(#f4483a), 하락 = 파랑(#3b82f6)
+   한국 주식 관행
+═══════════════════════════════════════════ */
+
+/* 앱 래퍼 — phone-app-screen 내부 전체 차지 */
+.stk-app {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+/* 헤더 */
+.stk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.stk-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stk-header-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f4483a, #ff7043);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.stk-header-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.stk-header-sub {
+  font-size: 8px;
+  color: rgba(200,215,245,0.55);
+  letter-spacing: 0.06em;
+}
+
+.stk-home-btn {
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.82);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 자산 카드 (인디고 포트폴리오 카드 영감) */
+.stk-asset-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(135deg, #1e2a4a 0%, #0f1c38 100%);
+  border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.stk-asset-wave {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 55%;
+  height: 50%;
+  pointer-events: none;
+}
+
+.stk-asset-wave svg {
+  width: 100%;
+  height: 100%;
+}
+
+.stk-asset-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(180,200,255,0.60);
+  margin-bottom: 3px;
+}
+
+.stk-asset-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.stk-asset-row {
+  margin-top: 6px;
+}
+
+.stk-asset-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+/* 지수 스트립 */
+.stk-index-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.stk-index-item {
+  flex: 1;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.stk-index-divider {
+  width: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 6px 0;
+}
+
+.stk-index-name {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(200,215,245,0.50);
+}
+
+.stk-index-val {
+  font-size: 12px;
+  font-weight: 900;
+  color: #fff;
+}
+
+/* 승률 바 */
+.stk-win-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.stk-win-bar-track {
+  height: 5px;
+  background: rgba(255,255,255,0.10);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.stk-win-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.stk-win-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 7px;
+  color: rgba(200,215,245,0.42);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* 예상 손익 */
+.stk-pnl-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.stk-pnl-card {
+  border-radius: 12px;
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stk-pnl-gain {
+  background: rgba(140, 20, 20, 0.35);
+  border: 1px solid rgba(244, 72, 58, 0.35);
+}
+
+.stk-pnl-loss {
+  background: rgba(20, 40, 110, 0.45);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.stk-pnl-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(200,215,245,0.55);
+}
+
+.stk-pnl-value {
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.stk-pnl-gain .stk-pnl-value { color: #f4483a; }
+.stk-pnl-loss .stk-pnl-value { color: #60a5fa; }
+
+/* 거래 주문 */
+.stk-order-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+.stk-order-btn {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+}
+
+.stk-order-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.stk-order-btn.is-up {
+  background: linear-gradient(135deg, #f4483a, #ff6b35);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(244,72,58,0.38);
+}
+
+.stk-order-btn.is-down {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(59,130,246,0.38);
+}
+
+.stk-order-btn.is-done,
+.stk-order-btn:disabled {
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.36);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.stk-order-note {
+  text-align: center;
+  font-size: 8px;
+  color: rgba(200,215,245,0.36);
+  letter-spacing: 0.06em;
+}
+
+/* stage 모드 확대 */
+#phone-stage .stk-asset-value  { font-size: 24px; }
+#phone-stage .stk-index-val    { font-size: 15px; }
+#phone-stage .stk-pnl-value    { font-size: 14px; }
+#phone-stage .stk-order-btn    { font-size: 16px; padding: 15px; }
+
+/* ═══════════════════════════════════════════
+   DIS 인터넷 앱
+═══════════════════════════════════════════ */
+
+.dis-headline-card {
+  background: rgba(20, 36, 80, 0.70);
+  border: 1px solid rgba(80, 130, 255, 0.28);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dis-headline-kicker {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(150, 190, 255, 0.75);
+  text-transform: uppercase;
+}
+
+.dis-headline-text {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.55;
+  color: #e8f0ff;
+}
+
+.dis-index-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.dis-index-cell {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dis-index-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(200, 215, 245, 0.50);
+}
+
+.dis-index-value {
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.dis-index-sub {
+  font-size: 9px;
+  color: rgba(200, 215, 245, 0.50);
+  line-height: 1.3;
+}
+
+.dis-topic-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dis-topic-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200, 215, 245, 0.50);
+}
+
+.dis-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.dis-tag {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(220, 235, 255, 0.88);
+}
+
+.dis-refresh-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dis-refresh-btn {
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(220, 235, 255, 0.76);
   font-size: 10px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s;
 }
 
-#phone-panel.phone-used .phone-locked-badge {
-  background: rgba(16, 22, 32, 0.42);
-  color: rgba(255, 245, 196, 0.92);
+.dis-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
-#phone-panel.phone-used .phone-preview-state {
-  color: rgba(255, 214, 150, 0.95);
+/* ═══════════════════════════════════════════
+   은행 앱
+═══════════════════════════════════════════ */
+
+.bank-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.22), transparent 32%),
+    linear-gradient(145deg, rgba(25, 98, 222, 0.95) 0%, rgba(15, 53, 150, 0.95) 52%, rgba(12, 28, 86, 0.98) 100%);
+  border: 1px solid rgba(149, 191, 255, 0.34);
+  box-shadow: 0 16px 26px rgba(5, 13, 30, 0.24);
 }
+
+.bank-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bank-hero-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(224, 238, 255, 0.76);
+}
+
+.bank-hero-balance {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.bank-hero-emblem {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 22px;
+}
+
+.bank-hero-sub {
+  font-size: 10px;
+  line-height: 1.6;
+  color: rgba(228, 239, 255, 0.82);
+}
+
+.bank-hero-actions,
+.bank-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bank-hero-btn,
+.bank-submit-btn,
+.bank-secondary-btn {
+  min-width: 0;
+  border: 0;
+  border-radius: 14px;
+  padding: 11px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.14s ease, opacity 0.14s ease, background 0.14s ease;
+}
+
+.bank-hero-btn,
+.bank-secondary-btn {
+  flex: 1 1 0;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f4f8ff;
+}
+
+.bank-hero-btn.is-primary {
+  background: #ffffff;
+  color: #1551dd;
+  border: 0;
+}
+
+.bank-submit-btn {
+  flex: 1 1 0;
+  background: linear-gradient(180deg, rgba(88, 142, 255, 0.98) 0%, rgba(48, 102, 240, 0.98) 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(27, 85, 218, 0.24);
+}
+
+.bank-secondary-btn {
+  flex: 0 0 auto;
+}
+
+.bank-hero-btn:hover:not(:disabled),
+.bank-submit-btn:hover:not(:disabled),
+.bank-secondary-btn:hover:not(:disabled),
+.bank-chip-btn:hover:not(:disabled),
+.bank-contact-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.bank-hero-btn:disabled,
+.bank-submit-btn:disabled,
+.bank-secondary-btn:disabled,
+.bank-chip-btn:disabled,
+.bank-contact-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bank-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.bank-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.bank-stat-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(200, 215, 245, 0.58);
+}
+
+.bank-stat-value {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.bank-stat-value.is-in,
+.bank-tx-amount.is-in {
+  color: #67e8a5;
+}
+
+.bank-stat-value.is-out,
+.bank-tx-amount.is-out {
+  color: #ff9b9b;
+}
+
+.bank-stat-sub {
+  font-size: 9px;
+  line-height: 1.45;
+  color: rgba(200, 215, 240, 0.64);
+}
+
+.bank-chip-row,
+.bank-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bank-contact-row {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  padding-bottom: 2px;
+}
+
+.bank-chip-btn,
+.bank-contact-btn {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(240, 246, 255, 0.96);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bank-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bank-tx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.bank-tx-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bank-tx-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.bank-tx-icon.is-in {
+  background: rgba(21, 80, 49, 0.65);
+  color: #86efac;
+}
+
+.bank-tx-icon.is-out {
+  background: rgba(87, 17, 17, 0.65);
+  color: #fca5a5;
+}
+
+.bank-tx-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bank-tx-title {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.bank-tx-date {
+  font-size: 9px;
+  line-height: 1.35;
+  color: rgba(200, 215, 240, 0.62);
+}
+
+.bank-tx-amount {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.bank-empty-state {
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+  color: rgba(200, 215, 240, 0.72);
+}
+
+.bank-transfer-screen,
+.bank-transfer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bank-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bank-field-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(200, 215, 245, 0.62);
+}
+
+.bank-input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+}
+
+.bank-input::placeholder {
+  color: rgba(200, 215, 240, 0.42);
+}
+
+.bank-input:focus {
+  border-color: rgba(122, 174, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(122, 174, 255, 0.28);
+}
+
+.bank-input.is-money {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.bank-form-hint {
+  font-size: 10px;
+  line-height: 1.6;
+  color: rgba(200, 215, 240, 0.72);
+}
+
+/* DIS stage 확대 */
+#phone-stage .dis-index-value   { font-size: 17px; }
+#phone-stage .dis-headline-text { font-size: 14px; }
+#phone-stage .dis-index-sub     { font-size: 11px; }
+#phone-stage .bank-hero-balance { font-size: 30px; }
+#phone-stage .bank-hero-btn,
+#phone-stage .bank-submit-btn,
+#phone-stage .bank-secondary-btn { font-size: 14px; padding: 14px; }
+#phone-stage .bank-input { font-size: 15px; padding: 14px 16px; }
+#phone-stage .bank-input.is-money { font-size: 26px; }
 
 #phone-panel.phone-used .phone-app-btn[data-app]:not([data-app="jobs"]) {
-  opacity: 0.45;
+  opacity: 0.42;
   box-shadow: none;
 }
 
@@ -477,97 +1652,285 @@
 @media (max-width: 600px) {
   #phone-panel {
     top: auto;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 92px;
-    padding: 8px 12px;
+    right: 8px;
+    bottom: 8px;
+    left: auto;
+    width: var(--phone-panel-width);
   }
 
   #phone-panel.is-hidden-panel {
-    transform: translateY(calc(100% + 10px));
-  }
-
-  #phone-toggle-btn {
-    right: 10px;
-    bottom: 102px;
-    min-width: 74px;
-    padding: 7px 10px;
-    font-size: 10px;
+    transform: translateX(38px) scale(0.78);
   }
 
   .phone-shell {
-    border-radius: 20px;
-    padding: 6px;
+    border-radius: 28px;
+    padding: 7px;
   }
 
-  .phone-notch,
-  .phone-preview,
-  .phone-divider,
-  .phone-hd-sub {
-    display: none;
+  .phone-shell::before {
+    top: 86px;
+    height: 42px;
+  }
+
+  .phone-shell::after {
+    top: 74px;
+    height: 64px;
+  }
+
+  .phone-shell > #phone-controls {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .phone-shell > #phone-controls.is-collapsed {
+    left: auto;
+    padding: 0;
+    gap: 0;
+  }
+
+  .phone-control-btn {
+    min-height: 30px;
+    padding: 6px 8px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .phone-control-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 12px;
+  }
+
+  #phone-home-btn {
+    flex-basis: 48px;
+    padding: 5px;
+  }
+
+  #phone-home-btn .phone-control-icon {
+    width: 14px;
+    height: 20px;
+  }
+
+  #phone-stage {
+    top: 46px;
+    right: 8px;
+    bottom: 112px;
+    left: 8px;
+  }
+
+  .phone-stage-shell {
+    padding: 12px;
+    border-radius: 20px;
+    gap: 10px;
+  }
+
+  .phone-stage-home-grid {
+    gap: 10px;
+  }
+
+  .phone-stage-app-btn {
+    min-height: 72px;
+    border-radius: 16px;
+  }
+
+  .phone-stage-day {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .phone-stage-time {
+    font-size: 18px;
+  }
+
+  .phone-stage-home-fill::before {
+    right: 14px;
+    bottom: 10px;
+    font-size: 10px;
+  }
+
+  .phone-notch {
+    width: 52px;
+    height: 14px;
   }
 
   .phone-screen {
-    border-radius: 16px;
-    padding: 8px 10px;
-    gap: 6px;
-    justify-content: flex-start;
+    border-radius: 22px;
+    padding: 14px 10px 60px;
+    gap: 8px;
+  }
+
+  #phone-panel.is-hidden-panel .phone-screen::after {
+    right: 12px;
+    bottom: 76px;
+    padding: 5px 8px;
+    font-size: 8px;
   }
 
   .phone-status-row {
     font-size: 8px;
   }
 
+  .phone-status-signal {
+    padding: 3px 5px;
+    font-size: 7px;
+  }
+
   .phone-day-chip {
-    align-self: flex-start;
-    padding: 4px 8px;
-    font-size: 9px;
-  }
-
-  .phone-hd {
-    padding: 5px 8px;
-  }
-
-  .phone-hd-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 14px;
-  }
-
-  .phone-hd-label {
-    font-size: 8px;
+    padding: 6px 8px;
+    font-size: 10px;
   }
 
   .phone-apps {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
+    gap: 8px;
   }
 
   .phone-app-btn {
-    min-width: 52px;
-    min-height: 42px;
-    border-radius: 12px;
-    padding: 5px 4px;
-    gap: 3px;
+    min-height: 56px;
+    border-radius: 14px;
+    padding: 6px 4px;
+    gap: 4px;
   }
 
   .phone-app-emoji {
-    font-size: 16px;
+    font-size: 18px;
   }
 
   .phone-app-name {
     font-size: 8px;
   }
 
-  .phone-locked-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 3px 7px;
+  .phone-app-screen {
+    padding: 10px 8px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .phone-app-screen-top {
+    padding-bottom: 8px;
+  }
+
+  .phone-app-screen-title {
+    font-size: 13px;
+  }
+
+  .phone-app-screen-note,
+  .phone-job-status-body,
+  .phone-job-card-body,
+  .phone-app-card-body {
+    font-size: 10px;
+  }
+
+  .phone-job-status-card,
+  .phone-job-card,
+  .phone-app-card {
+    padding: 10px;
+    border-radius: 12px;
+    gap: 6px;
+  }
+
+  .phone-job-status-title,
+  .phone-job-card-title,
+  .phone-app-card-title {
+    font-size: 12px;
+  }
+
+  .phone-job-status-label,
+  .phone-app-card-label,
+  .phone-app-screen-kicker {
     font-size: 8px;
+  }
+
+  .phone-job-pay {
+    font-size: 10px;
+  }
+
+  .phone-job-tag {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  .phone-app-mini-btn {
+    font-size: 9px;
+    padding: 4px 8px;
+  }
+
+  .phone-job-apply {
+    font-size: 10px;
+    padding: 6px 11px;
+  }
+
+  .phone-gallery-grid {
+    gap: 6px;
+  }
+
+  .bank-hero {
+    padding: 12px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .bank-hero-balance {
+    font-size: 20px;
+  }
+
+  .bank-hero-emblem {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    font-size: 18px;
+  }
+
+  .bank-hero-sub,
+  .bank-form-hint,
+  .bank-empty-state {
+    font-size: 9px;
+  }
+
+  .bank-hero-btn,
+  .bank-submit-btn,
+  .bank-secondary-btn,
+  .bank-chip-btn,
+  .bank-contact-btn {
+    font-size: 9px;
+    padding: 7px 10px;
+  }
+
+  .bank-stat-card {
+    padding: 9px;
+    border-radius: 12px;
+  }
+
+  .bank-stat-value,
+  .bank-tx-amount {
+    font-size: 11px;
+  }
+
+  .bank-tx-item {
+    padding: 9px;
+    border-radius: 12px;
+  }
+
+  .bank-tx-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .bank-tx-title,
+  .bank-input {
+    font-size: 10px;
+  }
+
+  .bank-input {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  .bank-input.is-money {
+    font-size: 16px;
   }
 }

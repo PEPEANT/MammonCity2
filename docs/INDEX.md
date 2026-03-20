@@ -9,6 +9,9 @@
 - [dev-position-editor.md](./dev-position-editor.md)
   `game.html` DEV 도구 창 구조, 위치 편집, 나레이션 편집, 이벤트 재생, 로컬 저장 규칙 문서.
 
+- [device-internet-structure.md](./device-internet-structure.md)
+  폰/PC 가상 인터넷 확장을 위한 권장 폴더 구조, 기기 셸/앱/인터넷/경제 시스템 분리 기준, 상태 이전 방향 문서.
+
 - [early-progression.md](./early-progression.md)
   30일 진행 구조, 7일차 이벤트 전환, 스마트폰 기반 알바 루프 초안 문서.
 

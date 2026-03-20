@@ -1,0 +1,207 @@
+const PHONE_APP_ID_ALIASES = {
+  youtube: "video",
+  phone: "call",
+  internet: "dis",
+  browser: "dis",
+  store: "playstore",
+};
+
+const PHONE_DEFAULT_INSTALLED_APPS = ["dis", "playstore", "call", "gallery"];
+
+function normalizePhoneAppId(appId = "") {
+  const rawAppId = String(appId || "").trim().toLowerCase();
+
+  if (!rawAppId || rawAppId === "home") {
+    return "";
+  }
+
+  return PHONE_APP_ID_ALIASES[rawAppId] || rawAppId;
+}
+
+function parsePhoneRoute(route = "home") {
+  const rawRoute = String(route || "").trim();
+
+  if (!rawRoute || rawRoute === "home") {
+    return {
+      route: "home",
+      appId: "",
+      screenId: "",
+    };
+  }
+
+  const [rawAppId, rawScreenId] = rawRoute.split("/");
+  const appId = normalizePhoneAppId(rawAppId);
+
+  if (!appId) {
+    return {
+      route: "home",
+      appId: "",
+      screenId: "",
+    };
+  }
+
+  const screenId = String(rawScreenId || "home").trim().toLowerCase() || "home";
+  return {
+    route: `${appId}/${screenId}`,
+    appId,
+    screenId,
+  };
+}
+
+function normalizePhoneRoute(route = "home") {
+  return parsePhoneRoute(route).route;
+}
+
+function isPhoneHomeRoute(route = "home") {
+  return parsePhoneRoute(route).appId === "";
+}
+
+function createDefaultInstalledPhoneApps() {
+  return [...PHONE_DEFAULT_INSTALLED_APPS];
+}
+
+function normalizeInstalledPhoneAppIds(appIds) {
+  const source = Array.isArray(appIds) ? appIds : [];
+  const normalized = [];
+
+  [...PHONE_DEFAULT_INSTALLED_APPS, ...source].forEach((appId) => {
+    const normalizedAppId = normalizePhoneAppId(appId);
+    if (!normalizedAppId || normalized.includes(normalizedAppId)) {
+      return;
+    }
+    normalized.push(normalizedAppId);
+  });
+
+  return normalized;
+}
+
+function createDefaultPhoneDeviceState() {
+  return {
+    minimized: true,
+    stageExpanded: false,
+    route: "home",
+    usedToday: false,
+    installedApps: createDefaultInstalledPhoneApps(),
+  };
+}
+
+function syncPhoneSessionState(targetState = state) {
+  if (!targetState) {
+    return createDefaultPhoneDeviceState();
+  }
+
+  const defaults = createDefaultPhoneDeviceState();
+  const devices = targetState.devices && typeof targetState.devices === "object"
+    ? targetState.devices
+    : {};
+  const nested = devices.phone && typeof devices.phone === "object"
+    ? devices.phone
+    : {};
+  const legacyRoute = typeof nested.route === "string" && nested.route
+    ? nested.route
+    : (typeof targetState.phoneView === "string" && targetState.phoneView ? targetState.phoneView : "home");
+  const resolvedRoute = normalizePhoneRoute(
+    legacyRoute,
+  );
+  const routeInfo = parsePhoneRoute(resolvedRoute);
+  const installedApps = normalizeInstalledPhoneAppIds(
+    Array.isArray(targetState.installedPhoneApps)
+      ? targetState.installedPhoneApps
+      : nested.installedApps,
+  );
+  const resolved = {
+    minimized: typeof targetState.phoneMinimized === "boolean"
+      ? targetState.phoneMinimized
+      : (typeof nested.minimized === "boolean" ? nested.minimized : defaults.minimized),
+    stageExpanded: typeof targetState.phoneStageExpanded === "boolean"
+      ? targetState.phoneStageExpanded
+      : (typeof nested.stageExpanded === "boolean" ? nested.stageExpanded : defaults.stageExpanded),
+    route: routeInfo.route,
+    usedToday: typeof targetState.phoneUsedToday === "boolean"
+      ? targetState.phoneUsedToday
+      : (typeof nested.usedToday === "boolean" ? nested.usedToday : defaults.usedToday),
+    installedApps,
+  };
+
+  targetState.devices = {
+    ...devices,
+    phone: resolved,
+  };
+  targetState.phoneMinimized = resolved.minimized;
+  targetState.phoneStageExpanded = resolved.stageExpanded;
+  targetState.phoneView = routeInfo.route;
+  targetState.phoneUsedToday = resolved.usedToday;
+  targetState.installedPhoneApps = [...installedApps];
+
+  return resolved;
+}
+
+function getPhoneSessionState(targetState = state) {
+  return syncPhoneSessionState(targetState);
+}
+
+function patchPhoneSession(targetState = state, patch = {}) {
+  if (!targetState) {
+    return createDefaultPhoneDeviceState();
+  }
+
+  const devices = targetState.devices && typeof targetState.devices === "object"
+    ? targetState.devices
+    : {};
+  const currentPhoneState = syncPhoneSessionState(targetState);
+  const nextPhoneState = {
+    ...currentPhoneState,
+    ...patch,
+    route: Object.prototype.hasOwnProperty.call(patch, "route")
+      ? normalizePhoneRoute(patch.route)
+      : currentPhoneState.route,
+    installedApps: Object.prototype.hasOwnProperty.call(patch, "installedApps")
+      ? normalizeInstalledPhoneAppIds(patch.installedApps)
+      : [...currentPhoneState.installedApps],
+  };
+  const routeInfo = parsePhoneRoute(nextPhoneState.route);
+
+  targetState.devices = {
+    ...devices,
+    phone: nextPhoneState,
+  };
+  targetState.phoneMinimized = nextPhoneState.minimized;
+  targetState.phoneStageExpanded = nextPhoneState.stageExpanded;
+  targetState.phoneView = routeInfo.route;
+  targetState.phoneUsedToday = nextPhoneState.usedToday;
+  targetState.installedPhoneApps = [...nextPhoneState.installedApps];
+
+  return nextPhoneState;
+}
+
+function resetPhoneSessionForDay(targetState = state) {
+  const phoneState = getPhoneSessionState(targetState);
+  return patchPhoneSession(targetState, {
+    minimized: phoneState.minimized,
+    stageExpanded: false,
+    route: "home",
+    usedToday: false,
+  });
+}
+
+function getInstalledPhoneAppIds(targetState = state) {
+  return [...getPhoneSessionState(targetState).installedApps];
+}
+
+function isPhoneAppInstalled(appId, targetState = state) {
+  const normalizedAppId = normalizePhoneAppId(appId);
+  return normalizedAppId
+    ? getInstalledPhoneAppIds(targetState).includes(normalizedAppId)
+    : false;
+}
+
+function installPhoneApp(appId, targetState = state) {
+  const normalizedAppId = normalizePhoneAppId(appId);
+  if (!normalizedAppId || isPhoneAppInstalled(normalizedAppId, targetState)) {
+    return false;
+  }
+
+  const installedApps = [...getInstalledPhoneAppIds(targetState), normalizedAppId];
+  patchPhoneSession(targetState, { installedApps });
+  return true;
+}

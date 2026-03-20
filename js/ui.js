@@ -1,4 +1,5 @@
-let ui = {};
+var ui = window.ui || {};
+window.ui = ui;
 
 function cacheUi() {
   ui.game = document.getElementById("game");
@@ -12,6 +13,11 @@ function cacheUi() {
   ui.headlineStrip = document.getElementById("headline-strip");
   ui.headlineBadge = document.getElementById("headline-badge");
   ui.headlineText = document.getElementById("headline-text");
+  ui.memoryButton = document.getElementById("memory-button");
+  ui.memoryCount = document.getElementById("memory-count");
+  ui.memoryPanel = document.getElementById("memory-panel");
+  ui.memoryList = document.getElementById("memory-list");
+  ui.memoryCloseButton = document.getElementById("memory-close-button");
   ui.bg = document.getElementById("bg");
   ui.buildings = document.getElementById("buildings");
   ui.outsideGoal = document.getElementById("outside-goal");
@@ -30,10 +36,16 @@ function cacheUi() {
   ui.continueButton = document.getElementById("continue-button");
   ui.startButton = document.getElementById("start-button");
   ui.phonePanel = document.getElementById("phone-panel");
+  ui.phoneStage = document.getElementById("phone-stage");
+  ui.textbox = document.getElementById("textbox");
+  ui.phoneControls = document.getElementById("phone-controls");
+  ui.phoneStageButton = document.getElementById("phone-stage-btn");
+  ui.phoneBackButton = document.getElementById("phone-back-btn");
   ui.phoneLockedBadge = document.getElementById("phone-locked-badge");
   ui.phoneTimeDisplay = document.getElementById("phone-time-display");
   ui.phoneStatusSignal = document.getElementById("phone-status-signal");
   ui.phoneDayChip = document.getElementById("phone-day-chip");
+  ui.phoneApps = document.getElementById("phone-apps");
   ui.phoneHeaderSub = document.getElementById("phone-hd-sub");
   ui.phoneAppScreen = document.getElementById("phone-app-screen");
   ui.phonePreview = document.getElementById("phone-preview");
@@ -41,34 +53,135 @@ function cacheUi() {
   ui.phonePreviewState = document.getElementById("phone-preview-state");
   ui.phonePreviewTitle = document.getElementById("phone-preview-title");
   ui.phonePreviewBody = document.getElementById("phone-preview-body");
-  ui.phoneToggleButton = document.getElementById("phone-toggle-btn");
+  ui.phoneToggleButton = document.getElementById("phone-home-btn");
+  ui.rankingScreen = document.getElementById("ranking-screen");
+  ui.rankingList = document.getElementById("ranking-list");
+  ui.rankingMyCard = document.getElementById("ranking-my-card");
+  ui.rankingRestartBtn = document.getElementById("ranking-restart-btn");
+  if (ui.rankingRestartBtn) {
+    ui.rankingRestartBtn.addEventListener("click", () => {
+      if (typeof restartToTitle === "function") restartToTitle();
+      if (ui.rankingScreen) {
+        ui.rankingScreen.hidden = true;
+        ui.rankingScreen.setAttribute("aria-hidden", "true");
+      }
+    });
+  }
   setupStartScreen();
   buildBuildings();
 }
+
+const sceneTextProgress = {
+  key: "",
+  lineIndex: 0,
+  lineCount: 0,
+};
+
+function syncTextboxContentState() {
+  if (!ui.textbox) {
+    return;
+  }
+
+  const hasChoices = Boolean(ui.choices?.childElementCount);
+  const hasMessage = Boolean(ui.message?.textContent?.trim());
+  const hasSpeaker = Boolean(ui.speaker?.textContent?.trim());
+
+  ui.textbox.classList.toggle("has-message", hasMessage);
+  ui.textbox.classList.toggle("has-choices", hasChoices);
+  ui.textbox.classList.toggle("is-choice-only", hasChoices);
+  ui.textbox.classList.toggle("is-message-only", hasMessage && !hasChoices);
+  ui.textbox.classList.toggle("has-speaker", hasSpeaker && hasMessage && !hasChoices);
+  syncHeadlineVisibility();
+}
+
+function setTextboxAdvanceState(canAdvance = false) {
+  if (!ui.textbox) {
+    return;
+  }
+
+  ui.textbox.classList.toggle("is-awaiting-advance", canAdvance);
+}
+
+function buildSceneTextProgressKey(sceneKey = "", title = "", lines = []) {
+  const resolvedTitle = resolveDynamicText(title);
+  const resolvedLines = (lines || []).map(resolveDynamicText);
+
+  return [String(sceneKey || "").trim(), resolvedTitle, ...resolvedLines].join("||");
+}
+
+function getSceneTextProgressState(progressKey, resolvedLines = []) {
+  const lineCount = resolvedLines.length;
+
+  if (!progressKey || lineCount <= 1) {
+    sceneTextProgress.key = progressKey || "";
+    sceneTextProgress.lineIndex = Math.max(0, lineCount - 1);
+    sceneTextProgress.lineCount = lineCount;
+
+    return {
+      visibleLines: resolvedLines,
+      canAdvance: false,
+      choicesReady: true,
+    };
+  }
+
+  if (sceneTextProgress.key !== progressKey) {
+    sceneTextProgress.key = progressKey;
+    sceneTextProgress.lineIndex = 0;
+  }
+
+  sceneTextProgress.lineCount = lineCount;
+  sceneTextProgress.lineIndex = Math.min(sceneTextProgress.lineIndex, Math.max(0, lineCount - 1));
+
+  const visibleLines = resolvedLines.slice(0, sceneTextProgress.lineIndex + 1);
+  const canAdvance = sceneTextProgress.lineIndex < lineCount - 1;
+
+  return {
+    visibleLines,
+    canAdvance,
+    choicesReady: !canAdvance,
+  };
+}
+
+function canAdvanceSceneText() {
+  return sceneTextProgress.lineCount > 1 && sceneTextProgress.lineIndex < sceneTextProgress.lineCount - 1;
+}
+
+function advanceSceneText() {
+  if (!canAdvanceSceneText()) {
+    return false;
+  }
+
+  sceneTextProgress.lineIndex += 1;
+  renderGame();
+  return true;
+}
+
 
 function setupStartScreen() {
   ui.startCard = ui.startScreen.querySelector(".start-card");
 
   const title = ui.startCard.querySelector(".start-title");
   const sub = ui.startCard.querySelector(".start-sub");
-  title.textContent = "배금도시";
-  sub.textContent = "30일동안 돈을 모으세요.";
-  ui.nameInput.placeholder = "닉네임";
+  title.textContent = "\ubc30\uae08\ub3c4\uc2dc";
+  sub.textContent = `${MAX_DAYS}\uc77c \ub3d9\uc548 \ubc84\ud2f0\uba70 \ub3c8\uc744 \ubaa8\uc544\ubcf4\uc138\uc694.`;
+  ui.nameInput.placeholder = "\ub2c9\ub124\uc784";
   ui.nameInput.autocomplete = "off";
-  ui.startButton.textContent = "시작하기";
+  ui.startButton.textContent = "\uc2dc\uc791\ud558\uae30";
   if (ui.continueButton) {
-    ui.continueButton.textContent = "이어하기";
+    ui.continueButton.textContent = "\uc774\uc5b4\ud558\uae30";
     ui.continueButton.hidden = true;
   }
 }
 
-function setStartScreenSaveState(hasSave = false) {
+
+function setStartScreenSaveState(_hasSave = false) {
+  // 이어하기 항상 숨김 (첫 게임)
   if (ui.continueButton) {
-    ui.continueButton.hidden = !hasSave;
+    ui.continueButton.hidden = true;
   }
 
   if (ui.startButton) {
-    ui.startButton.textContent = hasSave ? "새로 시작" : "시작하기";
+    ui.startButton.textContent = "\uc2dc\uc791\ud558\uae30";
   }
 }
 
@@ -76,39 +189,49 @@ function setSceneSpeaker(text) {
   const resolved = text || "";
   ui.playerDisplay.textContent = resolved;
   ui.speaker.textContent = resolved;
+  syncTextboxContentState();
 }
 
-function updatePhonePanel() {
-  if (!ui.phonePanel) return;
+function getPhonePanelState() {
+  if (typeof createPhoneShellViewModel === "function") {
+    return createPhoneShellViewModel(state);
+  }
+
   const unlocked = Boolean(state.hasPhone);
   const usedToday = Boolean(state.phoneUsedToday);
   const minimized = Boolean(state.phoneMinimized);
-  const phoneView = state.phoneView || "home";
+  const phoneView = typeof normalizePhoneRoute === "function"
+    ? normalizePhoneRoute(state.phoneView || "home")
+    : (state.phoneView || "home");
   const preview = state.phonePreview || {};
   const phoneTime = typeof getSceneTimeText === "function" ? getSceneTimeText() : "08:00";
   const canUseApps = typeof canUsePhoneApps === "function" ? canUsePhoneApps() : unlocked;
+  const canOpenStage = typeof canOpenPhoneStage === "function"
+    ? canOpenPhoneStage()
+    : (unlocked && !minimized && canUseApps);
   const hasShiftToday = Boolean(state.nextDayShift && state.nextDayShift.day === state.day);
   const hasBookedShift = Boolean(state.nextDayShift && state.nextDayShift.day > state.day);
   const jobAppliedToday = Boolean(state.jobApplicationDoneToday);
+  const stageExpanded = Boolean(state.phoneStageExpanded) && canOpenStage;
+  const routeInfo = typeof parsePhoneRoute === "function"
+    ? parsePhoneRoute(phoneView)
+    : { appId: phoneView === "home" ? "" : phoneView };
 
-  ui.phonePanel.classList.toggle("is-unlocked", unlocked);
-  ui.phonePanel.classList.toggle("phone-used", usedToday);
-  ui.phonePanel.classList.toggle("is-hidden-panel", minimized);
-  ui.game?.classList.toggle("phone-collapsed", minimized);
-
-  if (ui.phoneToggleButton) {
-    ui.phoneToggleButton.hidden = !unlocked;
-    ui.phoneToggleButton.textContent = minimized ? "폰 열기" : "폰 숨기기";
-    ui.phoneToggleButton.setAttribute("aria-expanded", minimized ? "false" : "true");
-    ui.phoneToggleButton.classList.toggle("is-active", !minimized);
-  }
-
-  if (ui.phoneTimeDisplay) {
-    ui.phoneTimeDisplay.textContent = phoneTime;
-  }
-
-  if (ui.phoneStatusSignal) {
-    ui.phoneStatusSignal.textContent = !unlocked
+  return {
+    unlocked,
+    usedToday,
+    minimized,
+    phoneView,
+    preview,
+    phoneTime,
+    canUseApps,
+    canOpenStage,
+    hasShiftToday,
+    hasBookedShift,
+    jobAppliedToday,
+    stageExpanded,
+    activeAppId: routeInfo.appId || preview.appId,
+    signalText: !unlocked
       ? "LOCK"
       : hasShiftToday
         ? "SHIFT"
@@ -120,174 +243,118 @@ function updatePhonePanel() {
               ? "DONE"
               : canUseApps
                 ? "ONLINE"
-                : "HOLD";
-  }
-
-  if (ui.phoneDayChip) {
-    ui.phoneDayChip.textContent = `DAY ${String(state.day).padStart(2, "0")}`;
-  }
-
-  if (ui.phoneHeaderSub) {
-    ui.phoneHeaderSub.textContent = !unlocked
-      ? "아직 사용할 수 없다."
-      : !canUseApps
-        ? "현재 장면이 끝나면 공고를 확인할 수 있다."
-        : hasShiftToday
-          ? "오늘 예약된 출근이 있다."
-          : hasBookedShift
-            ? "내일 출근 예약이 잡혀 있다."
-            : jobAppliedToday
-              ? "오늘 공고 지원을 끝냈다."
-              : usedToday
-                ? "오늘 생활 앱을 한 번 사용했다."
-                : "1일차부터 바로 사용할 수 있다.";
-  }
-
-  if (ui.phoneLockedBadge) {
-    ui.phoneLockedBadge.textContent = !unlocked
-      ? "잠금 중"
-      : hasShiftToday
-        ? "오늘 출근"
-        : hasBookedShift
-          ? "출근 예약"
-          : jobAppliedToday
-            ? "지원 완료"
-            : usedToday
-              ? "생활 앱 완료"
-              : "앱 사용 가능";
-  }
-
-  if (ui.phonePreviewKicker) {
-    ui.phonePreviewKicker.textContent = preview.kicker || "HOME";
-  }
-
-  if (ui.phonePreviewState) {
-    ui.phonePreviewState.textContent = preview.state || (usedToday ? "DONE" : "READY");
-  }
-
-  if (ui.phonePreviewTitle) {
-    ui.phonePreviewTitle.textContent = preview.title || "오늘의 폰 화면";
-  }
-
-  if (ui.phonePreviewBody) {
-    ui.phonePreviewBody.textContent = preview.body || "스마트폰으로 오늘 공고와 생활 앱을 바로 확인할 수 있다.";
-  }
-
-  if (ui.phoneAppScreen && ui.phonePreview) {
-    const showAppScreen = phoneView === "jobs";
-    ui.phoneAppScreen.hidden = !showAppScreen;
-    ui.phonePreview.hidden = showAppScreen;
-
-    if (showAppScreen) {
-      renderPhoneJobsApp();
-    } else {
-      ui.phoneAppScreen.innerHTML = "";
-    }
-  }
-
-  ui.phonePanel.querySelectorAll(".phone-app-btn[data-app]").forEach((button) => {
-    const activeAppId = phoneView === "jobs" ? "jobs" : preview.appId;
-    const active = activeAppId === button.dataset.app;
-    button.classList.toggle("is-selected", active);
-    button.disabled = button.dataset.app === "jobs"
-      ? (!unlocked || !canUseApps)
-      : (!unlocked || !canUseApps || usedToday);
-  });
+                : "HOLD",
+  };
 }
 
-function renderPhoneJobsApp() {
-  if (!ui.phoneAppScreen) {
+function buildPhoneHomeGridMarkup(targetState = state) {
+  const manifests = typeof getInstalledPhoneAppRegistry === "function"
+    ? getInstalledPhoneAppRegistry(targetState)
+    : [];
+
+  if (!manifests.length) {
+    return '<div class="phone-job-empty">설치된 앱이 없습니다.</div>';
+  }
+
+  return manifests.map((app) => `
+    <button
+      class="phone-app-btn"
+      type="button"
+      data-phone-app="${escapeHtml(app.id)}"
+    >
+      <span class="phone-app-emoji">${escapeHtml(app.icon || "📱")}</span>
+      <span class="phone-app-name">${escapeHtml(app.label || app.id)}</span>
+    </button>
+  `).join("");
+}
+
+function buildPhoneRouteMarkup(route, { stageMode = false } = {}, targetState = state) {
+  if (typeof buildPhoneRouteScreenMarkup === "function") {
+    return buildPhoneRouteScreenMarkup(route, {
+      showHomeButton: !stageMode,
+      stageMode,
+    }, targetState);
+  }
+
+  return '<div class="phone-job-empty">앱 화면을 준비 중입니다.</div>';
+}
+
+function renderPhoneStage(screenState = getPhonePanelState()) {
+  if (!ui.phoneStage) {
     return;
   }
 
-  const result = state.interviewResult && state.interviewResult.day === state.day
-    ? state.interviewResult
-    : null;
-  const bookedShift = state.nextDayShift || null;
-  const canApply = typeof canApplyForJobOffer === "function" ? canApplyForJobOffer() : false;
-  const offerCards = (state.dayOffers || []).map((offer, index) => {
-    const job = JOB_LOOKUP[offer.jobId];
-    const tags = (job.tags || []).slice(0, 2).map((tag) => `<span class="phone-job-tag">${escapeHtml(tag)}</span>`).join("");
-    const disabledReason = bookedShift
-      ? "예약된 출근이 있다"
-      : state.jobApplicationDoneToday
-        ? "오늘은 이미 지원했다"
-        : "";
+  const shouldShow = screenState.unlocked && !screenState.minimized && screenState.stageExpanded;
+  ui.phoneStage.hidden = !shouldShow;
+  ui.phoneStage.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  ui.game?.classList.toggle("phone-stage-active", shouldShow);
 
-    return `
-      <article class="phone-job-card">
-        <div class="phone-job-card-top">
-          <div class="phone-job-card-title">${escapeHtml(job.emoji)} ${escapeHtml(job.title)}</div>
-          <div class="phone-job-pay">${formatMoney(offer.pay)}</div>
-        </div>
-        <div class="phone-job-card-body">${escapeHtml(job.description || "오늘 바로 연결되는 단기 공고.")}</div>
-        <div class="phone-job-meta">
-          <div class="phone-job-tags">${tags}</div>
-          <button
-            class="phone-job-apply"
-            type="button"
-            data-phone-action="apply-job"
-            data-offer-index="${index}"
-            ${canApply ? "" : "disabled"}
-            title="${escapeHtml(disabledReason)}"
-          >
-            ${canApply ? "지원" : "마감"}
-          </button>
-        </div>
-      </article>
-    `;
-  }).join("");
-
-  const statusCards = [];
-
-  if (bookedShift) {
-    const job = JOB_LOOKUP[bookedShift.offer.jobId];
-    const dueToday = bookedShift.day === state.day;
-    statusCards.push(`
-      <section class="phone-job-status-card is-booked">
-        <div class="phone-job-status-label">
-          <span>${dueToday ? "TODAY SHIFT" : "BOOKED SHIFT"}</span>
-          <span>DAY ${String(bookedShift.day).padStart(2, "0")}</span>
-        </div>
-        <div class="phone-job-status-title">${escapeHtml(job.emoji)} ${escapeHtml(job.title)}</div>
-        <div class="phone-job-status-body">
-          ${dueToday ? "오늘은 이 근무로 출근할 차례다." : `다음 출근일은 ${bookedShift.day}일차다.`}
-        </div>
-        ${dueToday ? '<button class="phone-job-apply" type="button" data-phone-action="go-shift">출근하기</button>' : ""}
-      </section>
-    `);
+  if (!shouldShow) {
+    ui.phoneStage.innerHTML = "";
+    return;
   }
 
-  if (result) {
-    const job = JOB_LOOKUP[result.offer.jobId];
-    statusCards.push(`
-      <section class="phone-job-status-card ${result.success ? "is-success" : "is-fail"}">
-        <div class="phone-job-status-label">
-          <span>${result.success ? "INTERVIEW PASS" : "INTERVIEW FAIL"}</span>
-          <span>${Math.round((result.chance || 0) * 100)}%</span>
-        </div>
-        <div class="phone-job-status-title">${escapeHtml(job.emoji)} ${escapeHtml(job.title)}</div>
-        <div class="phone-job-status-body">${escapeHtml((result.lines || []).join(" "))}</div>
-      </section>
-    `);
-  }
-
-  ui.phoneAppScreen.innerHTML = `
-    <div class="phone-app-screen-top">
-      <div class="phone-app-screen-copy">
-        <span class="phone-app-screen-kicker">JOB APP</span>
-        <div class="phone-app-screen-title">오늘의 공고</div>
-        <div class="phone-app-screen-note">공고를 보고 지원하면 면접 결과가 바로 도착한다.</div>
+  const onHomeRoute = typeof isPhoneHomeRoute === "function"
+    ? isPhoneHomeRoute(screenState.phoneView)
+    : screenState.phoneView === "home";
+  const stageBody = !onHomeRoute
+    ? `<div class="phone-stage-app-screen">${buildPhoneRouteMarkup(screenState.phoneView, { stageMode: true })}</div>`
+    : `
+      <div class="phone-stage-home-grid">
+        ${buildPhoneHomeGridMarkup(state)}
       </div>
-      <button class="phone-app-mini-btn" type="button" data-phone-action="close-phone-view">홈</button>
+      <div class="phone-stage-home-fill"></div>
+    `;
+
+  ui.phoneStage.innerHTML = `
+    <div class="phone-stage-shell ${onHomeRoute ? "is-home-view" : "is-app-view"}">
+      <div class="phone-stage-top">
+        <div class="phone-stage-day">DAY ${String(state.day).padStart(2, "0")}</div>
+        <div class="phone-stage-meta">
+          <span class="phone-stage-time">${screenState.phoneTime}</span>
+          <span class="phone-stage-signal">${screenState.signalText}</span>
+        </div>
+      </div>
+      ${stageBody}
     </div>
-    ${statusCards.join("")}
-    ${offerCards || '<div class="phone-job-empty">오늘은 확인할 공고가 없다.</div>'}
   `;
 }
 
+
+function updatePhonePanel() {
+  if (!ui.phonePanel) return;
+
+  const screenState = getPhonePanelState();
+  const { phoneView } = screenState;
+  const onHomeRoute = typeof isPhoneHomeRoute === "function"
+    ? isPhoneHomeRoute(phoneView)
+    : phoneView === "home";
+
+  if (ui.phoneApps) {
+    ui.phoneApps.hidden = !onHomeRoute;
+    ui.phoneApps.innerHTML = onHomeRoute ? buildPhoneHomeGridMarkup(state) : "";
+  }
+
+  if (ui.phoneAppScreen) {
+    const showAppScreen = !onHomeRoute;
+    ui.phoneAppScreen.hidden = !showAppScreen;
+    ui.phoneAppScreen.innerHTML = showAppScreen ? buildPhoneRouteMarkup(phoneView) : "";
+  }
+
+  if (typeof applyPhoneShellUi === "function") {
+    applyPhoneShellUi(ui, screenState);
+  }
+
+  renderPhoneStage(screenState);
+}
+
+
 function formatMoney(amount) {
-  return `${amount.toLocaleString("ko-KR")}원`;
+  if (typeof formatCash === "function") {
+    return formatCash(amount);
+  }
+
+  return `${amount.toLocaleString("ko-KR")}\uc6d0`;
 }
 
 function showStartScreen(hasSave = false) {
@@ -311,10 +378,106 @@ function hideStartScreen() {
 function setHeadline(badge, text) {
   ui.headlineBadge.textContent = badge || "";
   ui.headlineText.textContent = text || "";
-  ui.headlineStrip.classList.toggle("is-hidden", !badge && !text);
+  syncHeadlineVisibility();
+}
+
+function syncHeadlineVisibility() {
+  if (!ui.headlineStrip) {
+    return;
+  }
+
+  const hasHeadline = Boolean(ui.headlineBadge?.textContent?.trim() || ui.headlineText?.textContent?.trim());
+  const suppressForSceneText = Boolean(ui.message?.textContent?.trim() || ui.choices?.childElementCount);
+  ui.headlineStrip.classList.toggle("is-hidden", !hasHeadline || suppressForSceneText);
+}
+
+function clearSceneBackgroundOverride() {
+  if (!ui.bg) {
+    return;
+  }
+
+  ui.bg.style.background = "";
+  ui.bg.style.transition = "";
+}
+
+function renderMemoryPanel() {
+  if (!ui.memoryButton || !ui.memoryPanel || !ui.memoryList) {
+    return;
+  }
+
+  const memoryState = typeof syncMemoryState === "function"
+    ? syncMemoryState(state)
+    : { panelOpen: false, entries: [] };
+  const entries = typeof getMemoryEntries === "function"
+    ? getMemoryEntries(state)
+    : (Array.isArray(memoryState.entries) ? memoryState.entries : []);
+  const isOpen = Boolean(memoryState.panelOpen);
+
+  ui.memoryButton.hidden = false;
+  ui.memoryButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  ui.memoryButton.classList.toggle("has-entries", entries.length > 0);
+  if (ui.memoryCount) {
+    ui.memoryCount.textContent = String(entries.length);
+  }
+
+  ui.memoryPanel.hidden = !isOpen;
+  ui.memoryPanel.setAttribute("aria-hidden", isOpen ? "false" : "true");
+
+  if (!isOpen) {
+    return;
+  }
+
+  if (!entries.length) {
+    ui.memoryList.innerHTML = `
+      <div class="memory-empty">
+        <div class="memory-empty-title">아직 남은 기억이 없습니다.</div>
+        <div class="memory-empty-body">사건이나 대화를 겪으면 여기에 기록이 쌓입니다.</div>
+      </div>
+    `;
+    return;
+  }
+
+  ui.memoryList.innerHTML = entries.map((entry) => {
+    const tags = Array.isArray(entry.tags) && entry.tags.length
+      ? `<div class="memory-entry-tags">${entry.tags.map((tag) => `<span class="memory-entry-tag">${escapeHtml(tag)}</span>`).join("")}</div>`
+      : "";
+    const body = entry.body ? `<div class="memory-entry-body">${escapeHtml(entry.body)}</div>` : "";
+    const source = entry.source ? `<span class="memory-entry-source">${escapeHtml(entry.source)}</span>` : "";
+
+    return `
+      <article class="memory-entry memory-entry--${escapeHtml(entry.type || "note")}">
+        <div class="memory-entry-meta">
+          <span class="memory-entry-time">${escapeHtml(entry.timestamp || "")}</span>
+          ${source}
+        </div>
+        <div class="memory-entry-title">${escapeHtml(entry.title || "기억")}</div>
+        ${body}
+        ${tags}
+      </article>
+    `;
+  }).join("");
+}
+
+function applySceneBackgroundConfig(backgroundConfig = null) {
+  if (!ui.bg || !backgroundConfig?.image) {
+    return false;
+  }
+
+  const overlay = backgroundConfig.overlay
+    || "linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%)";
+  const position = backgroundConfig.position || "center";
+  const size = backgroundConfig.size || "cover";
+  const repeat = backgroundConfig.repeat || "no-repeat";
+
+  ui.bg.className = backgroundConfig.className || "custom-location-bg";
+  ui.bg.style.background = `${overlay}, url('${backgroundConfig.image}') ${position} / ${size} ${repeat}`;
+  ui.bg.style.transition = "none";
+  return true;
 }
 
 function setBackgroundByTone(tone) {
+  clearSceneBackgroundOverride();
+
   if (state.day === 1 && tone === "prologue") {
     if (state.storyStep === 0) {
       ui.bg.className = "day-1-room-01";
@@ -342,7 +505,7 @@ function setBackgroundByTone(tone) {
 
   const map = {
     board: "night",
-    room: "room",       /* 방 배경: 실내 이미지 */
+    room: "room",       /* 獄?獄쏄퀗瑗? ??산땀 ???筌왖 */
     outside: "apartment-front",
     prologue: "night",
     cobalt: "night",
@@ -356,8 +519,9 @@ function setBackgroundByTone(tone) {
   ui.bg.className = map[tone] || "night";
 }
 
+
 function setCharacter(emoji) {
-  ui.character.textContent = emoji ?? "🧑";
+  ui.character.textContent = emoji ?? "\u{1F9D1}";
 }
 
 function resolveLayoutNumber(value, fallback) {
@@ -492,10 +656,25 @@ function renderActors(actors = []) {
 
   ui.actorsLayer.innerHTML = "";
   ui.actorsLayer.classList.toggle("is-hidden", actors.length === 0);
+  ui.actorsLayer.classList.toggle("has-interactive-actors", actors.some((actor) => Boolean(actor?.npcId)));
 
   actors.forEach((actor) => {
-    const wrapper = document.createElement("div");
+    const isInteractive = Boolean(actor?.npcId);
+    const wrapper = document.createElement(isInteractive ? "button" : "div");
     wrapper.className = "scene-actor";
+    if (isInteractive) {
+      const npcName = typeof getNpcConfig === "function"
+        ? getNpcConfig(actor.npcId)?.name
+        : "";
+      wrapper.type = "button";
+      wrapper.classList.add("is-interactive");
+      wrapper.setAttribute("aria-label", `${npcName || actor.alt || actor.npcId}와 대화`);
+      wrapper.addEventListener("click", () => {
+        if (typeof handleActorInteraction === "function") {
+          handleActorInteraction(actor.npcId);
+        }
+      });
+    }
 
     const image = document.createElement("img");
     image.className = "scene-actor-image";
@@ -509,7 +688,7 @@ function renderActors(actors = []) {
 }
 
 function setCharacterPosition(percent, facing = 1) {
-  // 우측 폰 패널 폭만큼 씬 중심을 자동 보정한다.
+  // ?怨쀫? ????ㅺ섯 ??彛????餓λ쵐????癒?짗 癰귣똻???뺣뼄.
   const gameWidth = ui.game?.clientWidth || window.innerWidth || 1;
   const isBottomPanel = window.matchMedia("(max-width: 600px)").matches;
   const panelWidth = isBottomPanel ? 0 : (ui.phonePanel?.offsetWidth || 0);
@@ -528,6 +707,7 @@ function setProgressByScene(scene) {
     prologue: 8,
     room: 18,
     outside: 42,
+    dialogue: 46,
     board: 18,
     incident: 60,
     result: 100,
@@ -543,10 +723,13 @@ function buildBuildings() {
 
 function clearChoices() {
   ui.choices.innerHTML = "";
+  syncTextboxContentState();
 }
 
 function clearMessage() {
   ui.message.innerHTML = "";
+  setTextboxAdvanceState(false);
+  syncTextboxContentState();
 }
 
 function hideTrashGame() {
@@ -559,6 +742,7 @@ function hideTrashGame() {
   ui.trashItems.innerHTML = "";
   ui.trashRemaining.textContent = "0 / 0";
 }
+
 
 function renderTrashGame() {
   const game = state.cleaningGame;
@@ -580,7 +764,7 @@ function renderTrashGame() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "trash-item";
-    button.setAttribute("aria-label", `쓰레기 ${item.id}`);
+    button.setAttribute("aria-label", `\uc4f0\ub808\uae30 ${item.id}`);
 
     const image = document.createElement("img");
     image.className = "trash-item-image";
@@ -594,20 +778,83 @@ function renderTrashGame() {
   });
 }
 
-function renderMessage(title, lines = []) {
+function renderMessage(title, lines = [], { progressKey = "" } = {}) {
   const resolvedTitle = resolveDynamicText(title);
   const resolvedLines = lines.map(resolveDynamicText);
+  const progressState = getSceneTextProgressState(progressKey, resolvedLines);
   const titleMarkup = resolvedTitle
     ? `<div class="message-title">${escapeHtml(resolvedTitle)}</div>`
     : "";
-  const copy = resolvedLines.length
-    ? `<div class="message-copy">${resolvedLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}</div>`
+  const copy = progressState.visibleLines.length
+    ? `<div class="message-copy">${progressState.visibleLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}</div>`
+    : "";
+  const continueMarkup = progressState.canAdvance
+    ? '<div class="message-continue">계속</div>'
     : "";
 
   ui.message.innerHTML = `
-    ${titleMarkup}
-    ${copy}
+    <div class="message-narration">
+      ${titleMarkup}
+      ${copy}
+      ${continueMarkup}
+    </div>
   `;
+  setTextboxAdvanceState(progressState.canAdvance);
+  syncTextboxContentState();
+
+  return progressState.choicesReady;
+}
+
+function renderLocationMap(locationConfig, currentLocationId = "") {
+  const resolvedTitle = resolveDynamicText(locationConfig?.title || locationConfig?.label || "");
+  const resolvedLines = (locationConfig?.lines || []).map(resolveDynamicText);
+  const map = locationConfig?.map || {};
+  const titleMarkup = resolvedTitle
+    ? `<div class="message-title">${escapeHtml(resolvedTitle)}</div>`
+    : "";
+  const copyMarkup = resolvedLines.length
+    ? `<div class="message-copy">${resolvedLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}</div>`
+    : "";
+  const mapTitle = map.title ? `<div class="location-map-title">${escapeHtml(map.title)}</div>` : "";
+  const mapSubtitle = map.subtitle ? `<div class="location-map-subtitle">${escapeHtml(resolveDynamicText(map.subtitle))}</div>` : "";
+  const nodes = Array.isArray(map.nodes) ? map.nodes : [];
+  const nodesMarkup = nodes.map((node) => {
+    const isCurrent = node.id === currentLocationId;
+    const currentBadge = isCurrent ? '<span class="location-map-badge">현재</span>' : "";
+    const emoji = node.emoji ? `<span class="location-map-emoji">${escapeHtml(node.emoji)}</span>` : "";
+    const note = node.note ? `<div class="location-map-note">${escapeHtml(resolveDynamicText(node.note))}</div>` : "";
+
+    return `
+      <div class="location-map-node${isCurrent ? " is-current" : ""}">
+        <div class="location-map-label-row">
+          <div class="location-map-label">
+            ${emoji}
+            <span>${escapeHtml(resolveDynamicText(node.label || node.id || ""))}</span>
+          </div>
+          ${currentBadge}
+        </div>
+        ${note}
+      </div>
+    `;
+  }).join("");
+
+  ui.message.innerHTML = `
+    <div class="message-narration">
+      ${titleMarkup}
+      ${copyMarkup}
+    </div>
+    <div class="location-map">
+      <div class="location-map-header">
+        ${mapTitle}
+        ${mapSubtitle}
+      </div>
+      <div class="location-map-grid">
+        ${nodesMarkup}
+      </div>
+    </div>
+  `;
+  setTextboxAdvanceState(false);
+  syncTextboxContentState();
 }
 
 function renderTags(tags = []) {
@@ -649,6 +896,7 @@ function createChoiceButton({ title, earnText, onClick }) {
 
   button.addEventListener("click", onClick);
   ui.choices.appendChild(button);
+  syncTextboxContentState();
 }
 
 function renderOfferButtons(offers) {
@@ -675,11 +923,12 @@ function renderChoiceButtons(incident) {
   });
 }
 
+
 function renderNextDayButton() {
   clearChoices();
 
   createChoiceButton({
-    title: state.day >= MAX_DAYS ? "최종 정산 보기" : "다음 날 공고 보기",
+    title: state.day >= MAX_DAYS ? "\ucd5c\uc885 \uc815\uc0b0 \ubcf4\uae30" : "\ub2e4\uc74c \ub0a0 \uacf5\uace0 \ubcf4\uae30",
     onClick: goToNextDay,
   });
 }
@@ -715,8 +964,14 @@ function renderPrologueScene() {
   setCharacterPosition(50, 1);
   setSceneSpeaker(step.speaker);
   renderTags([]);
-  renderMessage(step.title, step.lines);
+  const showChoices = renderMessage(step.title, step.lines, {
+    progressKey: buildSceneTextProgressKey(`prologue:${state.storyKey}:${state.storyStep}`, step.title, step.lines),
+  });
   clearChoices();
+
+  if (!showChoices) {
+    return;
+  }
 
   step.options.forEach((option) => {
     createChoiceButton({
@@ -726,201 +981,8 @@ function renderPrologueScene() {
   });
 }
 
-/*
-function renderRoomScene() {
-  setBackgroundByTone("room");
-  setWorldMode("room");
-  setCharacter("");
-  renderActors([]);
-  setCharacterPosition(50, 1);
-  setSceneSpeaker("부모님집");
-  renderTags([]);
-  const scheduledShift = typeof getScheduledShiftForToday === "function"
-    ? getScheduledShiftForToday()
-    : null;
-  if (scheduledShift) {
-    const job = JOB_LOOKUP[scheduledShift.offer.jobId];
-    renderMessage("오늘 예약된 출근이 있다", [
-      `${job.title} 면접에 붙었다.`,
-      "출근을 시작하거나, 오늘은 포기하고 넘길 수 있다.",
-    ]);
-  } else {
-    clearMessage();
-  }
-  clearChoices();
-  if (scheduledShift) {
-    createChoiceButton({
-      title: "예약된 출근 가기",
-      onClick: startScheduledShift,
-    });
-    createChoiceButton({
-      title: "결근하고 넘기기",
-      onClick: skipScheduledShift,
-    });
-  }
-  createChoiceButton({
-    title: "밖을 나가기",
-    onClick: goOutside,
-  });
-  createChoiceButton({
-    title: "잠을 자기",
-    onClick: sleepInRoom,
-  });
-}
 
 function renderRoomScene() {
-  setBackgroundByTone("room");
-  setWorldMode("room");
-  setCharacter("");
-  renderActors([]);
-  setCharacterPosition(50, 1);
-  setSceneSpeaker("遺紐⑤떂吏?);
-  renderTags([]);
-
-  const shiftStatus = typeof getScheduledShiftStatus === "function"
-    ? getScheduledShiftStatus()
-    : null;
-
-  if (shiftStatus) {
-    const job = JOB_LOOKUP[shiftStatus.scheduledShift.offer.jobId];
-    const shiftWindow = typeof formatClockTime === "function"
-      ? `${formatClockTime(shiftStatus.startSlot)} - ${formatClockTime(shiftStatus.endSlot)}`
-      : "";
-
-    if (shiftStatus.waiting) {
-      renderMessage("오늘 예약된 출근이 있다", [
-        `${job.title} 출근 시간은 ${shiftWindow}이다.`,
-        "출근 전까지 다른 행동을 하거나 바로 시간을 보낼 수 있다.",
-      ]);
-    } else if (shiftStatus.active) {
-      renderMessage("지금 출근할 수 있다", [
-        `${job.title} 근무 시간은 ${shiftWindow}이다.`,
-        "준비가 됐다면 바로 출근해서 오늘 근무를 시작한다.",
-      ]);
-    } else {
-      renderMessage("예약된 출근 시간이 지났다", [
-        `${job.title} 근무 시간 ${shiftWindow}을 놓쳤다.`,
-        "결근 처리하고 오늘을 넘길 수 있다.",
-      ]);
-    }
-  } else {
-    clearMessage();
-  }
-
-  clearChoices();
-
-  if (shiftStatus) {
-    if (shiftStatus.waiting) {
-      createChoiceButton({
-        title: `${typeof formatClockTime === "function" ? formatClockTime(shiftStatus.startSlot) : "출근"}까지 시간 보내기`,
-        onClick: waitForScheduledShift,
-      });
-    } else if (shiftStatus.active) {
-      createChoiceButton({
-        title: "?덉빟??異쒓렐 媛湲?,
-        onClick: startScheduledShift,
-      });
-    }
-
-    createChoiceButton({
-      title: "寃곌렐?섍퀬 ?섍린湲?,
-      onClick: skipScheduledShift,
-    });
-  }
-
-  createChoiceButton({
-    title: "30분 보내기",
-    onClick: waitInRoom,
-  });
-  createChoiceButton({
-    title: "諛뽰쓣 ?섍?湲?,
-    onClick: goOutside,
-  });
-  createChoiceButton({
-    title: "?좎쓣 ?먭린",
-    onClick: sleepInRoom,
-  });
-}
-*/
-
-/*
-function renderRoomScene() {
-  setBackgroundByTone("room");
-  setWorldMode("room");
-  setCharacter("");
-  renderActors([]);
-  setCharacterPosition(50, 1);
-  setSceneSpeaker("부모님집");
-  renderTags([]);
-
-  const shiftStatus = typeof getScheduledShiftStatus === "function"
-    ? getScheduledShiftStatus()
-    : null;
-
-  if (shiftStatus) {
-    const job = JOB_LOOKUP[shiftStatus.scheduledShift.offer.jobId];
-    const shiftWindow = typeof formatClockTime === "function"
-      ? `${formatClockTime(shiftStatus.startSlot)} - ${formatClockTime(shiftStatus.endSlot)}`
-      : "";
-
-    if (shiftStatus.waiting) {
-      renderMessage("오늘 예약된 출근이 있다", [
-        `${job.title} 출근 시간은 ${shiftWindow}이다.`,
-        "출근 전까지 다른 행동을 하거나 바로 시간을 보낼 수 있다.",
-      ]);
-    } else if (shiftStatus.active) {
-      renderMessage("지금 출근할 수 있다", [
-        `${job.title} 근무 시간은 ${shiftWindow}이다.`,
-        "준비가 됐다면 바로 출근해서 오늘 근무를 시작한다.",
-      ]);
-    } else {
-      renderMessage("예약된 출근 시간이 지났다", [
-        `${job.title} 근무 시간 ${shiftWindow}을 놓쳤다.`,
-        "결근 처리하고 오늘을 넘길 수 있다.",
-      ]);
-    }
-  } else {
-    clearMessage();
-  }
-
-  clearChoices();
-
-  if (shiftStatus) {
-    if (shiftStatus.waiting) {
-      createChoiceButton({
-        title: `${typeof formatClockTime === "function" ? formatClockTime(shiftStatus.startSlot) : "출근"}까지 시간 보내기`,
-        onClick: waitForScheduledShift,
-      });
-    } else if (shiftStatus.active) {
-      createChoiceButton({
-        title: "예약된 출근 가기",
-        onClick: startScheduledShift,
-      });
-    }
-
-    createChoiceButton({
-      title: "결근하고 넘기기",
-      onClick: skipScheduledShift,
-    });
-  }
-
-  createChoiceButton({
-    title: "30분 보내기",
-    onClick: waitInRoom,
-  });
-  createChoiceButton({
-    title: "밖을 나가기",
-    onClick: goOutside,
-  });
-  createChoiceButton({
-    title: "잠을 잔다",
-    onClick: sleepInRoom,
-  });
-}
-*/
-
-/*
-function renderRoomSceneV2() {
   setBackgroundByTone("room");
   setWorldMode("room");
   setCharacter("");
@@ -938,103 +1000,42 @@ function renderRoomSceneV2() {
     const shiftWindow = typeof formatClockTime === "function"
       ? `${formatClockTime(shiftStatus.startSlot)} - ${formatClockTime(shiftStatus.endSlot)}`
       : "";
+    let showChoices = true;
+    let messageTitle = "";
+    let messageLines = [];
 
     if (shiftStatus.waiting) {
-      renderMessage("\uc624\ub298 \uc608\uc57d\ub41c \ucd9c\uadfc\uc774 \uc788\ub2e4", [
+      messageTitle = "\uc624\ub298 \uc608\uc57d\ub41c \ucd9c\uadfc\uc774 \uc788\ub2e4";
+      messageLines = [
         `${job.title} \ucd9c\uadfc \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
         "\ucd9c\uadfc \uc804\uae4c\uc9c0 \ub2e4\ub978 \ud589\ub3d9\uc744 \ud558\uac70\ub098 \ubc14\ub85c \uc2dc\uac04\uc744 \ubcf4\ub0bc \uc218 \uc788\ub2e4.",
-      ]);
+      ];
     } else if (shiftStatus.active) {
-      renderMessage("\uc9c0\uae08 \ucd9c\uadfc\ud560 \uc218 \uc788\ub2e4", [
+      messageTitle = "\uc9c0\uae08 \ucd9c\uadfc\ud560 \uc218 \uc788\ub2e4";
+      messageLines = [
         `${job.title} \uadfc\ubb34 \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
         "\uc900\ube44\uac00 \ub410\ub2e4\uba74 \ubc14\ub85c \ucd9c\uadfc\ud574\uc11c \uc624\ub298 \uadfc\ubb34\ub97c \uc2dc\uc791\ud55c\ub2e4.",
-      ]);
+      ];
     } else {
-      renderMessage("\uc608\uc57d\ub41c \ucd9c\uadfc \uc2dc\uac04\uc774 \uc9c0\ub0ac\ub2e4", [
-        `${job.title} \uadfc\ubb34 \uc2dc\uac04 ${shiftWindow}\uc744 \ub193\uc쳤\ub2e4.`,
-        "\uacb0\uadfc \ucc98\ub9ac\ud558\uace0 \uc624\ub298\uc744 \ub118\uae38 \uc218 \uc788\ub2e4.",
-      ]);
-    }
-  } else {
-    clearMessage();
-  }
-
-  clearChoices();
-
-  if (shiftStatus) {
-    if (shiftStatus.waiting) {
-      createChoiceButton({
-        title: `${typeof formatClockTime === "function" ? formatClockTime(shiftStatus.startSlot) : "\ucd9c\uadfc"}\uae4c\uc9c0 \uc2dc\uac04 \ubcf4\ub0b4\uae30`,
-        onClick: waitForScheduledShift,
-      });
-    } else if (shiftStatus.active) {
-      createChoiceButton({
-        title: "\uc608\uc57d\ub41c \ucd9c\uadfc \uac00\uae30",
-        onClick: startScheduledShift,
-      });
-    }
-
-    createChoiceButton({
-      title: "\uacb0\uadfc\ud558\uace0 \ub118\uae30\uae30",
-      onClick: skipScheduledShift,
-    });
-  }
-
-  createChoiceButton({
-    title: "30\ubd84 \ubcf4\ub0b4\uae30",
-    onClick: waitInRoom,
-  });
-  createChoiceButton({
-    title: "\ubc16\uc744 \ub098\uac00\uae30",
-    onClick: goOutside,
-  });
-  createChoiceButton({
-    title: "\uc7a0\uc744 \uc794\ub2e4",
-    onClick: sleepInRoom,
-  });
-}
-*/
-
-function renderRoomSceneV3() {
-  setBackgroundByTone("room");
-  setWorldMode("room");
-  setCharacter("");
-  renderActors([]);
-  setCharacterPosition(50, 1);
-  setSceneSpeaker("\ubd80\ubaa8\ub2d8\uc9d1");
-  renderTags([]);
-
-  const shiftStatus = typeof getScheduledShiftStatus === "function"
-    ? getScheduledShiftStatus()
-    : null;
-
-  if (shiftStatus) {
-    const job = JOB_LOOKUP[shiftStatus.scheduledShift.offer.jobId];
-    const shiftWindow = typeof formatClockTime === "function"
-      ? `${formatClockTime(shiftStatus.startSlot)} - ${formatClockTime(shiftStatus.endSlot)}`
-      : "";
-
-    if (shiftStatus.waiting) {
-      renderMessage("\uc624\ub298 \uc608\uc57d\ub41c \ucd9c\uadfc\uc774 \uc788\ub2e4", [
-        `${job.title} \ucd9c\uadfc \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
-        "\ucd9c\uadfc \uc804\uae4c\uc9c0 \ub2e4\ub978 \ud589\ub3d9\uc744 \ud558\uac70\ub098 \ubc14\ub85c \uc2dc\uac04\uc744 \ubcf4\ub0bc \uc218 \uc788\ub2e4.",
-      ]);
-    } else if (shiftStatus.active) {
-      renderMessage("\uc9c0\uae08 \ucd9c\uadfc\ud560 \uc218 \uc788\ub2e4", [
-        `${job.title} \uadfc\ubb34 \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
-        "\uc900\ube44\uac00 \ub410\ub2e4\uba74 \ubc14\ub85c \ucd9c\uadfc\ud574\uc11c \uc624\ub298 \uadfc\ubb34\ub97c \uc2dc\uc791\ud55c\ub2e4.",
-      ]);
-    } else {
-      renderMessage("\uc608\uc57d\ub41c \ucd9c\uadfc \uc2dc\uac04\uc774 \uc9c0\ub0ac\ub2e4", [
+      messageTitle = "\uc608\uc57d\ub41c \ucd9c\uadfc \uc2dc\uac04\uc774 \uc9c0\ub0ac\ub2e4";
+      messageLines = [
         `${job.title} \uadfc\ubb34 \uc2dc\uac04 ${shiftWindow}\uc744 \ub193\uccd0\ub2e4.`,
         "\uacb0\uadfc \ucc98\ub9ac\ud558\uace0 \uc624\ub298\uc744 \ub118\uae38 \uc218 \uc788\ub2e4.",
-      ]);
+      ];
+    }
+
+    showChoices = renderMessage(messageTitle, messageLines, {
+      progressKey: buildSceneTextProgressKey(`room:${state.day}:${shiftStatus.startSlot}:${messageTitle}`, messageTitle, messageLines),
+    });
+    clearChoices();
+
+    if (!showChoices) {
+      return;
     }
   } else {
     clearMessage();
+    clearChoices();
   }
-
-  clearChoices();
 
   if (shiftStatus) {
     if (shiftStatus.waiting) {
@@ -1068,47 +1069,67 @@ function renderRoomSceneV3() {
     onClick: sleepInRoom,
   });
 }
+
 
 function renderOutsideScene() {
   const outsideScene = typeof getCurrentOutsideSceneConfig === "function"
     ? getCurrentOutsideSceneConfig()
     : null;
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId()
+    : "";
 
   setBackgroundByTone("outside");
+  applySceneBackgroundConfig(outsideScene?.background || null);
   setWorldMode("outside");
   setCharacter("");
   renderActors(outsideScene?.actors || []);
   setCharacterPosition(50, 1);
-  setSceneSpeaker(outsideScene?.speaker || "아파트 앞");
-  renderTags([]);
-  renderMessage(outsideScene?.title || "", outsideScene?.lines || []);
+  setSceneSpeaker(outsideScene?.speaker || outsideScene?.label || "\uc544\ud30c\ud2b8 \uc55e");
+  renderTags(outsideScene?.tags || []);
+  let showChoices = true;
+  if (outsideScene?.map) {
+    renderLocationMap(outsideScene, currentLocationId);
+  } else {
+    const outsideTitle = outsideScene?.title || outsideScene?.label || "";
+    const outsideLines = outsideScene?.lines || [];
+    showChoices = renderMessage(outsideTitle, outsideLines, {
+      progressKey: buildSceneTextProgressKey(`outside:${state.day}:${currentLocationId}`, outsideTitle, outsideLines),
+    });
+  }
   clearChoices();
+
+  if (!showChoices) {
+    return;
+  }
 
   (outsideScene?.options || []).forEach((option) => {
     createChoiceButton({
       title: option.title,
-      onClick: () => handleOutsideOption(option.action),
+      onClick: () => handleOutsideOption(option),
     });
   });
 }
 
+
 function renderBoardScene() {
   setBackgroundByTone("board");
   setWorldMode("board");
-  setCharacter("🧑");
+  setCharacter("\u{1F9D1}");
   setCharacterPosition(50, 1);
-  setSceneSpeaker("구인 앱");
+  setSceneSpeaker("\uad6c\uc778 \uc571");
   renderTags([]);
   clearMessage();
   renderOfferButtons(state.dayOffers);
 }
+
 
 function renderCleanupScene() {
   setBackgroundByTone("cleanup");
   setWorldMode("cleanup");
   setCharacter("");
   setCharacterPosition(50, 1);
-  setSceneSpeaker("부모님집");
+  setSceneSpeaker("\ubd80\ubaa8\ub2d8\uc9d1");
   renderTags([]);
   clearMessage();
   clearChoices();
@@ -1116,26 +1137,8 @@ function renderCleanupScene() {
 }
 
 function getSceneTimeText() {
-  if (state.scene === "prologue") {
-    return state.storyStep === 0 ? "06:30" : "07:10";
-  }
-
-  const map = {
-    room: "08:00",
-    cleanup: "07:20",
-    outside: "09:00",
-    board: "09:30",
-    incident: "14:00",
-    result: "20:00",
-    ending: "23:59",
-  };
-
-  return map[state.scene] || "08:00";
-}
-
-function getSceneTimeText() {
   if (typeof formatClockTime === "function") {
-    return formatClockTime(state.timeSlot);
+    return formatClockTime(state.timeSlot, state.timeMinuteOffset || 0);
   }
 
   return "08:00";
@@ -1150,9 +1153,83 @@ function renderIncidentScene() {
   setCharacterPosition(50, 1);
   setSceneSpeaker(`${job.emoji} ${job.title}`);
   renderTags([]);
-  renderMessage(state.currentIncident.title, state.currentIncident.intro);
+  const showChoices = renderMessage(state.currentIncident.title, state.currentIncident.intro, {
+    progressKey: buildSceneTextProgressKey(`incident:${state.currentOffer.jobId}:${state.currentIncident.title}`, state.currentIncident.title, state.currentIncident.intro),
+  });
+  clearChoices();
+
+  if (!showChoices) {
+    return;
+  }
+
   renderChoiceButtons(state.currentIncident);
 }
+
+function renderDialogueScene() {
+  const dialogueNode = typeof getActiveDialogueNode === "function"
+    ? getActiveDialogueNode(state)
+    : null;
+  const outsideScene = typeof getCurrentOutsideSceneConfig === "function"
+    ? getCurrentOutsideSceneConfig(state)
+    : null;
+
+  if (!dialogueNode) {
+    if (typeof endNpcDialogue === "function") {
+      endNpcDialogue(state);
+    }
+    renderGame();
+    return;
+  }
+
+  setBackgroundByTone("outside");
+  applySceneBackgroundConfig(outsideScene?.background || null);
+  setWorldMode("outside");
+  setCharacter("");
+  renderActors(outsideScene?.actors || []);
+  setCharacterPosition(50, 1);
+  setSceneSpeaker(dialogueNode.speaker || "대화");
+  renderTags(dialogueNode.tags || ["대화"]);
+
+  const showChoices = renderMessage(dialogueNode.title || "", dialogueNode.lines || [], {
+    progressKey: buildSceneTextProgressKey(
+      `dialogue:${state.day}:${dialogueNode.npcId}:${dialogueNode.nodeId}`,
+      dialogueNode.title || "",
+      dialogueNode.lines || []
+    ),
+  });
+  clearChoices();
+
+  if (!showChoices) {
+    return;
+  }
+
+  const choices = Array.isArray(dialogueNode.choices) ? dialogueNode.choices : [];
+  if (!choices.length) {
+    createChoiceButton({
+      title: "대화를 마친다",
+      onClick: () => {
+        if (typeof endNpcDialogue === "function") {
+          endNpcDialogue(state);
+        }
+        renderGame();
+      },
+    });
+    return;
+  }
+
+  choices.forEach((choice, index) => {
+    createChoiceButton({
+      title: choice.label || choice.title || `선택 ${index + 1}`,
+      onClick: () => {
+        if (typeof chooseDialogueOption === "function") {
+          chooseDialogueOption(index, state);
+        }
+        renderGame();
+      },
+    });
+  });
+}
+
 
 function renderResultScene() {
   const job = JOB_LOOKUP[state.currentOffer.jobId];
@@ -1161,28 +1238,47 @@ function renderResultScene() {
   setWorldMode("result");
   setCharacter(job.emoji);
   setCharacterPosition(50, 1);
-  setSceneSpeaker("그날 근무 종료");
+  setSceneSpeaker("\uadf8\ub0a0 \uadfc\ubb34 \uc885\ub8cc");
   renderTags([]);
-  renderMessage(`오늘 손에 쥔 돈 ${formatMoney(state.lastResult.pay)}`, state.lastResult.lines);
+  const resultTitle = `\uc624\ub298 \uc190\uc5d0 \uc950 \ub3c8 ${formatMoney(state.lastResult.pay)}`;
+  const showChoices = renderMessage(resultTitle, state.lastResult.lines, {
+    progressKey: buildSceneTextProgressKey(`result:${state.day}:${state.lastResult.pay}`, resultTitle, state.lastResult.lines),
+  });
+
+  if (!showChoices) {
+    clearChoices();
+    return;
+  }
+
   renderNextDayButton();
 }
+
 
 function renderEndingScene() {
   const summary = state.endingSummary;
 
   setBackgroundByTone("board");
   setWorldMode("ending");
-  setCharacter("💰");
+  setCharacter("\u{1F4B0}");
   setCharacterPosition(50, 1);
-  setSceneSpeaker("정산표");
-  renderTags([`랭킹 ${summary.rank.label}`, summary.rank.title]);
-  renderMessage(`최종 현금 ${formatMoney(summary.totalCash)}`, summary.lines);
+  setSceneSpeaker("\uc815\uc0b0\ud45c");
+  renderTags([`\ub7ad\ud0b9 ${summary.rank.label}`, summary.rank.title]);
+  const endingTitle = `\ucd5c\uc885 \ud604\uae08 ${formatMoney(summary.totalCash)}`;
+  const showChoices = renderMessage(endingTitle, summary.lines, {
+    progressKey: buildSceneTextProgressKey(`ending:${summary.totalCash}:${summary.rank.label}`, endingTitle, summary.lines),
+  });
   clearChoices();
+
+  if (!showChoices) {
+    return;
+  }
+
   createChoiceButton({
-    title: "처음부터 다시 하기",
+    title: "\ucc98\uc74c\ubd80\ud130 \ub2e4\uc2dc \ud558\uae30",
     onClick: restartToTitle,
   });
 }
+
 
 function renderGame() {
   const totalDays = typeof MAX_DAYS === "number" ? MAX_DAYS : 30;
@@ -1196,13 +1292,14 @@ function renderGame() {
   if (state.scene !== "cleanup") {
     hideTrashGame();
   }
-  ui.dayDisplay.textContent = `${state.day}일차 / ${totalDays}`;
+  ui.dayDisplay.textContent = `${state.day}\uc77c\ucc28 / ${totalDays}`;
   ui.moneyDisplay.textContent = formatMoney(state.money);
   ui.staminaDisplay.textContent = `${state.stamina}`;
   ui.energyDisplay.textContent = `${state.energy}`;
   ui.timeDisplay.textContent = getSceneTimeText();
   setHeadline(state.headline.badge, state.headline.text);
   setProgressByScene(state.scene);
+  renderMemoryPanel();
   if (typeof persistState === "function") {
     persistState();
   }
@@ -1213,12 +1310,17 @@ function renderGame() {
   }
 
   if (state.scene === "room") {
-    renderRoomSceneV3();
+    renderRoomScene();
     return;
   }
 
   if (state.scene === "outside") {
     renderOutsideScene();
+    return;
+  }
+
+  if (state.scene === "dialogue") {
+    renderDialogueScene();
     return;
   }
 
@@ -1242,7 +1344,53 @@ function renderGame() {
     return;
   }
 
+  if (state.scene === "ranking") {
+    // 랭킹 화면은 별도 오버레이 — renderGame에서 별도 처리 없음
+    return;
+  }
+
   renderResultScene();
+}
+
+function showRankingScreen(myEntry, allEntries) {
+  if (!ui.rankingScreen) return;
+
+  // 내 카드 렌더링
+  if (ui.rankingMyCard) {
+    ui.rankingMyCard.innerHTML = `
+      <div class="ranking-my-label">내 결과</div>
+      <div class="ranking-my-name">${escapeHtml(myEntry.name)}</div>
+      <div class="ranking-my-stats">
+        <span class="ranking-my-money">${formatMoney(myEntry.money)}</span>
+        <span class="ranking-my-job">${escapeHtml(myEntry.job)}</span>
+        <span class="ranking-my-rank ranking-rank--${myEntry.rank.toLowerCase()}">${myEntry.rank}</span>
+      </div>
+    `;
+  }
+
+  // 전체 랭킹 리스트 렌더링
+  if (ui.rankingList) {
+    // money 내림차순 정렬
+    const sorted = [...allEntries].sort((a, b) => (b.money || 0) - (a.money || 0));
+    const isMe = (entry) =>
+      entry.name === myEntry.name && entry.money === myEntry.money;
+
+    ui.rankingList.innerHTML = sorted
+      .map((entry, idx) => {
+        const me = isMe(entry);
+        return `<tr class="ranking-row${me ? " ranking-row--me" : ""}">
+          <td class="ranking-pos">${idx + 1}</td>
+          <td class="ranking-name">${escapeHtml(entry.name || "무명")}${me ? " <span class=\"ranking-me-badge\">나</span>" : ""}</td>
+          <td class="ranking-money">${formatMoney(entry.money || 0)}</td>
+          <td class="ranking-job">${escapeHtml(entry.job || "무직")}</td>
+          <td class="ranking-rank ranking-rank--${(entry.rank || "d").toLowerCase()}">${entry.rank || "D"}</td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  ui.rankingScreen.hidden = false;
+  ui.rankingScreen.setAttribute("aria-hidden", "false");
 }
 
 function escapeHtml(text) {
@@ -1254,10 +1402,11 @@ function escapeHtml(text) {
     .replaceAll("'", "&#39;");
 }
 
+
 function resolveDynamicText(text) {
   const rawName = String(state.playerName || "").trim();
-  const displayName = rawName && rawName !== "이름 없음" ? rawName : "";
-  const nameCall = displayName ? `${displayName}아` : "얘야";
+  const displayName = rawName && rawName !== "\uc774\ub984 \uc5c6\uc74c" ? rawName : "";
+  const nameCall = displayName ? `${displayName}\uc544` : "\uc598\uc57c";
 
   return String(text)
     .replaceAll("{nameCall}", nameCall)

@@ -8,4 +8,13 @@ const CHARACTER_ART = {
   npcWoman: {
     default: "assets/characters/npc-woman/default.png",
   },
+  highSchoolGirl: {
+    default: "assets/characters/high-school-girl/default.png",
+  },
+  alleyOfficeWorker: {
+    default: "assets/characters/alley-office-worker/default.png",
+  },
+  alleyAunt: {
+    default: "assets/characters/alley-aunt/default.png",
+  },
 };

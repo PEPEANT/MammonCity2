@@ -327,7 +327,8 @@ body {
 ═══════════════════════════════════════════════════════ */
 #game {
   --gw: min(720px, 100vw, calc(100vh * 1.5));
-  --phone-panel-width: 196px;
+  --phone-shell-width: clamp(196px, 18vw, 228px);
+  --phone-panel-width: calc(var(--phone-shell-width) + 28px);
   width: var(--gw);
   height: calc(var(--gw) * 2 / 3);  /* 3:2 비율 */
   position: relative;
@@ -392,6 +393,10 @@ body {
   background:
     linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
     url('../assets/days/day01/room-05.png') center / cover no-repeat;
+  transition: none;
+}
+
+#bg.custom-location-bg {
   transition: none;
 }
 
@@ -468,12 +473,37 @@ body {
   overflow: visible;
 }
 
+#actors-layer.has-interactive-actors {
+  pointer-events: auto;
+}
+
 #actors-layer.dev-position-active {
   pointer-events: auto;
 }
 
 #game.phone-collapsed #actors-layer {
   right: 0;
+}
+
+#memory-button {
+  position: absolute;
+  top: 84px;
+  right: calc(var(--phone-panel-width) + 12px);
+  z-index: 12;
+}
+
+#memory-panel {
+  position: absolute;
+  top: 122px;
+  right: calc(var(--phone-panel-width) + 12px);
+  width: min(304px, calc(100% - var(--phone-panel-width) - 24px));
+  max-height: calc(100% - 138px);
+  z-index: 13;
+}
+
+#game.phone-collapsed #memory-button,
+#game.phone-collapsed #memory-panel {
+  right: 12px;
 }
 
 #actors-layer.is-hidden {
@@ -587,17 +617,19 @@ body {
 /* 2. 헤드라인: 텍스트박스 바로 위 floating */
 #headline-strip {
   position: absolute;
-  bottom: 112px;
-  left: 10px;
-  right: calc(var(--phone-panel-width) + 8px);
+  top: 48px;
+  left: 18px;
+  right: auto;
+  max-width: min(380px, calc(100% - var(--phone-panel-width) - 36px));
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(4px);
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(8, 11, 20, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
   z-index: 15;
 }
 
@@ -606,34 +638,41 @@ body {
 }
 
 #game.phone-collapsed #headline-strip {
-  right: 10px;
+  max-width: min(380px, calc(100% - 36px));
 }
 
 /* 3. 텍스트박스: 반투명 RPG 대사창 */
 #textbox {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: var(--phone-panel-width);
-  min-height: 64px;
-  background: rgba(96, 102, 110, 0.62);
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  bottom: 16px;
+  left: 18px;
+  right: calc(var(--phone-panel-width) + 18px);
+  width: auto;
+  max-width: none;
+  min-height: 0;
+  background: transparent;
+  border: 0;
   backdrop-filter: none;
-  padding: 10px 16px 8px;
+  padding: 0;
   z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
 }
 
 #game.phone-collapsed #textbox {
-  right: 0;
+  right: 18px;
 }
 
 .textbox-top {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
+  width: min(100%, 680px);
+  align-self: center;
+  margin-bottom: 0;
 }
 
 /* 4. 선택지 바: 배경 없음, 버튼만 독립 float */
@@ -682,45 +721,64 @@ body {
 @media (max-width: 600px) {
   #game {
     --gw: 100vw;
+    --phone-shell-width: clamp(136px, 34vw, 164px);
+    --phone-panel-width: calc(var(--phone-shell-width) + 16px);
     border-radius: 0;
     box-shadow: none;
   }
 
   /* 모바일: 폰 패널이 하단 → 텍스트박스/선택지 right: 0 */
   #textbox {
-    right: 0;
-    bottom: 44px;  /* phone-panel ??*/
+    bottom: 12px;
+    left: 12px;
+    right: calc(var(--phone-panel-width) + 12px);
   }
 
   #choice-bar {
     right: 0;
-    bottom: 44px;  /* phone-panel 위 */
+    bottom: 0;
+    padding-right: calc(var(--phone-panel-width) + 12px);
     height: 48px;
   }
 
   #headline-strip {
-    right: 10px;
-    bottom: 156px;
+    top: 44px;
+    left: 12px;
+    max-width: calc(100% - var(--phone-panel-width) - 24px);
   }
 
   #trash-game-layer {
     right: 0;
-    bottom: 156px;
+    bottom: 106px;
   }
 
   #outside-goal {
     right: 16px;
-    bottom: 158px;
+    bottom: 120px;
   }
 
   #actors-layer {
     right: 0;
-    bottom: 128px;
+    bottom: 84px;
+  }
+
+  #memory-button {
+    top: 84px;
+    left: 12px;
+    right: auto;
+  }
+
+  #memory-panel {
+    top: 122px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100% - 226px);
   }
 
   #character {
     left: 50%;
-    bottom: 158px;
+    bottom: 120px;
     font-size: 52px;
   }
 

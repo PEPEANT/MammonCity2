@@ -1,7 +1,7 @@
 const BASE_STAMINA = 100;
 const BASE_ENERGY = 100;
-// 업데이트마다 조금씩 늘릴 것 (현재: 14일 / 목표: 30일)
-const MAX_DAYS = 14;
+// 업데이트마다 조금씩 늘릴 것 (현재: 7일 / 목표: 30일)
+const MAX_DAYS = 7;
 const TIME_SLOT_MINUTES = 30;
 const DAY_START_TIME_SLOT = 16;
 const DAY_END_TIME_SLOT = 48;

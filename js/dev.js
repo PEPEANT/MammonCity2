@@ -548,14 +548,14 @@
 
     const note = document.createElement("div");
     note.className = "dev-editor-note";
-    note.textContent = "드래그 결과는 파일이 아니라 이 브라우저에만 저장됩니다.";
+    note.textContent = "드래그 배치는 코드 파일이 아니라 현재 브라우저의 localStorage에만 저장됩니다.";
 
     const status = document.createElement("div");
     status.className = "dev-editor-status";
     status.id = "dev-position-status";
     status.textContent = "편집 꺼짐";
 
-    section.append(actions, sceneLine, selectionLine, readout, actorFields, note, status);
+    section.append(actions, note, status);
 
     editor.elements = {
       section: sectionEntry.section,

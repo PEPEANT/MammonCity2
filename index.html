@@ -9,17 +9,18 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/phone.css">
+  <link rel="stylesheet" href="css/ranking.css">
 </head>
 <body>
   <div id="dev-panel" style="display:none">
     <div class="dev-title">DEV PANEL</div>
 
     <div class="dev-section days">
-      <div class="dev-section-label">일차 점프</div>
+      <div class="dev-section-label">일차 이동</div>
     </div>
 
     <div class="dev-section stats">
-      <div class="dev-section-label">스탯 설정</div>
+      <div class="dev-section-label">행동 / 스탯</div>
     </div>
 
     <div class="dev-section state-dump">
@@ -78,6 +79,24 @@
         <span id="headline-text" class="headline-text">동네 구인 앱이 오늘 공고를 다시 밀어 올린다.</span>
       </div>
 
+      <button id="memory-button" type="button" aria-expanded="false">
+        <span class="memory-button-icon">기억</span>
+        <span id="memory-count" class="memory-button-count">0</span>
+      </button>
+
+      <div id="memory-panel" hidden aria-hidden="true">
+        <div class="memory-panel-header">
+          <div>
+            <div class="memory-panel-kicker">MEMORY LOG</div>
+            <div class="memory-panel-title">기억</div>
+          </div>
+          <button id="memory-close-button" class="memory-close-button" type="button" aria-label="기억 닫기">닫기</button>
+        </div>
+        <div id="memory-list" class="memory-list"></div>
+      </div>
+
+      <div id="phone-stage" hidden aria-hidden="true"></div>
+
       <div id="phone-panel">
         <div class="phone-shell">
           <div class="phone-notch"></div>
@@ -89,51 +108,27 @@
 
             <div id="phone-day-chip" class="phone-day-chip">DAY 01</div>
 
-            <div class="phone-hd">
-              <span class="phone-hd-icon">📱</span>
-              <div class="phone-hd-copy">
-                <span class="phone-hd-label">MAMMON PHONE</span>
-                <span id="phone-hd-sub" class="phone-hd-sub">앱을 눌러 바로 사용한다.</span>
-              </div>
-            </div>
-
-            <div id="phone-locked-badge" class="phone-locked-badge">앱 사용 가능</div>
-            <div class="phone-divider"></div>
-
-            <div class="phone-apps">
-              <button class="phone-app-btn" type="button" data-app="jobs">
-                <span class="phone-app-emoji">💼</span>
-                <span class="phone-app-name">공고</span>
-              </button>
-              <button class="phone-app-btn" type="button" data-app="stocks">
-                <span class="phone-app-emoji">📈</span>
-                <span class="phone-app-name">주식</span>
-              </button>
-              <button class="phone-app-btn" type="button" data-app="delivery">
-                <span class="phone-app-emoji">🍔</span>
-                <span class="phone-app-name">배달</span>
-              </button>
-              <button class="phone-app-btn" type="button" data-app="youtube">
-                <span class="phone-app-emoji">📺</span>
-                <span class="phone-app-name">영상</span>
-              </button>
-            </div>
+            <div id="phone-apps" class="phone-apps"></div>
 
             <div id="phone-app-screen" class="phone-app-screen" hidden></div>
+          </div>
 
-            <div id="phone-preview" class="phone-preview">
-              <div class="phone-preview-top">
-                <span id="phone-preview-kicker" class="phone-preview-kicker">HOME</span>
-                <span id="phone-preview-state" class="phone-preview-state">READY</span>
-              </div>
-              <div id="phone-preview-title" class="phone-preview-title">오늘의 폰 화면</div>
-              <div id="phone-preview-body" class="phone-preview-body">스마트폰으로 오늘 공고와 생활 앱을 바로 확인할 수 있다.</div>
-            </div>
+          <div id="phone-controls" aria-label="Phone controls">
+            <button id="phone-stage-btn" class="phone-control-btn" type="button" aria-pressed="false">
+              <span class="phone-control-icon" aria-hidden="true">⛶</span>
+              <span class="phone-control-label">확대</span>
+            </button>
+            <button id="phone-home-btn" class="phone-control-btn is-home" type="button" aria-expanded="false">
+              <span class="phone-control-icon" aria-hidden="true"></span>
+              <span class="phone-control-label"></span>
+            </button>
+            <button id="phone-back-btn" class="phone-control-btn" type="button">
+              <span class="phone-control-icon" aria-hidden="true">↩</span>
+              <span class="phone-control-label">뒤로</span>
+            </button>
           </div>
         </div>
       </div>
-
-      <button id="phone-toggle-btn" type="button" aria-expanded="false">폰 열기</button>
 
       <div id="textbox">
         <div class="textbox-top">
@@ -160,6 +155,54 @@
     </div>
   </div>
 
+  <!-- 랭킹 전체화면 오버레이 -->
+  <div id="ranking-screen" hidden aria-hidden="true">
+    <div class="ranking-inner">
+      <div class="ranking-header">
+        <div class="ranking-title">배금도시</div>
+        <div class="ranking-subtitle">7일 결산 · 전국 랭킹</div>
+      </div>
+      <div class="ranking-my-card" id="ranking-my-card"></div>
+      <div class="ranking-list-wrap">
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>이름</th>
+              <th>현금</th>
+              <th>직업</th>
+              <th>랭크</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-list"></tbody>
+        </table>
+      </div>
+      <div class="ranking-actions">
+        <button id="ranking-restart-btn" class="ranking-btn" type="button">처음부터 다시 하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Firebase 설정 — Firebase Console에서 발급받은 값으로 교체하세요
+    // https://console.firebase.google.com → 프로젝트 생성 → 웹 앱 등록 → config 복사
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+    };
+    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      firebase.initializeApp(firebaseConfig);
+      window.__FIREBASE_CONFIG_SET__ = true;
+    }
+  </script>
+
   <script src="js/data/jobs/jobs-data.js"></script>
   <script src="js/data/jobs/job-headlines-data.js"></script>
   <script src="js/data/jobs/service-job-events-data.js"></script>
@@ -168,13 +211,42 @@
   <script src="js/data/jobs/job-events-data.js"></script>
   <script src="js/data/constants.js"></script>
   <script src="js/data/characters.js"></script>
+  <script src="js/data/npcs/npc-data.js"></script>
+  <script src="js/data/npcs/npc-dialogue-data.js"></script>
   <script src="js/data/days/day01/story.js"></script>
   <script src="js/data/days/day01/events.js"></script>
   <script src="js/data/days/day01/world.js"></script>
   <script src="js/data/days/day01/index.js"></script>
   <script src="js/data/days/day02/index.js"></script>
   <script src="js/data/days/day03/index.js"></script>
+  <script src="js/data/days/day04/index.js"></script>
+  <script src="js/data/days/day05/index.js"></script>
+  <script src="js/data/days/day06/index.js"></script>
+  <script src="js/data/days/day07/index.js"></script>
   <script src="js/data/days/index.js"></script>
+  <script src="js/data/economy/economy-calendar.js"></script>
+  <script src="js/systems/economy/wallet-service.js"></script>
+  <script src="js/systems/economy/economy-service.js"></script>
+  <script src="js/systems/memory/memory-service.js"></script>
+  <script src="js/systems/npc/dialogue-service.js"></script>
+  <script src="js/systems/ranking-service.js"></script>
+  <script src="js/devices/phone/phone-session.js"></script>
+  <script src="js/apps/app-ui-helpers.js"></script>
+  <script src="js/apps/jobs/jobs-app-state.js"></script>
+  <script src="js/apps/jobs/jobs-app-ui.js"></script>
+  <script src="js/apps/jobs/jobs-manifest.js"></script>
+  <script src="js/apps/dis/dis-manifest.js"></script>
+  <script src="js/apps/playstore/playstore-manifest.js"></script>
+  <script src="js/apps/call/call-manifest.js"></script>
+  <script src="js/apps/gallery/gallery-manifest.js"></script>
+  <script src="js/apps/bank/bank-app-state.js"></script>
+  <script src="js/apps/bank/bank-manifest.js"></script>
+  <script src="js/apps/stocks/stocks-manifest.js"></script>
+  <script src="js/apps/delivery/delivery-manifest.js"></script>
+  <script src="js/apps/video/video-manifest.js"></script>
+  <script src="js/devices/phone/phone-app-registry.js"></script>
+  <script src="js/devices/phone/phone-shell-ui.js"></script>
+  <script src="js/devices/phone/phone-router.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/logic.js"></script>
   <script src="js/dev.js"></script>
