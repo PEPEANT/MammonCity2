@@ -43,6 +43,16 @@
         </div>
         <div id="trash-items"></div>
       </div>
+      <div id="job-minigame-layer" class="is-hidden" aria-hidden="true">
+        <div id="job-minigame-hud">
+          <div class="job-minigame-copy">
+            <span id="job-minigame-title">알바 미니게임</span>
+            <span id="job-minigame-note">핵심 업무 카드만 빠르게 정리하세요.</span>
+          </div>
+          <span id="job-minigame-progress">0 / 0</span>
+        </div>
+        <div id="job-minigame-items"></div>
+      </div>
 
       <!-- 좌상단 HUD: 일차 · 시간 -->
       <div id="hud-left">
@@ -66,6 +76,11 @@
         <div class="hud-stat">
           <span class="hud-label">에너지</span>
           <span id="energy-display" class="hud-val energy">100</span>
+        </div>
+        <span class="hud-divider"></span>
+        <div class="hud-stat">
+          <span class="hud-label">배고픔</span>
+          <span id="hunger-display" class="hud-val hunger">5/5</span>
         </div>
       </div>
 
@@ -279,16 +294,25 @@
   <script src="js/systems/ranking-service.js"></script>
   <script src="js/devices/phone/phone-session.js"></script>
   <script src="js/apps/app-ui-helpers.js"></script>
+  <script src="js/apps/trading-terminal.js"></script>
   <script src="js/apps/jobs/jobs-app-state.js"></script>
   <script src="js/apps/jobs/jobs-app-ui.js"></script>
   <script src="js/apps/jobs/jobs-manifest.js"></script>
   <script src="js/apps/dis/dis-manifest.js"></script>
+  <script src="js/apps/news/news-manifest.js"></script>
   <script src="js/apps/playstore/playstore-manifest.js"></script>
+  <script src="js/apps/bus/bus-manifest.js"></script>
   <script src="js/apps/call/call-manifest.js"></script>
   <script src="js/apps/gallery/gallery-manifest.js"></script>
   <script src="js/apps/bank/bank-app-state.js"></script>
   <script src="js/apps/bank/bank-manifest.js"></script>
   <script src="js/apps/stocks/stocks-manifest.js"></script>
+  <script src="js/apps/casino/casino-state.js"></script>
+  <script src="js/apps/casino/casino-exchange.js"></script>
+  <script src="js/apps/casino/casino-blackjack.js"></script>
+  <script src="js/apps/casino/casino-slots.js"></script>
+  <script src="js/apps/casino/casino-manifest.js"></script>
+  <script src="js/apps/coin/coin-manifest.js"></script>
   <script src="js/apps/delivery/delivery-manifest.js"></script>
   <script src="js/apps/video/video-manifest.js"></script>
   <script src="js/devices/phone/phone-app-registry.js"></script>

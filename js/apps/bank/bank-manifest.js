@@ -82,22 +82,20 @@ function buildBankHomeScreenMarkup(viewModel, { stageMode = false } = {}) {
 
   return `
     ${buildPhoneAppScreenHeaderMarkup({
-      kicker: "MAMMON BANK",
-      title: "배금은행",
-      note: "현금과 계좌 잔액을 분리해서 관리합니다.",
+      title: "은행",
       showHomeButton: !stageMode,
     })}
     ${statusMarkup}
     <section class="bank-hero">
       <div class="bank-hero-top">
         <div>
-          <div class="bank-hero-label">총 계좌 잔액</div>
+          <div class="bank-hero-label">잔액</div>
           <div class="bank-hero-balance">${escapePhoneAppHtml(formatCash(viewModel.balance))}</div>
         </div>
         <div class="bank-hero-emblem">🏦</div>
       </div>
       <div class="bank-hero-sub">
-        현금 ${escapePhoneAppHtml(formatCash(viewModel.cashOnHand))} · 누적 입금 +${escapePhoneAppHtml(formatCash(viewModel.totalInflow))} · 누적 출금 -${escapePhoneAppHtml(formatCash(viewModel.totalOutflow))}
+        현금 ${escapePhoneAppHtml(formatCash(viewModel.cashOnHand))}
       </div>
       <div class="bank-hero-actions">
         ${buildPhoneRouteButtonMarkup({
@@ -118,32 +116,27 @@ function buildBankHomeScreenMarkup(viewModel, { stageMode = false } = {}) {
       <section class="bank-stat-card">
         <div class="bank-stat-label">현금 보유</div>
         <div class="bank-stat-value">${escapePhoneAppHtml(formatCash(viewModel.cashOnHand))}</div>
-        <div class="bank-stat-sub">지금 손에 들고 있는 금액</div>
       </section>
       <section class="bank-stat-card">
         <div class="bank-stat-label">거래 횟수</div>
         <div class="bank-stat-value">${escapePhoneAppHtml(String(viewModel.transactionCount))}</div>
-        <div class="bank-stat-sub">계좌에 남은 기록 수</div>
       </section>
       <section class="bank-stat-card">
         <div class="bank-stat-label">누적 입금</div>
         <div class="bank-stat-value is-in">+${escapePhoneAppHtml(formatCash(viewModel.totalInflow))}</div>
-        <div class="bank-stat-sub">계좌로 들어온 총액</div>
       </section>
       <section class="bank-stat-card">
         <div class="bank-stat-label">누적 출금</div>
         <div class="bank-stat-value is-out">-${escapePhoneAppHtml(formatCash(viewModel.totalOutflow))}</div>
-        <div class="bank-stat-sub">송금과 출금으로 나간 총액</div>
       </section>
     </div>
     <section class="phone-app-card">
-      <div class="phone-app-card-label">빠른 입출금</div>
-      <div class="phone-app-card-body">은행 업무는 각각 1분씩 소모됩니다.</div>
+      <div class="phone-app-card-title">입출금</div>
       ${buildBankQuickAmountButtons("bank-deposit-cash", viewModel.depositAmounts, true, "전액 입금", depositDisabled)}
       ${buildBankQuickAmountButtons("bank-withdraw-cash", viewModel.withdrawAmounts, true, "전액 출금", withdrawDisabled)}
     </section>
     <section class="phone-app-card">
-      <div class="phone-app-card-label">최근 거래 내역</div>
+      <div class="phone-app-card-title">거래</div>
       ${buildBankTransactionsMarkup(viewModel)}
     </section>
   `;
@@ -157,9 +150,7 @@ function buildBankTransferScreenMarkup(viewModel, { stageMode = false } = {}) {
   return `
     <div class="bank-transfer-screen" data-bank-transfer-root>
       ${buildPhoneAppScreenHeaderMarkup({
-        kicker: "MAMMON BANK",
-        title: "송금하기",
-        note: "계좌 잔액에서 바로 상대에게 송금합니다.",
+        title: "송금",
         showHomeButton: !stageMode,
       })}
       ${buildPhoneAppStatusMarkup("bank")}
@@ -189,7 +180,7 @@ function buildBankTransferScreenMarkup(viewModel, { stageMode = false } = {}) {
         </div>
         ${buildBankQuickAmountButtons("bank-fill-amount", viewModel.transferAmounts, false, "", false)}
         <div class="bank-form-hint">
-          출금 가능 잔액 ${escapePhoneAppHtml(formatCash(viewModel.balance))} · 송금 시 1분이 흐릅니다.
+          가능 ${escapePhoneAppHtml(formatCash(viewModel.balance))}
         </div>
         <div class="bank-form-actions">
           ${buildPhoneAppActionButtonMarkup({
@@ -206,8 +197,7 @@ function buildBankTransferScreenMarkup(viewModel, { stageMode = false } = {}) {
         </div>
       </section>
       <section class="phone-app-card">
-        <div class="phone-app-card-label">최근 송금 대상</div>
-        <div class="phone-app-card-body">한 번 눌러서 바로 받는 분 칸을 채울 수 있습니다.</div>
+        <div class="phone-app-card-title">최근 대상</div>
         ${buildBankQuickContactButtons(viewModel.quickContacts)}
       </section>
     </div>
@@ -226,7 +216,7 @@ function getBankAppManifest(targetState = state) {
     openRoute: "bank/home",
     installable: true,
     storeCategory: "금융",
-    storeDescription: "현금을 계좌에 넣고, 출금과 송금 내역을 관리합니다.",
+    storeDescription: "은행 앱",
     isAvailable: () => (
       typeof canUsePhoneApps === "function"
         ? canUsePhoneApps(targetState)

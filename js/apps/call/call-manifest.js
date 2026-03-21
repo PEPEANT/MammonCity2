@@ -12,23 +12,17 @@ function getCallAppManifest(targetState = state) {
     ),
     buildScreenMarkup: ({ stageMode = false } = {}) => `
       ${buildPhoneAppScreenHeaderMarkup({
-        kicker: "CALL",
-        title: "연락처",
-        note: "가족과 잠깐 통화하며 상황을 정리합니다.",
+        title: "전화",
         showHomeButton: !stageMode,
       })}
       ${buildPhoneAppStatusMarkup("call", buildPhoneAppCardMarkup({
-        label: "빠른 연락",
         title: "엄마",
-        body: "집에 늦는지, 오늘 하루는 어땠는지 잠깐 통화할 수 있습니다.",
       }))}
       ${buildPhoneAppCardMarkup({
-        label: "주 연락처",
-        title: "엄마에게 전화",
-        body: "1분 정도 짧게 안부를 나눕니다.",
+        title: "엄마",
         actionsHtml: buildPhoneAppActionButtonMarkup({
           action: "call-home-contact",
-          label: "통화",
+          label: "전화",
         }),
       })}
     `,

@@ -7,6 +7,99 @@ const STARTING_JOB_IDS = [
   "cleaning",
 ];
 
+const JOB_SCENE_BACKGROUNDS = {
+  delivery: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/job-delivery-shift.jpg",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(7, 12, 22, 0.24) 0%, rgba(7, 12, 22, 0.56) 100%)",
+  },
+  tutoring: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/job-tutoring-shift.png",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(8, 18, 16, 0.18) 0%, rgba(8, 18, 16, 0.48) 100%)",
+  },
+  warehouse: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/job-warehouse-shift.jpg",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(9, 12, 20, 0.26) 0%, rgba(9, 12, 20, 0.58) 100%)",
+  },
+};
+
+const JOB_MINIGAME_DEFINITIONS = {
+  delivery: {
+    id: "delivery-route-sprint",
+    title: "배달 동선 정리",
+    intro: "출근 직후 몰린 주문을 빠르게 훑어 핵심 배차만 먼저 정리하자.",
+    note: "파란 업무 카드만 눌러 묶음 주문을 우선 처리하세요.",
+    baseBonus: 8000,
+    penaltyPerMistake: 2200,
+    perfectBonus: 5000,
+    performanceLabels: {
+      perfect: "배차 흐름을 매끄럽게 정리해 추가 수당이 붙었다.",
+      success: "핵심 주문은 챙겨서 무난한 추가 수당을 받았다.",
+      fail: "동선 정리가 어수선해 추가 수당은 붙지 않았다.",
+    },
+    items: [
+      { id: "delivery-office", icon: "📦", shortLabel: "오피스", label: "오피스 타워 주문 묶기", x: 23, y: 27, size: 108, target: true, tone: "primary" },
+      { id: "delivery-bike", icon: "🛵", shortLabel: "픽업", label: "골목 입구 픽업 확인", x: 41, y: 57, size: 106, target: true, tone: "primary" },
+      { id: "delivery-apartment", icon: "🏢", shortLabel: "주상복합", label: "주상복합 배달 정리", x: 61, y: 42, size: 114, target: true, tone: "primary" },
+      { id: "delivery-complete", icon: "✅", shortLabel: "완료", label: "배달 완료 콜 정리", x: 78, y: 29, size: 100, target: true, tone: "primary" },
+      { id: "delivery-break", icon: "☕", shortLabel: "휴식", label: "괜히 쉬는 시간 잡기", x: 19, y: 64, size: 94, target: false, tone: "danger" },
+      { id: "delivery-chat", icon: "💬", shortLabel: "잡담", label: "단톡방 잡담 확인", x: 79, y: 66, size: 96, target: false, tone: "danger" },
+    ],
+  },
+  tutoring: {
+    id: "tutoring-focus-check",
+    title: "과외 집중 정리",
+    intro: "수업 시작 전에 오늘 꼭 짚어야 할 포인트를 먼저 골라보자.",
+    note: "초록 업무 카드만 눌러 핵심 개념과 오답을 먼저 정리하세요.",
+    baseBonus: 9000,
+    penaltyPerMistake: 2500,
+    perfectBonus: 6000,
+    performanceLabels: {
+      perfect: "수업 흐름을 깔끔하게 잡아 부모 상담까지 매끄럽게 이어졌다.",
+      success: "핵심 포인트는 챙겨서 수업 몰입도가 안정적으로 올라갔다.",
+      fail: "잡담과 딴생각에 끌려 추가 수당 없이 평범하게 끝났다.",
+    },
+    items: [
+      { id: "tutoring-concept", icon: "📘", shortLabel: "개념", label: "핵심 개념 정리", x: 26, y: 31, size: 108, target: true, tone: "success" },
+      { id: "tutoring-incorrect", icon: "📝", shortLabel: "오답", label: "오답 노트 체크", x: 58, y: 28, size: 108, target: true, tone: "success" },
+      { id: "tutoring-question", icon: "❓", shortLabel: "질문", label: "학생 질문 카드 준비", x: 74, y: 50, size: 102, target: true, tone: "success" },
+      { id: "tutoring-homework", icon: "📚", shortLabel: "숙제", label: "숙제 범위 정리", x: 42, y: 60, size: 112, target: true, tone: "success" },
+      { id: "tutoring-chat", icon: "💬", shortLabel: "잡담", label: "수업 전 잡담 길게 끌기", x: 18, y: 64, size: 92, target: false, tone: "danger" },
+      { id: "tutoring-alert", icon: "🔔", shortLabel: "알림", label: "메신저 알림 딴짓하기", x: 82, y: 33, size: 92, target: false, tone: "danger" },
+    ],
+  },
+  warehouse: {
+    id: "warehouse-load-balance",
+    title: "상하차 우선 배치",
+    intro: "라인이 막히기 전에 먼저 실어야 할 상자와 출고 라벨만 정리하자.",
+    note: "노란 업무 카드만 눌러 우선 상차 물량을 빠르게 분류하세요.",
+    baseBonus: 10000,
+    penaltyPerMistake: 2800,
+    perfectBonus: 7000,
+    performanceLabels: {
+      perfect: "상차 흐름을 깔끔하게 정리해 현장 반장이 보너스를 얹어줬다.",
+      success: "라인을 크게 막지 않아 추가 수당이 조금 붙었다.",
+      fail: "손이 꼬여 흐름이 밀리면서 추가 수당은 받지 못했다.",
+    },
+    items: [
+      { id: "warehouse-load", icon: "📦", shortLabel: "상차", label: "상차 우선 상자 이동", x: 24, y: 33, size: 116, target: true, tone: "warn" },
+      { id: "warehouse-check", icon: "🔎", shortLabel: "검수", label: "출고 라벨 검수", x: 55, y: 26, size: 104, target: true, tone: "warn" },
+      { id: "warehouse-route", icon: "🚚", shortLabel: "출고", label: "출고 라인 맞추기", x: 72, y: 48, size: 112, target: true, tone: "warn" },
+      { id: "warehouse-stack", icon: "🧱", shortLabel: "분류", label: "무게 맞춰 박스 분류", x: 41, y: 60, size: 112, target: true, tone: "warn" },
+      { id: "warehouse-break", icon: "🪑", shortLabel: "휴게", label: "휴게 의자부터 찾기", x: 16, y: 67, size: 92, target: false, tone: "danger" },
+      { id: "warehouse-misload", icon: "⚠️", shortLabel: "오입고", label: "잘못 온 상자에 시간 쓰기", x: 82, y: 67, size: 96, target: false, tone: "danger" },
+    ],
+  },
+};
+
 const JOBS = [
   {
     id: "convenience",
@@ -27,6 +120,8 @@ const JOBS = [
     category: "이동",
     payMin: 76000,
     payMax: 108000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.delivery,
+    minigame: JOB_MINIGAME_DEFINITIONS.delivery,
     description: "피크 시간대 주문을 몰아서 뛰는 배달 콜.",
     tags: ["피크타임", "이동", "날씨영향"],
   },
@@ -38,6 +133,8 @@ const JOBS = [
     category: "교육",
     payMin: 92000,
     payMax: 126000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.tutoring,
+    minigame: JOB_MINIGAME_DEFINITIONS.tutoring,
     description: "수학이나 영어를 봐 주는 1:1 방문 과외.",
     tags: ["설명", "학부모", "준비물"],
   },
@@ -60,6 +157,8 @@ const JOBS = [
     category: "현장",
     payMin: 82000,
     payMax: 106000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.warehouse,
+    minigame: JOB_MINIGAME_DEFINITIONS.warehouse,
     description: "분류대와 스캔건 사이를 계속 오가는 새벽 물류 파트.",
     tags: ["새벽", "분류", "현장"],
   },

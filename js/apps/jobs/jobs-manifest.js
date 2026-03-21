@@ -6,7 +6,7 @@ function getJobsAppManifest(targetState = state) {
     openRoute: "jobs/home",
     installable: true,
     storeCategory: "생활",
-    storeDescription: "오늘의 알바 공고를 확인하고 바로 지원할 수 있습니다.",
+    storeDescription: "공고 앱",
     isAvailable: () => (
       typeof canUsePhoneApps === "function"
         ? canUsePhoneApps(targetState)

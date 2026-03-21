@@ -1,6 +1,18 @@
 const NPC_DIALOGUES = {
   "high-school-girl": {
     startNodeId: "intro",
+    startNodeSelector(targetState) {
+      const relation = typeof getNpcRelation === "function"
+        ? getNpcRelation("high-school-girl", targetState)
+        : null;
+      if ((relation?.meetings || 0) >= 2) {
+        return "late-cram";
+      }
+      if ((relation?.meetings || 0) >= 1) {
+        return "snack-break";
+      }
+      return "intro";
+    },
     nodes: {
       intro: {
         title: "교복 치맛자락이 바람에 조금 흔들린다",
@@ -86,10 +98,236 @@ const NPC_DIALOGUES = {
           },
         ],
       },
+      "snack-break": {
+        title: "교복 주머니에서 작은 과자 봉지가 바스락거린다",
+        lines: [
+          "\"학원 가기 전에 잠깐 당 떨어져서요.\"",
+          "학생은 버스 시간표보다 손에 쥔 문제집을 더 자주 내려다본다.",
+        ],
+        choices: [
+          { label: "오늘 공부 많이 하나 보다 하고 묻는다", next: "concern" },
+          {
+            label: "힘내라고 하고 지나간다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "짧은 응원",
+                text: "잠깐 스친 말이었는데도 학생의 표정이 조금 풀렸다.",
+              },
+              memory: {
+                type: "npc",
+                title: "골목 학생에게 짧게 응원했다",
+                body: "버스를 기다리던 학생이 과자 봉지를 쥔 채 고개를 끄덕였다.",
+                tags: ["NPC", "응원", "학생"],
+              },
+            },
+          },
+        ],
+      },
+      "late-cram": {
+        title: "문제집 가장자리에 형광펜 자국이 빽빽하게 남아 있다",
+        lines: [
+          "\"오늘 모의고사 다시 풀어보는 날이라서요.\"",
+          "학생은 버스가 늦는 것보다 남은 공부 시간이 줄어드는 걸 더 신경 쓰는 눈치다.",
+        ],
+        choices: [
+          {
+            label: "집중 잘 되길 바란다고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "시험 준비",
+                text: "누군가의 하루도 이렇게 다급하게 굴러간다는 걸 다시 느꼈다.",
+              },
+              memory: {
+                type: "mood",
+                title: "모의고사 앞둔 학생을 만났다",
+                body: "버스보다 공부 시간을 더 신경 쓰는 얼굴이 오래 남았다.",
+                tags: ["학생", "시험", "골목"],
+              },
+            },
+          },
+          { label: "버스 쪽 길을 다시 알려준다", next: "bus-stop" },
+        ],
+      },
+      "rush-hour": {
+        title: "넥타이를 느슨하게 푼 채 발걸음만 빨라져 있다",
+        lines: [
+          "\"퇴근 시간 놓치면 집까지 더 오래 걸리거든요.\"",
+          "그는 폰 화면과 버스 방향을 번갈아 보며 숨을 한 번 고른다.",
+        ],
+        choices: [
+          { label: "퇴근길 자주 막히냐고 묻는다", next: "jobs" },
+          {
+            label: "오늘도 고생 많았겠다고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "퇴근길 한숨",
+                text: "남의 하루 끝자락을 보고 있자니 묘하게 현실감이 밀려왔다.",
+              },
+              memory: {
+                type: "npc",
+                title: "퇴근길 직장인과 짧게 말을 섞었다",
+                body: "급한 발걸음 사이로도 피곤한 표정은 쉽게 감춰지지 않았다.",
+                tags: ["직장인", "퇴근", "골목"],
+              },
+            },
+          },
+        ],
+      },
+      "coffee-run": {
+        title: "손에 든 종이컵이 거의 비어 있는데도 계속 들고 있다",
+        lines: [
+          "\"오늘은 커피 두 잔째인데도 정신이 안 차려지네요.\"",
+          "그는 웃으면서도 어깨를 한 번 크게 돌려 뭉친 기색을 푼다.",
+        ],
+        choices: [
+          {
+            label: "무리하지 말라고 하고 보내준다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "피곤한 웃음",
+                text: "지친 사람의 농담은 가볍게 흘려듣기 어렵다.",
+              },
+              memory: {
+                type: "mood",
+                title: "커피로 버티는 직장인을 봤다",
+                body: "웃는 얼굴 뒤로 피로가 눌어붙은 느낌이 오래 남았다.",
+                tags: ["직장인", "피로", "골목"],
+              },
+            },
+          },
+          { label: "괜찮은 일자리 쪽 이야기를 다시 묻는다", next: "jobs" },
+        ],
+      },
+      "market-rumor": {
+        title: "장바구니 끈을 고쳐 쥔 채 동네 이야기를 먼저 꺼낸다",
+        lines: [
+          "\"사거리 쪽은 오늘도 사람 많더라. 해 질 무렵 되면 더 붐비지.\"",
+          "아주머니는 별일 아닌 말처럼 꺼내지만 동네 흐름을 꽤 정확히 짚는다.",
+        ],
+        choices: [
+          {
+            label: "장사 잘되는 시간대를 기억해둔다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "동네 흐름",
+                text: "사람이 몰리는 시간대를 아는 것만으로도 길이 조금 선명해졌다.",
+              },
+              memory: {
+                type: "info",
+                title: "사거리 붐비는 시간대를 들었다",
+                body: "동네 아주머니의 말 한마디가 의외로 정확한 생활 정보가 됐다.",
+                tags: ["동네", "사거리", "정보"],
+              },
+            },
+          },
+          { label: "그 김에 일자리 이야기도 묻는다", next: "jobs" },
+        ],
+      },
+      "weather-check": {
+        title: "비 올 것 같은 하늘을 올려다보며 우산 손잡이를 두드린다",
+        lines: [
+          "\"오늘 저녁엔 바람도 차고 금방 어두워질 거다.\"",
+          "\"멀리 나갈 거면 일찍 움직이는 게 낫다.\"",
+        ],
+        choices: [
+          {
+            label: "늦게까지 밖에 있지 말아야겠다고 생각한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "생활 감각",
+                text: "거창한 조언은 아니어도 하루 동선을 정리하는 데 도움이 됐다.",
+              },
+              memory: {
+                type: "mood",
+                title: "동네 아주머니가 날씨를 걱정해줬다",
+                body: "사소한 말인데도 이상하게 하루를 챙겨받은 느낌이 남았다.",
+                tags: ["동네", "날씨", "조언"],
+              },
+            },
+          },
+          { label: "버스 정류장 쪽 분위기를 다시 묻는다", next: "rumor" },
+        ],
+      },
+      "discount-rumor": {
+        title: "계산대 옆 행사 스티커를 정리하다가 먼저 말을 건넨다",
+        lines: [
+          "\"오늘은 도시락이 빨리 빠져서 저녁 전에 한 번 더 채워야 할 것 같아요.\"",
+          "점원은 바코드 리더기보다 진열대 쪽을 더 자주 힐끗거린다.",
+        ],
+        choices: [
+          {
+            label: "사람 몰리는 시간대가 언제냐고 묻는다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "편의점 팁",
+                text: "저녁 직전이 제일 분주하다는 말이 의외로 또렷하게 남았다.",
+              },
+              memory: {
+                type: "info",
+                title: "편의점 붐비는 시간대를 들었다",
+                body: "점원의 짧은 말이 생활 동선을 읽는 힌트처럼 느껴졌다.",
+                tags: ["편의점", "정보", "NPC"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+          { label: "가볍게 웃고 장을 본다", next: "small-talk" },
+        ],
+      },
+      "restock-chat": {
+        title: "삼각김밥 상자를 들고도 시선은 금방 계산대로 돌아온다",
+        lines: [
+          "\"요즘엔 물류차 늦게 들어오는 날이 많아서 정리할 틈이 잘 안 나네요.\"",
+          "익숙하게 듣는 말투지만 전보다 한결 편한 분위기다.",
+        ],
+        choices: [
+          {
+            label: "오늘도 바쁘겠다고 말해준다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "익숙한 인사",
+                text: "몇 번 마주친 사이라는 건 말투에서 먼저 드러난다.",
+              },
+              memory: {
+                type: "npc",
+                title: "편의점 점원과 조금 편하게 대화했다",
+                body: "예전보다 한결 자연스럽게 안부를 주고받게 됐다.",
+                tags: ["편의점", "대화", "NPC"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+          { label: "진열대 쪽 일손이 부족한지 묻는다", next: "small-talk" },
+        ],
+      },
     },
   },
   "alley-office-worker": {
     startNodeId: "intro",
+    startNodeSelector(targetState) {
+      const relation = typeof getNpcRelation === "function"
+        ? getNpcRelation("alley-office-worker", targetState)
+        : null;
+      if ((relation?.meetings || 0) >= 2) {
+        return "coffee-run";
+      }
+      if ((relation?.meetings || 0) >= 1) {
+        return "rush-hour";
+      }
+      return "intro";
+    },
     nodes: {
       intro: {
         title: "양복 차림의 남자가 통화를 마치고 한숨을 삼킨다",
@@ -166,6 +404,18 @@ const NPC_DIALOGUES = {
   },
   "alley-aunt": {
     startNodeId: "intro",
+    startNodeSelector(targetState) {
+      const relation = typeof getNpcRelation === "function"
+        ? getNpcRelation("alley-aunt", targetState)
+        : null;
+      if ((relation?.meetings || 0) >= 2) {
+        return "weather-check";
+      }
+      if ((relation?.meetings || 0) >= 1) {
+        return "market-rumor";
+      }
+      return "intro";
+    },
     nodes: {
       intro: {
         title: "장바구니 비닐이 손등에 스치는 소리가 난다",
@@ -255,6 +505,18 @@ const NPC_DIALOGUES = {
   },
   "convenience-cashier": {
     startNodeId: "default-greeting",
+    startNodeSelector(targetState) {
+      const relation = typeof getNpcRelation === "function"
+        ? getNpcRelation("convenience-cashier", targetState)
+        : null;
+      if ((relation?.meetings || 0) >= 2) {
+        return "restock-chat";
+      }
+      if ((relation?.meetings || 0) >= 1) {
+        return "discount-rumor";
+      }
+      return "default-greeting";
+    },
     nodes: {
       "default-greeting": {
         title: "편의점 계산대에 형광등 불빛이 반듯하게 내려앉아 있다",

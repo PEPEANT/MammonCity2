@@ -1,0 +1,213 @@
+{
+  "archive": {
+    "organizedUploads": "assets/_incoming/references/original-uploads/day01",
+    "unusedRootPhotos": "assets/_incoming/misc/unused-root-photos"
+  },
+  "backgrounds": [
+    {
+      "source": "image.jpg",
+      "organized": "assets/backgrounds/day01/bus-city-interior.jpg",
+      "description": "시내버스 안",
+      "usedInGame": true
+    },
+    {
+      "source": "assets/backgrounds/day01/bus-travel.jpg",
+      "organized": "assets/backgrounds/day01/bus-express-interior.jpg",
+      "description": "고속버스 안",
+      "usedInGame": true,
+      "note": "사용자가 지정한 원본 파일이 없어 기존 자산으로 임시 대체"
+    },
+    {
+      "source": "assets/backgrounds/day01/bus-stop.png",
+      "organized": "assets/backgrounds/day01/bus-terminal-exterior.png",
+      "description": "배금시외버스터미널 배경",
+      "usedInGame": true,
+      "note": "사용자가 지정한 원본 파일이 없어 기존 자산으로 임시 대체"
+    },
+    {
+      "source": "assets/backgrounds/day01/downtown-street.png",
+      "organized": "assets/backgrounds/day01/metropolis-ending.png",
+      "description": "메트로폴리스 엔딩 배경",
+      "usedInGame": true,
+      "note": "사용자가 지정한 원본 파일이 없어 기존 자산으로 임시 대체"
+    },
+    {
+      "source": "13ca9f3c-b132-4e25-99f8-cc394ae06147.jpg",
+      "organized": "assets/backgrounds/day01/university-building.jpg",
+      "description": "대학교 건물",
+      "usedInGame": true
+    },
+    {
+      "source": "64dc1e79-392a-4804-bb1f-f0977c60e65d.jpg",
+      "organized": "assets/backgrounds/day03/casino-exterior.jpg",
+      "description": "카지노 건물",
+      "usedInGame": false,
+      "note": "하루 이상 이동이 필요한 원거리 도시 자산으로 day03에 분리"
+    },
+    {
+      "source": "87cb0dbe-88c1-4ef6-89dc-853a06ef8110.jpg",
+      "organized": "assets/backgrounds/day01/library-building.jpg",
+      "description": "도서관 건물",
+      "usedInGame": true
+    },
+    {
+      "source": "03b770b3-6e22-430a-b443-977c5deca24a.jpg",
+      "organized": "assets/backgrounds/day03/casino-interior.jpg",
+      "description": "카지노 안",
+      "usedInGame": false,
+      "note": "하루 이상 이동이 필요한 원거리 도시 자산으로 day03에 분리"
+    },
+    {
+      "source": "a96356e3-8f8d-4c80-8f46-0391bfa071a2.jpg",
+      "organized": "assets/backgrounds/day01/university-hallway.jpg",
+      "description": "대학교 복도",
+      "usedInGame": false
+    },
+    {
+      "source": "018edec2-34ef-4d10-a92f-d074cb2e1356.jpg",
+      "organized": "assets/backgrounds/day01/library-corridor.jpg",
+      "description": "도서관 복도",
+      "usedInGame": false
+    },
+    {
+      "source": "de942ece-d279-4c32-8370-2111968fb4db.jpg",
+      "organized": "assets/backgrounds/day01/library-interior.jpg",
+      "description": "도서관 안",
+      "usedInGame": true
+    },
+    {
+      "source": "9e264a38-c7aa-4795-aa12-df00bbc6f600.jpg",
+      "organized": "assets/backgrounds/day01/university-classroom.jpg",
+      "description": "대학 강의실",
+      "usedInGame": true
+    },
+    {
+      "source": "856ca1a2-c473-40bc-8299-9f0f139938dd.jpg",
+      "organized": "assets/backgrounds/day01/mcdonalds-exterior.jpg",
+      "description": "신규 맥도날드 건물",
+      "usedInGame": true
+    },
+    {
+      "source": "7ced2d31-7824-4472-9c9f-a8e32ef0b922.jpg",
+      "organized": "assets/backgrounds/day01/mcdonalds-kitchen.jpg",
+      "description": "맥도날드 주방알바 일러스트",
+      "usedInGame": true
+    },
+    {
+      "source": "169f33d6-3b04-411f-a7c1-c7df33902869.jpg",
+      "organized": "assets/backgrounds/day01/street-walk.jpg",
+      "description": "도보 이동 길거리 배경",
+      "usedInGame": true
+    },
+    {
+      "source": "0dcf4fff-8495-41bf-891c-4024f5696647.jpg",
+      "organized": "assets/backgrounds/day01/street-walk-2.jpg",
+      "description": "도보 이동 배경 2",
+      "usedInGame": true
+    },
+    {
+      "source": "b5819e34-3286-45ea-9d6c-9ecfbce2878b.jpg",
+      "organized": "assets/backgrounds/day01/street-walk-3.jpg",
+      "description": "멀리 걷기 배경 3",
+      "usedInGame": true
+    },
+    {
+      "source": "f0f22803-b164-4f90-8bdb-4cc949c8a5e5.jpg",
+      "organized": "assets/backgrounds/day01/job-delivery-shift.jpg",
+      "description": "배달알바 일러스트 배경",
+      "usedInGame": true
+    },
+    {
+      "source": "grok-image-afa58e10-4408-421d-9405-f25ab094b11b.png",
+      "organized": "assets/backgrounds/day01/job-tutoring-shift.png",
+      "description": "과외알바 일러스트 배경",
+      "usedInGame": true
+    },
+    {
+      "source": "de1feff5-caf8-419e-a6eb-db04d2bee9fb.jpg",
+      "organized": "assets/backgrounds/day01/job-warehouse-shift.jpg",
+      "description": "상하차 알바 일러스트 배경",
+      "usedInGame": true
+    }
+  ],
+  "characters": [
+    {
+      "source": "a1.png",
+      "organized": "assets/characters/player/walking.png",
+      "description": "도보 이동 주인공 컷",
+      "usedInGame": true,
+      "note": "초록 배경 원본을 걷기 장면 전용으로 정리"
+    },
+    {
+      "source": "grok-image-dfa30413-3abe-415c-864b-874d025670e2.png",
+      "organized": "assets/characters/casino-homeless/default.png",
+      "description": "카지노 건물 주변 노숙자",
+      "usedInGame": false
+    },
+    {
+      "source": "grok-image-f9a55132-2081-440d-9334-9b81f49f1d3f.png",
+      "organized": "assets/characters/casino-guide/default.png",
+      "description": "카지노 안내원",
+      "usedInGame": false
+    }
+  ],
+  "processedSources": [
+    {
+      "source": "a1.png",
+      "archived": "assets/_incoming/references/original-uploads/day01/a1.png",
+      "description": "원본 걷기 캐릭터 소스"
+    },
+    {
+      "source": "169f33d6-3b04-411f-a7c1-c7df33902869.jpg",
+      "archived": "assets/_incoming/references/original-uploads/day01/169f33d6-3b04-411f-a7c1-c7df33902869.jpg",
+      "description": "원본 길거리 배경 소스"
+    },
+    {
+      "source": "0dcf4fff-8495-41bf-891c-4024f5696647.jpg",
+      "archived": "assets/_incoming/references/original-uploads/day01/0dcf4fff-8495-41bf-891c-4024f5696647.jpg",
+      "description": "원본 도보 이동 배경 2"
+    },
+    {
+      "source": "b5819e34-3286-45ea-9d6c-9ecfbce2878b.jpg",
+      "archived": "assets/_incoming/references/original-uploads/day01/b5819e34-3286-45ea-9d6c-9ecfbce2878b.jpg",
+      "description": "원본 멀리 걷기 배경 3"
+    },
+    {
+      "source": "f0f22803-b164-4f90-8bdb-4cc949c8a5e5.jpg",
+      "archived": "assets/_incoming/references/original-uploads/day01/f0f22803-b164-4f90-8bdb-4cc949c8a5e5.jpg",
+      "description": "원본 배달알바 일러스트"
+    },
+    {
+      "source": "grok-image-afa58e10-4408-421d-9405-f25ab094b11b.png",
+      "archived": "assets/_incoming/references/original-uploads/day01/grok-image-afa58e10-4408-421d-9405-f25ab094b11b.png",
+      "description": "원본 과외알바 일러스트"
+    },
+    {
+      "source": "de1feff5-caf8-419e-a6eb-db04d2bee9fb.jpg",
+      "archived": "assets/_incoming/references/original-uploads/day01/de1feff5-caf8-419e-a6eb-db04d2bee9fb.jpg",
+      "description": "원본 상하차 알바 일러스트"
+    },
+    {
+      "source": "7ced2d31-7824-4472-9c9f-a8e32ef0b922.jpg",
+      "archived": "assets/_incoming/references/original-uploads/day01/7ced2d31-7824-4472-9c9f-a8e32ef0b922.jpg",
+      "description": "원본 맥도날드 주방알바 일러스트"
+    }
+  ],
+  "unused": [
+    {
+      "source": "a919abcf-85f2-4b9b-8b15-8bb21d983123.jpg",
+      "archived": "assets/_incoming/misc/unused-root-photos/a919abcf-85f2-4b9b-8b15-8bb21d983123.jpg",
+      "description": "미사용 실내 사진"
+    },
+    {
+      "source": "grok-image-82de450d-7338-4365-a91a-caac2bd9fa2c.png",
+      "archived": "assets/_incoming/misc/unused-root-photos/grok-image-82de450d-7338-4365-a91a-caac2bd9fa2c.png",
+      "description": "미사용 조직원 이미지"
+    },
+    {
+      "source": "grok-image-a68c6bbd-f71a-4a55-8e89-0b197b1b5774.png",
+      "archived": "assets/_incoming/misc/unused-root-photos/grok-image-a68c6bbd-f71a-4a55-8e89-0b197b1b5774.png",
+      "description": "미사용 조직원 이미지"
+    }
+  ]
+}

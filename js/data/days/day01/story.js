@@ -22,6 +22,10 @@ const DAY01_INTRO_STEPS = [
     character: "",
     options: [
       {
+        title: "거실로 간다",
+        action: "goToLivingRoom",
+      },
+      {
         title: "방청소를 한다",
         action: "cleanRoom",
       },

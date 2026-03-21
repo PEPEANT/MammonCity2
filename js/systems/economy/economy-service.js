@@ -116,12 +116,234 @@ function getStockMarketSnapshot(targetState = state) {
     roundEconomyCurrency(30000 * (0.95 + (economy.stockVolatility * 0.4) + (Math.max(0, -economy.stockBias) * 0.6))),
   );
 
+  // 베팅 기반 배율: 오늘 시장 변동률 기반 수익/손실 배율
+  // 주식: marketChangePercent 그대로 사용 (±2~8% 범위)
+  const stockDailyReturnRate = clampEconomyValue(economy.marketChangePercent / 100, -0.15, 0.15);
+
   return {
     ...economy,
     successChance,
     gainAmount,
     lossAmount,
+    stockDailyReturnRate,
     movementText: formatSignedEconomyPercent(economy.marketChangePercent),
     successChanceText: `${Math.round(successChance * 100)}%`,
   };
+}
+
+// 코인 종류별 변동성 배율
+const COIN_TYPES = {
+  MAMC: {
+    label: "맘코인",
+    symbol: "MAMC",
+    volatility: 2.5,
+    emoji: "🟡",
+    shortDescription: "생활형 기준 코인",
+    description: "시장 흐름을 비교적 따라가는 기준 코인. 큰 급등락보다 안정적인 편이다.",
+    isMeme: false,
+  },
+  DICE: {
+    label: "다이스 코인",
+    symbol: "DICE",
+    volatility: 14.0,
+    emoji: "🎲",
+    shortDescription: "주사위 밈 초고변동",
+    description: "커뮤니티 밈, 짤, 방송 클립 하나에도 차트가 출렁이는 초고변동 밈코인이다.",
+    isMeme: true,
+  },
+  DIAB: {
+    label: "디아블로",
+    symbol: "DIAB",
+    volatility: 5.0,
+    emoji: "🔴",
+    shortDescription: "공포 심리 추종형",
+    description: "강한 매수·매도 심리에 민감하게 반응하는 공격형 코인이다.",
+    isMeme: false,
+  },
+  MOON: {
+    label: "문샷",
+    symbol: "MOON",
+    volatility: 10.0,
+    emoji: "🌙",
+    shortDescription: "급등 기대 테마형",
+    description: "상장설과 커뮤니티 기대감에 크게 흔들리는 투기성 코인이다.",
+    isMeme: true,
+  },
+};
+
+const COIN_EVENT_RULES = {
+  MAMC: [
+    {
+      id: "steady-flow",
+      adjustment: 0.00,
+      severity: "normal",
+      headline: "맘코인, 기준 자산 역할 유지",
+      body: "생활형 자금이 꾸준히 유입되며 큰 이슈 없이 흐름을 따라가고 있다.",
+      topics: ["맘코인", "기준코인", "생활자금"],
+    },
+    {
+      id: "bank-link",
+      adjustment: 0.03,
+      severity: "normal",
+      headline: "맘코인 결제 연동 기대감에 소폭 강세",
+      body: "생활 결제 연동 이야기가 돌며 보수적인 매수세가 붙고 있다.",
+      topics: ["맘코인", "결제연동", "생활자산"],
+    },
+    {
+      id: "cooldown",
+      adjustment: -0.02,
+      severity: "normal",
+      headline: "맘코인, 거래량 둔화로 숨 고르기",
+      body: "기준 코인답게 변동은 제한적이지만 단기 유입세는 잠시 꺾였다.",
+      topics: ["맘코인", "거래량둔화", "숨고르기"],
+    },
+  ],
+  DICE: [
+    {
+      id: "meme-rally",
+      adjustment: 0.18,
+      severity: "high",
+      headline: "다이스 코인, 주사위 밈 역주행에 매수세 폭주",
+      body: "짤 하나가 커뮤니티를 돌면서 거래량이 급증했다. 웃자고 들어온 자금이 차트를 흔드는 중이다.",
+      topics: ["다이스 코인", "밈코인", "주사위밈"],
+    },
+    {
+      id: "stream-pump",
+      adjustment: 0.28,
+      severity: "extreme",
+      headline: "다이스 코인, 스트리머 언급 직후 초고변동 돌입",
+      body: "실시간 방송에서 이름이 언급되자 추격 매수가 몰렸다. 몇 분 만에 호가가 크게 벌어지는 상황이다.",
+      topics: ["다이스 코인", "스트리머펌프", "초고변동"],
+    },
+    {
+      id: "whale-entry",
+      adjustment: 0.36,
+      severity: "extreme",
+      headline: "다이스 코인, 고래 지갑 포착 소문에 급등 베팅 확산",
+      body: "정체불명의 큰 지갑이 포착됐다는 루머가 퍼지며 과열 매수가 붙고 있다.",
+      topics: ["다이스 코인", "고래지갑", "급등루머"],
+    },
+    {
+      id: "liquidation",
+      adjustment: -0.24,
+      severity: "high",
+      headline: "다이스 코인, 레버리지 청산 경보에 투매 확대",
+      body: "과열 포지션이 한 번에 무너지며 밈코인 특유의 급락이 터졌다.",
+      topics: ["다이스 코인", "청산경보", "투매"],
+    },
+    {
+      id: "rug-rumor",
+      adjustment: -0.34,
+      severity: "extreme",
+      headline: "다이스 코인, 유동성 이탈 루머에 패닉셀 확산",
+      body: "개발팀 이탈설과 유동성 회수 루머가 겹치며 커뮤니티 분위기가 급격히 식었다.",
+      topics: ["다이스 코인", "패닉셀", "유동성루머"],
+    },
+    {
+      id: "bot-chaos",
+      adjustment: -0.42,
+      severity: "extreme",
+      headline: "다이스 코인, 봇 매매 충돌로 호가창 난기류",
+      body: "봇 주문이 서로 부딪히며 호가창이 튀고 있다. 초고변동 경보가 울릴 만한 움직임이다.",
+      topics: ["다이스 코인", "호가창난기류", "초고변동"],
+    },
+    {
+      id: "dice-night",
+      adjustment: 0.10,
+      severity: "high",
+      headline: "다이스 코인, 커뮤니티 주사위 챌린지로 야간 거래 과열",
+      body: "짧은 밈 챌린지가 밤새 확산되며 단타성 자금이 몰리고 있다.",
+      topics: ["다이스 코인", "커뮤니티챌린지", "야간과열"],
+    },
+  ],
+  DIAB: [
+    {
+      id: "fear-trade",
+      adjustment: 0.05,
+      severity: "normal",
+      headline: "디아블로, 공포 심리 장세에 반등 시도",
+      body: "공격형 자금이 다시 들어오며 변동폭이 서서히 커지고 있다.",
+      topics: ["디아블로", "공포심리", "반등시도"],
+    },
+    {
+      id: "sudden-dump",
+      adjustment: -0.08,
+      severity: "normal",
+      headline: "디아블로, 단기 차익 실현에 눌림",
+      body: "고점 부담이 커지며 단기 트레이더들의 물량이 쏟아졌다.",
+      topics: ["디아블로", "차익실현", "눌림"],
+    },
+  ],
+  MOON: [
+    {
+      id: "listing-rumor",
+      adjustment: 0.12,
+      severity: "high",
+      headline: "문샷, 상장설 재점화에 기대 매수 유입",
+      body: "확정된 건 없지만 상장 루머가 다시 돌며 과열 기대감이 붙고 있다.",
+      topics: ["문샷", "상장설", "기대매수"],
+    },
+    {
+      id: "dream-fade",
+      adjustment: -0.14,
+      severity: "high",
+      headline: "문샷, 상장 기대 후퇴에 급락 경계",
+      body: "루머가 식자 먼저 들어왔던 자금이 빠르게 빠져나가고 있다.",
+      topics: ["문샷", "루머후퇴", "급락경계"],
+    },
+  ],
+};
+
+function getCoinTypeInfo(coinType) {
+  return COIN_TYPES[coinType] || COIN_TYPES.MAMC;
+}
+
+function getCoinEventRule(coinType, targetState = state) {
+  const rules = COIN_EVENT_RULES[coinType] || COIN_EVENT_RULES.MAMC;
+  const coin = getCoinTypeInfo(coinType);
+  const economy = getTodayEconomy(targetState);
+  const seed = Array.from(`${coin.symbol}:${economy.day}:${economy.exchangeIndex}`)
+    .reduce((sum, char, index) => sum + (char.charCodeAt(0) * (index + 3)), 0);
+  return rules[seed % rules.length] || rules[0];
+}
+
+function getCoinMarketSnapshot(coinType, targetState = state) {
+  const stockSnapshot = getStockMarketSnapshot(targetState);
+  const coin = getCoinTypeInfo(coinType);
+  const event = getCoinEventRule(coinType, targetState);
+  const eventBoost = coin.isMeme
+    ? 1 + (Math.max(0, stockSnapshot.stockVolatility - 1) * 0.8)
+    : 1;
+  const rawReturnRate = (stockSnapshot.stockDailyReturnRate * coin.volatility)
+    + ((event.adjustment || 0) * eventBoost);
+  const returnRate = clampEconomyValue(
+    rawReturnRate,
+    coin.isMeme ? -0.95 : -0.80,
+    coin.isMeme ? 3.20 : 2.00,
+  );
+  const direction = returnRate >= 0 ? "up" : "down";
+
+  return {
+    ...coin,
+    event,
+    returnRate,
+    direction,
+    movementText: formatSignedEconomyPercent(returnRate * 100),
+    eventKicker: coin.isMeme
+      ? (event.severity === "extreme" ? "초고변동 이벤트" : "밈코인 속보")
+      : "코인 이슈",
+    topics: [...new Set([
+      coin.label,
+      coin.symbol,
+      ...(Array.isArray(event.topics) ? event.topics : []),
+    ].filter(Boolean))],
+  };
+}
+
+function getFeaturedMemeCoinSnapshot(targetState = state) {
+  return getCoinMarketSnapshot("DICE", targetState);
+}
+
+function getCoinDailyReturnRate(coinType, targetState = state) {
+  return getCoinMarketSnapshot(coinType, targetState).returnRate;
 }

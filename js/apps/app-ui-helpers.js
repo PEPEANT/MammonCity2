@@ -21,9 +21,9 @@ function buildPhoneAppScreenHeaderMarkup({
   return `
     <div class="phone-app-screen-top">
       <div class="phone-app-screen-copy">
-        <span class="phone-app-screen-kicker">${escapePhoneAppHtml(kicker)}</span>
+        ${kicker ? `<span class="phone-app-screen-kicker">${escapePhoneAppHtml(kicker)}</span>` : ""}
         <div class="phone-app-screen-title">${escapePhoneAppHtml(title)}</div>
-        <div class="phone-app-screen-note">${escapePhoneAppHtml(note)}</div>
+        ${note ? `<div class="phone-app-screen-note">${escapePhoneAppHtml(note)}</div>` : ""}
       </div>
       ${showHomeButton ? `<button class="phone-app-mini-btn" type="button" data-phone-action="close-phone-view">${escapePhoneAppHtml(homeButtonLabel)}</button>` : ""}
     </div>
@@ -114,7 +114,7 @@ function buildPhoneAppStatusMarkup(appId, fallbackMarkup = "") {
   }
 
   return buildPhoneAppCardMarkup({
-    label: status.kicker || "최근 기록",
+    label: "",
     title: status.title || "",
     body: status.body || "",
     tone: status.tone || "",

@@ -6,7 +6,8 @@ const PHONE_APP_ID_ALIASES = {
   store: "playstore",
 };
 
-const PHONE_DEFAULT_INSTALLED_APPS = ["dis", "playstore", "call", "gallery"];
+const PHONE_DEFAULT_INSTALLED_APPS = ["dis", "news", "playstore", "call", "gallery"];
+const PHONE_REMOVED_APP_IDS = new Set(["casino"]);
 
 function normalizePhoneAppId(appId = "") {
   const rawAppId = String(appId || "").trim().toLowerCase();
@@ -66,7 +67,7 @@ function normalizeInstalledPhoneAppIds(appIds) {
 
   [...PHONE_DEFAULT_INSTALLED_APPS, ...source].forEach((appId) => {
     const normalizedAppId = normalizePhoneAppId(appId);
-    if (!normalizedAppId || normalized.includes(normalizedAppId)) {
+    if (!normalizedAppId || PHONE_REMOVED_APP_IDS.has(normalizedAppId) || normalized.includes(normalizedAppId)) {
       return;
     }
     normalized.push(normalizedAppId);
@@ -103,12 +104,15 @@ function syncPhoneSessionState(targetState = state) {
   const resolvedRoute = normalizePhoneRoute(
     legacyRoute,
   );
-  const routeInfo = parsePhoneRoute(resolvedRoute);
   const installedApps = normalizeInstalledPhoneAppIds(
     Array.isArray(targetState.installedPhoneApps)
       ? targetState.installedPhoneApps
       : nested.installedApps,
   );
+  const sanitizedRoute = parsePhoneRoute(resolvedRoute).appId === "casino"
+    ? "home"
+    : resolvedRoute;
+  const routeInfo = parsePhoneRoute(sanitizedRoute);
   const resolved = {
     minimized: typeof targetState.phoneMinimized === "boolean"
       ? targetState.phoneMinimized

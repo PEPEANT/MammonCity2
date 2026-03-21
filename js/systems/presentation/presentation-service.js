@@ -16,6 +16,8 @@ function createDefaultAppearanceState() {
 function createDefaultNpcRelationState() {
   return {
     met: false,
+    meetings: 0,
+    lastSeenDay: 0,
     affinity: 0,
     attraction: 0,
     annoyance: 0,
@@ -29,6 +31,8 @@ function normalizeNpcRelationState(value = {}) {
     ...defaults,
     ...(value && typeof value === "object" ? value : {}),
     met: Boolean(value?.met),
+    meetings: Number.isFinite(value?.meetings) ? Number(value.meetings) : defaults.meetings,
+    lastSeenDay: Number.isFinite(value?.lastSeenDay) ? Number(value.lastSeenDay) : defaults.lastSeenDay,
     affinity: Number.isFinite(value?.affinity) ? Number(value.affinity) : defaults.affinity,
     attraction: Number.isFinite(value?.attraction) ? Number(value.attraction) : defaults.attraction,
     annoyance: Number.isFinite(value?.annoyance) ? Number(value.annoyance) : defaults.annoyance,
@@ -169,6 +173,14 @@ function patchNpcRelation(npcId = "", patch = {}, targetState = state) {
   }
 
   const relation = getNpcRelation(normalizedNpcId, targetState);
+  const nextMeetings = Number.isFinite(patch.meetings)
+    ? Number(patch.meetings)
+    : (Number.isFinite(patch.meetingsDelta)
+      ? relation.meetings + Number(patch.meetingsDelta)
+      : relation.meetings);
+  const nextLastSeenDay = Number.isFinite(patch.lastSeenDay)
+    ? Number(patch.lastSeenDay)
+    : relation.lastSeenDay;
   const nextAffinity = Number.isFinite(patch.affinity)
     ? Number(patch.affinity)
     : (Number.isFinite(patch.affinityDelta)
@@ -189,6 +201,8 @@ function patchNpcRelation(npcId = "", patch = {}, targetState = state) {
     ...relation,
     ...(patch && typeof patch === "object" ? patch : {}),
     met: typeof patch.met === "boolean" ? patch.met : relation.met,
+    meetings: nextMeetings,
+    lastSeenDay: nextLastSeenDay,
     affinity: nextAffinity,
     attraction: nextAttraction,
     annoyance: nextAnnoyance,
@@ -203,6 +217,7 @@ function patchNpcRelation(npcId = "", patch = {}, targetState = state) {
   delete targetState.npcs.relations[normalizedNpcId].affinityDelta;
   delete targetState.npcs.relations[normalizedNpcId].attractionDelta;
   delete targetState.npcs.relations[normalizedNpcId].annoyanceDelta;
+  delete targetState.npcs.relations[normalizedNpcId].meetingsDelta;
   return targetState.npcs.relations[normalizedNpcId];
 }
 

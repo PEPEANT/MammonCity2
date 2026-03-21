@@ -16,6 +16,13 @@ function openPhoneRoute(route, targetState = state) {
     route: routeInfo.route,
   });
 
+  if (routeInfo.route === "dis/home") {
+    targetState.disSearchQuery = "";
+    if (targetState.phoneAppStatus && typeof targetState.phoneAppStatus === "object") {
+      delete targetState.phoneAppStatus.dis;
+    }
+  }
+
   if (typeof isPhoneHomeRoute === "function" ? isPhoneHomeRoute(routeInfo.route) : routeInfo.route === "home") {
     if (typeof refreshPhoneHomePreviewForState === "function") {
       refreshPhoneHomePreviewForState(targetState);

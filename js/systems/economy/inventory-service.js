@@ -25,6 +25,9 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
   }),
   "water-bottle": Object.freeze({
     id: "water-bottle",
+    hungerRestore: 1,
+    useLabel: "마신다",
+    useMemoryBody: "가방 안에서 생수를 꺼내 몇 모금 넘기며 비어 가던 속을 잠깐 달랬다.",
     category: "carry",
     label: "생수",
     icon: "🥤",
@@ -32,6 +35,9 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
   }),
   "triangle-kimbap": Object.freeze({
     id: "triangle-kimbap",
+    hungerRestore: 3,
+    useLabel: "먹는다",
+    useMemoryBody: "챙겨 둔 삼각김밥을 꺼내 허겁지겁 먹고 다시 움직일 기운을 붙잡았다.",
     category: "carry",
     label: "삼각김밥",
     icon: "🍙",
@@ -436,12 +442,14 @@ function buildInventoryEntryFromItem(item, targetState = state) {
 
   return {
     key: `item:${definition.id}`,
+    itemId: definition.id,
     category: definition.category || "carry",
     label: definition.label || definition.id,
     icon: definition.icon || "📦",
     description: definition.description || "",
     quantity,
     badges,
+    actionLabel: typeof definition.useLabel === "string" ? definition.useLabel : "",
     source: "inventory",
   };
 }

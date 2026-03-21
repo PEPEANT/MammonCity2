@@ -58,8 +58,18 @@ function createDefaultWorldState(day = getCurrentDayNumber()) {
       : (currentLocation ? [currentLocation] : []),
     alleyNpcVisible: false,
     alleyNpcId: "",
+    activeNpcLocationId: "",
+    wanderedLocations: [],
+    wanderResult: {
+      locationId: "",
+      title: "",
+      lines: [],
+    },
     pendingTravelTarget: "",
     pendingTravelDistrict: "",
+    pendingTravelSource: "",
+    pendingTravelMinutes: 0,
+    terminalTab: "route",
   };
 }
 
@@ -101,6 +111,12 @@ function syncWorldState(targetState = state) {
   const unlockedLocations = typeof normalizeWorldIdList === "function"
     ? normalizeWorldIdList(worldState.unlockedLocations, Object.keys(locations || {}), defaults.unlockedLocations)
     : [...(defaults.unlockedLocations || [])];
+  const wanderedLocations = typeof normalizeWorldIdList === "function"
+    ? normalizeWorldIdList(worldState.wanderedLocations, Object.keys(locations || {}), defaults.wanderedLocations)
+    : [];
+  const wanderResult = worldState.wanderResult && typeof worldState.wanderResult === "object"
+    ? worldState.wanderResult
+    : {};
 
   if (currentDistrict && !unlockedDistricts.includes(currentDistrict)) {
     unlockedDistricts.push(currentDistrict);
@@ -121,6 +137,21 @@ function syncWorldState(targetState = state) {
     alleyNpcId: typeof worldState.alleyNpcId === "string"
       ? worldState.alleyNpcId
       : defaults.alleyNpcId,
+    activeNpcLocationId: typeof worldState.activeNpcLocationId === "string"
+      ? worldState.activeNpcLocationId
+      : defaults.activeNpcLocationId,
+    wanderedLocations,
+    wanderResult: {
+      locationId: typeof wanderResult.locationId === "string"
+        ? wanderResult.locationId
+        : defaults.wanderResult.locationId,
+      title: typeof wanderResult.title === "string"
+        ? wanderResult.title
+        : defaults.wanderResult.title,
+      lines: Array.isArray(wanderResult.lines)
+        ? wanderResult.lines.filter((line) => typeof line === "string")
+        : [...defaults.wanderResult.lines],
+    },
     pendingTravelTarget: typeof worldState.pendingTravelTarget === "string"
       ? worldState.pendingTravelTarget
       : defaults.pendingTravelTarget,
@@ -128,6 +159,13 @@ function syncWorldState(targetState = state) {
       && (!worldState.pendingTravelDistrict || districts[worldState.pendingTravelDistrict])
       ? worldState.pendingTravelDistrict
       : defaults.pendingTravelDistrict,
+    pendingTravelSource: typeof worldState.pendingTravelSource === "string"
+      ? worldState.pendingTravelSource
+      : defaults.pendingTravelSource,
+    pendingTravelMinutes: Number.isFinite(worldState.pendingTravelMinutes)
+      ? Math.max(0, Math.round(worldState.pendingTravelMinutes))
+      : defaults.pendingTravelMinutes,
+    terminalTab: worldState.terminalTab === "timetable" ? "timetable" : "route",
   };
 
   return targetState.world;
@@ -139,6 +177,16 @@ function getCurrentDistrictId(targetState = state) {
 
 function getCurrentLocationId(targetState = state) {
   return syncWorldState(targetState).currentLocation;
+}
+
+function getWorldTerminalTab(targetState = state) {
+  return syncWorldState(targetState).terminalTab === "timetable" ? "timetable" : "route";
+}
+
+function setWorldTerminalTab(tab = "route", targetState = state) {
+  const worldState = syncWorldState(targetState);
+  worldState.terminalTab = tab === "timetable" ? "timetable" : "route";
+  return worldState.terminalTab;
 }
 
 function getCurrentLocationLabel(targetState = state) {
@@ -155,20 +203,138 @@ function getPendingTravelTargetLabel(targetState = state) {
   return locationMap?.[pendingTarget]?.label || "다음 정류장";
 }
 
-function getAlleyNpcPool(targetState = state) {
+function getPendingTravelSourceLabel(targetState = state) {
+  const sourceLabel = syncWorldState(targetState).pendingTravelSource;
+  return sourceLabel || "이전 장소";
+}
+
+function formatTravelDurationLabel(totalMinutes = TIME_SLOT_MINUTES) {
+  const minutes = Math.max(TIME_SLOT_MINUTES, Math.round(Number(totalMinutes || TIME_SLOT_MINUTES)));
+  const hours = Math.floor(minutes / 60);
+  const remainMinutes = minutes % 60;
+
+  if (hours <= 0) {
+    return `${minutes}분`;
+  }
+  if (remainMinutes <= 0) {
+    return `${hours}시간`;
+  }
+  return `${hours}시간 ${remainMinutes}분`;
+}
+
+function getPendingTravelDurationLabel(targetState = state) {
+  const pendingMinutes = syncWorldState(targetState).pendingTravelMinutes;
+  return formatTravelDurationLabel(pendingMinutes || TIME_SLOT_MINUTES);
+}
+
+function getWalkTravelBackgroundForMinutes(totalMinutes = TIME_SLOT_MINUTES) {
+  const normalizedMinutes = Math.max(TIME_SLOT_MINUTES, Math.round(Number(totalMinutes || TIME_SLOT_MINUTES)));
+
+  if (normalizedMinutes > TIME_SLOT_MINUTES * 2) {
+    return typeof DAY01_WORLD_WALKING_BACKGROUND_3 !== "undefined"
+      ? DAY01_WORLD_WALKING_BACKGROUND_3
+      : (typeof DAY01_WORLD_WALKING_BACKGROUND !== "undefined" ? DAY01_WORLD_WALKING_BACKGROUND : null);
+  }
+
+  if (normalizedMinutes > TIME_SLOT_MINUTES) {
+    return typeof DAY01_WORLD_WALKING_BACKGROUND_2 !== "undefined"
+      ? DAY01_WORLD_WALKING_BACKGROUND_2
+      : (typeof DAY01_WORLD_WALKING_BACKGROUND !== "undefined" ? DAY01_WORLD_WALKING_BACKGROUND : null);
+  }
+
+  return typeof DAY01_WORLD_WALKING_BACKGROUND !== "undefined"
+    ? DAY01_WORLD_WALKING_BACKGROUND
+    : null;
+}
+
+function estimateWalkTravelMinutes(fromLocationId = "", toLocationId = "", targetState = state) {
+  const day = targetState?.day || getCurrentDayNumber();
+  const fromDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(fromLocationId, day)
+    : "";
+  const toDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(toLocationId, day)
+    : "";
+
+  if (fromDistrict && toDistrict && fromDistrict !== toDistrict) {
+    return TIME_SLOT_MINUTES * 3;
+  }
+
+  const nearbyResidentialStops = new Set(["apt-alley", "bus-stop", "bus-stop-map"]);
+  if (nearbyResidentialStops.has(fromLocationId) && nearbyResidentialStops.has(toLocationId)) {
+    return TIME_SLOT_MINUTES;
+  }
+
+  return TIME_SLOT_MINUTES * 2;
+}
+
+function getAlleyNpcPool(targetState = state, locationId = getCurrentLocationId(targetState)) {
   const day = targetState?.day || getCurrentDayNumber();
   const locations = getDayWorldLocationMap(day);
-  const pool = locations?.["apt-alley"]?.randomNpcPool;
+  const pool = locations?.[locationId || ""]?.randomNpcPool;
   return Array.isArray(pool) ? pool : [];
 }
 
 function getActiveAlleyNpcConfig(targetState = state) {
   const worldState = syncWorldState(targetState);
-  if (!worldState.alleyNpcVisible || !worldState.alleyNpcId) {
+  const currentLocationId = getCurrentLocationId(targetState);
+  if (!worldState.alleyNpcVisible || !worldState.alleyNpcId || worldState.activeNpcLocationId !== currentLocationId) {
     return null;
   }
 
-  return getAlleyNpcPool(targetState).find((entry) => entry.id === worldState.alleyNpcId) || null;
+  return getAlleyNpcPool(targetState, currentLocationId).find((entry) => entry.id === worldState.alleyNpcId) || null;
+}
+
+function hasUsedLocationWander(locationId = getCurrentLocationId(state), targetState = state) {
+  if (!locationId) {
+    return false;
+  }
+
+  return syncWorldState(targetState).wanderedLocations.includes(locationId);
+}
+
+function markLocationWanderUsed(locationId = getCurrentLocationId(state), targetState = state) {
+  if (!locationId) {
+    return [];
+  }
+
+  const worldState = syncWorldState(targetState);
+  if (!worldState.wanderedLocations.includes(locationId)) {
+    worldState.wanderedLocations.push(locationId);
+  }
+
+  return worldState.wanderedLocations;
+}
+
+function setLocationWanderResult(locationId = "", title = "", lines = [], targetState = state) {
+  const worldState = syncWorldState(targetState);
+  worldState.wanderResult = {
+    locationId: typeof locationId === "string" ? locationId : "",
+    title: typeof title === "string" ? title : "",
+    lines: Array.isArray(lines) ? lines.filter((line) => typeof line === "string") : [],
+  };
+
+  return worldState.wanderResult;
+}
+
+function clearWanderResultState(targetState = state) {
+  return setLocationWanderResult("", "", [], targetState);
+}
+
+function resetLocationWanderState(targetState = state) {
+  const worldState = syncWorldState(targetState);
+  worldState.wanderedLocations = [];
+  clearWanderResultState(targetState);
+  return worldState.wanderedLocations;
+}
+
+function canUseLocationWander(locationId = getCurrentLocationId(state), targetState = state) {
+  if (!locationId) {
+    return false;
+  }
+
+  const npcPool = getAlleyNpcPool(targetState, locationId);
+  return npcPool.length > 0 && !hasUsedLocationWander(locationId, targetState);
 }
 
 function pickWeightedEntry(entries = []) {
@@ -194,12 +360,286 @@ function clearAlleyNpcState(targetState = state) {
   const worldState = syncWorldState(targetState);
   worldState.alleyNpcVisible = false;
   worldState.alleyNpcId = "";
+  worldState.activeNpcLocationId = "";
 }
 
 function clearPendingTravelState(targetState = state) {
   const worldState = syncWorldState(targetState);
   worldState.pendingTravelTarget = "";
   worldState.pendingTravelDistrict = "";
+  worldState.pendingTravelSource = "";
+  worldState.pendingTravelMinutes = 0;
+}
+
+function clampHungerValue(value) {
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  return Math.max(0, Math.min(hungerMax, Math.round(Number(value) || 0)));
+}
+
+function createDefaultHungerState() {
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  return {
+    value: hungerMax,
+    decayProgressMinutes: 0,
+    version: typeof HUNGER_SYSTEM_VERSION === "number" ? HUNGER_SYSTEM_VERSION : 1,
+  };
+}
+
+function ensureHungerState(targetState = state) {
+  const defaults = createDefaultHungerState();
+  if (!targetState || typeof targetState !== "object") {
+    return defaults;
+  }
+
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : defaults.value;
+  const hungerVersion = typeof HUNGER_SYSTEM_VERSION === "number" ? HUNGER_SYSTEM_VERSION : defaults.version;
+  const storedVersion = Math.max(0, Math.round(Number(targetState.hungerVersion) || 0));
+  const activeVersion = storedVersion || 1;
+
+  if (activeVersion < hungerVersion) {
+    const previousMax = activeVersion <= 1 && typeof LEGACY_HUNGER_MAX === "number"
+      ? LEGACY_HUNGER_MAX
+      : hungerMax;
+    const previousInterval = activeVersion <= 1 && typeof LEGACY_HUNGER_DECAY_INTERVAL_MINUTES === "number"
+      ? LEGACY_HUNGER_DECAY_INTERVAL_MINUTES
+      : HUNGER_DECAY_INTERVAL_MINUTES;
+    const previousValue = Math.max(0, Math.min(previousMax, Math.round(Number(targetState.hunger) || previousMax)));
+    const previousProgress = Math.max(0, Math.min(previousInterval, Math.round(Number(targetState.hungerDecayProgress) || 0)));
+    const valueRatio = previousMax > 0 ? previousValue / previousMax : 1;
+    const progressRatio = previousInterval > 0 ? previousProgress / previousInterval : 0;
+
+    targetState.hunger = clampHungerValue(Math.round(valueRatio * hungerMax));
+    targetState.hungerDecayProgress = Math.round(progressRatio * HUNGER_DECAY_INTERVAL_MINUTES);
+  }
+
+  targetState.hunger = clampHungerValue(targetState.hunger ?? defaults.value);
+  targetState.hungerDecayProgress = Math.max(0, Math.round(Number(targetState.hungerDecayProgress) || 0));
+  targetState.hungerVersion = hungerVersion;
+
+  return {
+    value: targetState.hunger,
+    decayProgressMinutes: targetState.hungerDecayProgress,
+    version: targetState.hungerVersion,
+  };
+}
+
+function getHungerStatusTone(targetState = state) {
+  const hungerValue = ensureHungerState(targetState).value;
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  const steadyThreshold = Math.max(2, Math.ceil(hungerMax * 0.6));
+  const hungryThreshold = Math.max(1, Math.ceil(hungerMax * 0.25));
+
+  if (hungerValue >= hungerMax) {
+    return "sated";
+  }
+  if (hungerValue >= steadyThreshold) {
+    return "steady";
+  }
+  if (hungerValue >= hungryThreshold) {
+    return "hungry";
+  }
+  return "critical";
+}
+
+function getHungerStatusLabel(targetState = state) {
+  const tone = getHungerStatusTone(targetState);
+  if (tone === "sated") {
+    return "든든";
+  }
+  if (tone === "steady") {
+    return "보통";
+  }
+  if (tone === "hungry") {
+    return "공복";
+  }
+  return "위험";
+}
+
+function restoreHunger(amount = 0, targetState = state, { resetProgress = true } = {}) {
+  const hungerState = ensureHungerState(targetState);
+  const nextValue = clampHungerValue(hungerState.value + Math.max(0, Math.round(Number(amount) || 0)));
+  targetState.hunger = nextValue;
+  if (resetProgress) {
+    targetState.hungerDecayProgress = 0;
+  }
+  return targetState.hunger;
+}
+
+function getTotalLiquidFunds(targetState = state) {
+  const cash = typeof getWalletBalance === "function"
+    ? getWalletBalance(targetState)
+    : Math.max(0, Number(targetState?.money) || 0);
+  const bankBalance = typeof getBankDomainState === "function"
+    ? Math.max(0, Number(getBankDomainState(targetState).balance) || 0)
+    : Math.max(0, Number(targetState?.bank?.balance) || 0);
+  return cash + bankBalance;
+}
+
+function spendEmergencyFunds(amount, targetState = state) {
+  const cost = Math.max(0, Math.round(Number(amount) || 0));
+  if (!cost || getTotalLiquidFunds(targetState) < cost) {
+    return null;
+  }
+
+  const cashOnHand = typeof getWalletBalance === "function"
+    ? getWalletBalance(targetState)
+    : Math.max(0, Number(targetState?.money) || 0);
+  const cashPaid = Math.min(cost, cashOnHand);
+  const bankPaid = Math.max(0, cost - cashPaid);
+
+  if (cashPaid > 0) {
+    if (typeof spendCash === "function") {
+      spendCash(cashPaid, targetState);
+    } else if (targetState) {
+      targetState.money = Math.max(0, (Number(targetState.money) || 0) - cashPaid);
+    }
+  }
+
+  if (bankPaid > 0) {
+    if (typeof patchBankDomainState === "function" && typeof getBankDomainState === "function") {
+      const bankState = getBankDomainState(targetState);
+      patchBankDomainState(targetState, {
+        balance: Math.max(0, bankState.balance - bankPaid),
+      });
+    } else if (targetState?.bank) {
+      targetState.bank.balance = Math.max(0, (Number(targetState.bank.balance) || 0) - bankPaid);
+    }
+
+    if (typeof recordBankTransaction === "function") {
+      recordBankTransaction({
+        title: "응급 진료비",
+        amount: -bankPaid,
+        direction: "out",
+        type: "emergency",
+        note: "배고픔으로 배금병원 응급 이송",
+      }, targetState);
+    }
+  }
+
+  return {
+    totalPaid: cost,
+    cashPaid,
+    bankPaid,
+  };
+}
+
+function buildBankruptcyEndingSummary() {
+  return {
+    noRanking: true,
+    title: "당신은 파산하였습니다",
+    speaker: "배금병원 응급실",
+    tags: ["파산", "배고픔", "응급실"],
+    character: "",
+    backgroundConfig: typeof DAY01_WORLD_BAEGEUM_HOSPITAL_BACKGROUND !== "undefined"
+      ? DAY01_WORLD_BAEGEUM_HOSPITAL_BACKGROUND
+      : null,
+    lines: [
+      "배고픔이 바닥나 배금병원으로 실려 갔다.",
+      `${formatMoney(HUNGER_HOSPITAL_COST)} 진료비를 낼 돈이 남아 있지 않았다.`,
+      "이번 판은 여기서 끝난다.",
+    ],
+  };
+}
+
+function triggerBankruptcyEnding(targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  if (typeof closeMemoryPanel === "function") {
+    closeMemoryPanel(targetState);
+  }
+  if (typeof closeInventoryPanel === "function") {
+    closeInventoryPanel(targetState);
+  }
+  targetState._characterPanelOpen = false;
+  targetState.scene = "ending";
+  targetState.currentOffer = null;
+  targetState.currentIncident = null;
+  targetState.endingSummary = buildBankruptcyEndingSummary();
+  targetState.headline = {
+    badge: "파산",
+    text: "응급실 비용을 감당하지 못해 이번 판이 그대로 끝났다.",
+  };
+  return true;
+}
+
+function resolveHungerEmergency(targetState = state) {
+  if (!targetState || targetState.scene === "ending" || targetState.scene === "ranking") {
+    return false;
+  }
+
+  const hungerState = ensureHungerState(targetState);
+  if (hungerState.value > 0) {
+    return false;
+  }
+
+  if (getTotalLiquidFunds(targetState) < HUNGER_HOSPITAL_COST) {
+    if (typeof recordActionMemory === "function") {
+      recordActionMemory("응급실 비용을 감당하지 못했다", "배고픔이 0이 되어 배금병원으로 실려 갔지만 진료비를 낼 돈이 남아 있지 않았다.", {
+        type: "event",
+        source: "배금병원",
+        tags: ["배고픔", "파산", "병원"],
+      });
+    }
+    triggerBankruptcyEnding(targetState);
+    return true;
+  }
+
+  const payment = spendEmergencyFunds(HUNGER_HOSPITAL_COST, targetState);
+  const paidFromBank = Boolean(payment?.bankPaid);
+  restoreHunger(typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3, targetState, { resetProgress: true });
+
+  if (typeof resetDialogueState === "function") {
+    resetDialogueState(targetState);
+  }
+  if (typeof closeMemoryPanel === "function") {
+    closeMemoryPanel(targetState);
+  }
+  if (typeof closeInventoryPanel === "function") {
+    closeInventoryPanel(targetState);
+  }
+
+  targetState._characterPanelOpen = false;
+  targetState.scene = "outside";
+  syncWorldState(targetState);
+  targetState.world.currentLocation = "baegeum-hospital";
+  targetState.world.currentDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId("baegeum-hospital", targetState.day)
+    : targetState.world.currentDistrict;
+  clearPendingTravelState(targetState);
+  clearAlleyNpcState(targetState);
+  clearWanderResultState(targetState);
+  targetState.headline = {
+    badge: "응급 이송",
+    text: paidFromBank
+      ? `배고픔이 0이 되어 배금병원으로 옮겨졌고 진료비 ${formatMoney(HUNGER_HOSPITAL_COST)}이 현금과 계좌에서 빠져나갔다.`
+      : `배고픔이 0이 되어 배금병원으로 옮겨졌고 진료비 ${formatMoney(HUNGER_HOSPITAL_COST)}이 빠져나갔다.`,
+  };
+
+  return true;
+}
+
+function applyHungerTimePassage(minutes = 0, targetState = state) {
+  const normalizedMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+  if (!normalizedMinutes || !targetState || targetState.scene === "ending" || targetState.scene === "ranking") {
+    return false;
+  }
+
+  ensureHungerState(targetState);
+  targetState.hungerDecayProgress += normalizedMinutes;
+
+  while (targetState.hungerDecayProgress >= HUNGER_DECAY_INTERVAL_MINUTES && targetState.hunger > 0) {
+    targetState.hungerDecayProgress -= HUNGER_DECAY_INTERVAL_MINUTES;
+    targetState.hunger = Math.max(0, targetState.hunger - 1);
+
+    if (targetState.hunger <= 0) {
+      targetState.hungerDecayProgress = 0;
+      return resolveHungerEmergency(targetState);
+    }
+  }
+
+  return false;
 }
 
 const DEFAULT_DAY_DEV_PRESETS = [
@@ -278,13 +718,45 @@ function getCurrentOutsideSceneConfig(targetState = state) {
       ];
     }
 
-    const activeAlleyNpc = locationId === "apt-alley"
-      ? getActiveAlleyNpcConfig(targetState)
-      : null;
+    if (locationId === "walk-travel") {
+      const sourceLabel = getPendingTravelSourceLabel(targetState);
+      const targetLabel = getPendingTravelTargetLabel(targetState);
+      const durationLabel = getPendingTravelDurationLabel(targetState);
+      const travelMinutes = syncWorldState(targetState).pendingTravelMinutes;
+      resolvedScene.title = "걷는 중...";
+      resolvedScene.background = getWalkTravelBackgroundForMinutes(travelMinutes);
+      resolvedScene.lines = [
+        `${sourceLabel}에서 나와 ${targetLabel} 쪽으로 걷는 중... 도보 ${durationLabel} 소요 됨.`,
+        "신호등과 골목 모퉁이를 지나며 발걸음을 계속 이어간다.",
+      ];
+    }
+
+    const activeAlleyNpc = getActiveAlleyNpcConfig(targetState);
+    const wanderResult = worldState.wanderResult || {};
+    resolvedScene.options = resolvedScene.options.filter((option) => option.action !== "wander");
+
+    if (locationId && canUseLocationWander(locationId, targetState)) {
+      resolvedScene.options.splice(Math.min(2, resolvedScene.options.length), 0, {
+        title: "돌아다닌다",
+        action: "wander",
+      });
+    }
+
+    if (wanderResult.locationId === locationId && wanderResult.title && wanderResult.lines?.length) {
+      resolvedScene.title = wanderResult.title;
+      resolvedScene.lines = [...wanderResult.lines];
+    }
+
     if (activeAlleyNpc?.actor) {
       resolvedScene.actors.push({ ...activeAlleyNpc.actor, npcId: activeAlleyNpc.id });
       if (activeAlleyNpc.tag && !resolvedScene.tags.includes(activeAlleyNpc.tag)) {
         resolvedScene.tags.push(activeAlleyNpc.tag);
+      }
+      if (!(wanderResult.locationId === locationId && wanderResult.title && wanderResult.lines?.length)) {
+        resolvedScene.title = activeAlleyNpc.sceneTitle || resolvedScene.title;
+        resolvedScene.lines = Array.isArray(activeAlleyNpc.sceneLines) && activeAlleyNpc.sceneLines.length
+          ? [...activeAlleyNpc.sceneLines]
+          : resolvedScene.lines;
       }
       resolvedScene.options.unshift({
         title: "가까이 가기",
@@ -318,6 +790,7 @@ const TIME_COSTS = {
   phoneApp: 1,
   videoApp: 2,
   waitInRoom: 1,
+  wanderOutside: 2,
 };
 const PROLOGUE_TIME_SLOTS = {
   introWake: 13,
@@ -529,6 +1002,13 @@ function finishRegisteredCleanupEvent() {
       getActiveStorySteps().length - 1,
     );
   }
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory(`${definition.label} 사용`, definition.useMemoryBody || `${definition.label}으로 배고픔을 달랬다.`, {
+      type: "food",
+      source: "인벤토리",
+      tags: ["인벤토리", "배고픔", definition.id],
+    });
+  }
 
   renderGame();
   return true;
@@ -540,8 +1020,11 @@ let pendingSavedState = null;
 document.addEventListener("DOMContentLoaded", () => {
   cacheUi();
   bindStaticEvents();
-  clearSavedState();
-  showStartScreen(false);
+  if (typeof startTradingTerminalTicker === "function") {
+    startTradingTerminalTicker();
+  }
+  pendingSavedState = loadSavedState();
+  showStartScreen(Boolean(pendingSavedState));
 });
 
 function createInitialState() {
@@ -678,6 +1161,9 @@ function createInitialState() {
     money: 0,
     stamina: BASE_STAMINA,
     energy: BASE_ENERGY,
+    hunger: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3,
+    hungerDecayProgress: 0,
+    hungerVersion: typeof HUNGER_SYSTEM_VERSION === "number" ? HUNGER_SYSTEM_VERSION : 1,
     timeSlot: PROLOGUE_TIME_SLOTS.introWake,
     timeMinuteOffset: 0,
     scene: "prologue",
@@ -763,13 +1249,28 @@ function createInitialState() {
     phoneView: phoneDefaults.route,
     phoneUsedToday: phoneDefaults.usedToday,
     installedPhoneApps: [...(phoneDefaults.installedApps || [])],
+    disSearchQuery: "",
+    disGambleDrafts: {
+      "odd-even": "1000",
+      ladder: "5000",
+    },
     phonePreview: createPhoneHomePreview(1),
     phoneAppStatus: {},
+    casino: typeof createDefaultCasinoState === "function"
+      ? createDefaultCasinoState()
+      : null,
+    stocksUsedToday: false,
+    casinoUsedToday: false,
+    coinUsedToday: false,
+    stockHolding: null,
+    coinHolding: null,
     activeJobs: new Set(STARTING_JOB_IDS),
     seenIncidents: new Set(),
     jobVisits: {},
     currentOffer: null,
     currentIncident: null,
+    jobMiniGame: null,
+    jobMiniGameResult: null,
     lastResult: null,
     endingSummary: null,
     lastWorkedJobId: null,
@@ -852,6 +1353,26 @@ function serializeState(currentState = state) {
           : [],
         equipped: { ...(currentState.inventory?.equipped || {}) },
       },
+      casino: typeof syncCasinoState === "function"
+        ? {
+            ...syncCasinoState(currentState),
+            exchangeDraft: { ...(currentState.casino?.exchangeDraft || {}) },
+            blackjack: typeof syncCasinoBlackjackState === "function"
+              ? syncCasinoBlackjackState(currentState.casino?.blackjack)
+              : { ...(currentState.casino?.blackjack || {}) },
+            slots: typeof syncCasinoSlotsState === "function"
+              ? syncCasinoSlotsState(currentState.casino?.slots)
+              : { ...(currentState.casino?.slots || {}) },
+            scam: currentState.casino?.scam
+              ? { ...(currentState.casino.scam || {}) }
+              : null,
+            lastResult: currentState.casino?.lastResult
+              ? { ...(currentState.casino.lastResult || {}) }
+              : null,
+          }
+        : {
+            ...(currentState.casino || {}),
+          },
       ownership: {
         ...(currentState.ownership || {}),
       },
@@ -967,6 +1488,17 @@ function hydrateState(rawState = {}) {
       };
   mergedState.currentOffer = rawState.currentOffer ? { ...rawState.currentOffer } : null;
   mergedState.currentIncident = rawState.currentIncident ? { ...rawState.currentIncident } : null;
+  mergedState.jobMiniGame = rawState.jobMiniGame
+    ? {
+        ...rawState.jobMiniGame,
+        items: Array.isArray(rawState.jobMiniGame.items)
+          ? rawState.jobMiniGame.items.map((item) => ({ ...item }))
+          : [],
+      }
+    : null;
+  mergedState.jobMiniGameResult = rawState.jobMiniGameResult
+    ? { ...rawState.jobMiniGameResult }
+    : null;
   mergedState.lastResult = rawState.lastResult
     ? { ...rawState.lastResult, lines: [...(rawState.lastResult.lines || [])] }
     : null;
@@ -991,6 +1523,28 @@ function hydrateState(rawState = {}) {
   mergedState.phoneAppStatus = rawState.phoneAppStatus && typeof rawState.phoneAppStatus === "object"
     ? Object.fromEntries(Object.entries(rawState.phoneAppStatus).map(([key, value]) => [key, { ...(value || {}) }]))
     : {};
+  mergedState.casino = rawState.casino && typeof rawState.casino === "object"
+    ? {
+        ...(typeof createDefaultCasinoState === "function" ? createDefaultCasinoState() : {}),
+        ...rawState.casino,
+        exchangeDraft: {
+          ...((typeof createDefaultCasinoState === "function" ? createDefaultCasinoState().exchangeDraft : {}) || {}),
+          ...(rawState.casino.exchangeDraft || {}),
+        },
+        blackjack: typeof syncCasinoBlackjackState === "function"
+          ? syncCasinoBlackjackState(rawState.casino.blackjack)
+          : { ...(rawState.casino.blackjack || {}) },
+        slots: typeof syncCasinoSlotsState === "function"
+          ? syncCasinoSlotsState(rawState.casino.slots)
+          : { ...(rawState.casino.slots || {}) },
+        scam: rawState.casino.scam && typeof rawState.casino.scam === "object"
+          ? { ...(rawState.casino.scam || {}) }
+          : { ...((typeof createDefaultCasinoState === "function" ? createDefaultCasinoState().scam : {}) || {}) },
+        lastResult: rawState.casino.lastResult
+          ? { ...(rawState.casino.lastResult || {}) }
+          : null,
+      }
+    : (typeof createDefaultCasinoState === "function" ? createDefaultCasinoState() : null);
   mergedState.inventory = rawState.inventory && typeof rawState.inventory === "object"
     ? {
         ...nextState.inventory,
@@ -1054,6 +1608,15 @@ function hydrateState(rawState = {}) {
   mergedState.phoneView = typeof normalizePhoneRoute === "function"
     ? normalizePhoneRoute(rawState.phoneView || nextState.phoneView)
     : (rawState.phoneView || nextState.phoneView);
+  mergedState.disSearchQuery = typeof rawState.disSearchQuery === "string"
+    ? rawState.disSearchQuery
+    : nextState.disSearchQuery;
+  mergedState.disGambleDrafts = rawState.disGambleDrafts && typeof rawState.disGambleDrafts === "object"
+    ? {
+        "odd-even": String(rawState.disGambleDrafts["odd-even"] ?? nextState.disGambleDrafts["odd-even"] ?? "1000"),
+        ladder: String(rawState.disGambleDrafts.ladder ?? nextState.disGambleDrafts.ladder ?? "5000"),
+      }
+    : { ...(nextState.disGambleDrafts || { "odd-even": "1000", ladder: "5000" }) };
   mergedState.headline = { ...nextState.headline, ...(rawState.headline || {}) };
   mergedState.timeSlot = Number.isFinite(rawState.timeSlot)
     ? rawState.timeSlot
@@ -1117,7 +1680,7 @@ function createPhoneHomePreview(day = 1) {
     kicker: "HOME",
     state: "READY",
     title: `${day}일차 스마트폰`,
-    body: "DIS 인터넷, 플레이스토어, 전화, 갤러리를 바로 열 수 있다.",
+    body: "Diggle, 뉴스, 플레이스토어, 전화, 갤러리를 바로 열 수 있다.",
   };
 }
 
@@ -1273,6 +1836,9 @@ function spendTimeSlots(slots = 0) {
   if (state.timeSlot >= DAY_END_TIME_SLOT) {
     state.timeMinuteOffset = 0;
   }
+  if (applyHungerTimePassage(normalized * TIME_SLOT_MINUTES, state)) {
+    return false;
+  }
   return state.timeSlot >= DAY_END_TIME_SLOT;
 }
 
@@ -1282,8 +1848,12 @@ function advanceTimeToSlot(targetSlot) {
     return false;
   }
 
+  const elapsedSlots = nextSlot - state.timeSlot;
   state.timeSlot = Math.min(DAY_END_TIME_SLOT, nextSlot);
   state.timeMinuteOffset = 0;
+  if (applyHungerTimePassage(elapsedSlots * TIME_SLOT_MINUTES, state)) {
+    return false;
+  }
   return state.timeSlot >= DAY_END_TIME_SLOT;
 }
 
@@ -1301,11 +1871,15 @@ function spendMinorTime(minutes = 1) {
 
     if (state.timeSlot >= DAY_END_TIME_SLOT) {
       state.timeMinuteOffset = 0;
-      return true;
+      break;
     }
   }
 
-  return false;
+  if (applyHungerTimePassage(normalizedMinutes, state)) {
+    return false;
+  }
+
+  return state.timeSlot >= DAY_END_TIME_SLOT;
 }
 
 function refreshPhoneHomePreviewForState(targetState = state) {
@@ -1870,6 +2444,176 @@ function applyToPhoneJobLegacy(index) {
   renderGame();
 }
 
+function getJobMiniGameDefinition(jobId = "") {
+  return JOB_LOOKUP?.[jobId]?.minigame || null;
+}
+
+function createJobMiniGameSession(jobId = "") {
+  const definition = getJobMiniGameDefinition(jobId);
+  if (!definition || !Array.isArray(definition.items) || !definition.items.length) {
+    return null;
+  }
+
+  const items = definition.items.map((item, index) => ({
+    ...item,
+    id: item.id || `${jobId}-task-${index + 1}`,
+    target: item.target !== false,
+    resolved: false,
+  }));
+  const totalTargets = items.filter((item) => item.target !== false).length;
+
+  return {
+    id: definition.id || `${jobId}-minigame`,
+    jobId,
+    title: definition.title || "알바 미니게임",
+    intro: definition.intro || "",
+    note: definition.note || "",
+    baseBonus: Number.isFinite(definition.baseBonus) ? Number(definition.baseBonus) : 0,
+    penaltyPerMistake: Number.isFinite(definition.penaltyPerMistake) ? Number(definition.penaltyPerMistake) : 0,
+    perfectBonus: Number.isFinite(definition.perfectBonus) ? Number(definition.perfectBonus) : 0,
+    performanceLabels: definition.performanceLabels && typeof definition.performanceLabels === "object"
+      ? { ...definition.performanceLabels }
+      : {},
+    totalTargets,
+    clearedTargets: 0,
+    mistakes: 0,
+    items,
+  };
+}
+
+function buildJobMiniGameSummary(result = null) {
+  if (!result || !result.jobId) {
+    return "";
+  }
+
+  const definition = getJobMiniGameDefinition(result.jobId);
+  const performanceLabels = definition?.performanceLabels || {};
+
+  if (result.bonus > 0) {
+    const baseLine = result.perfect
+      ? (performanceLabels.perfect || "현장 흐름을 깔끔하게 잡아 추가 수당이 붙었다.")
+      : (performanceLabels.success || "핵심 업무를 먼저 처리해 추가 수당이 붙었다.");
+    return `${baseLine} ${formatMoney(result.bonus)} 보너스를 받았다.`;
+  }
+
+  return performanceLabels.fail || "초반 정리가 흔들려 추가 수당은 붙지 않았다.";
+}
+
+function startWorkSceneForOffer(offerSnapshot, {
+  clearScheduledShift = false,
+} = {}) {
+  const offer = cloneOfferSnapshot(offerSnapshot);
+  const job = JOB_LOOKUP[offer.jobId];
+  const miniGameSession = createJobMiniGameSession(offer.jobId);
+
+  state.currentOffer = offer;
+  state.lastWorkedJobId = offer.jobId;
+  state.jobVisits[offer.jobId] = (state.jobVisits[offer.jobId] || 0) + 1;
+  state.currentIncident = pickIncident(offer.jobId, state.jobVisits[offer.jobId]);
+  state.jobMiniGame = miniGameSession;
+  state.jobMiniGameResult = null;
+  state.scene = miniGameSession ? "job-minigame" : "incident";
+
+  if (clearScheduledShift) {
+    if (typeof patchJobsDomainState === "function") {
+      patchJobsDomainState(state, {
+        scheduledShift: null,
+        interviewResult: null,
+      });
+    } else {
+      state.nextDayShift = null;
+      state.interviewResult = null;
+    }
+  }
+
+  state.phoneView = "home";
+  state.headline = {
+    badge: miniGameSession ? "근무 준비" : "출근 시작",
+    text: miniGameSession
+      ? `${job.title} 시작 전 핵심 업무부터 빠르게 정리한다.`
+      : `${job.title} 근무를 위해 현장으로 향했다.`,
+  };
+  recordActionMemory("예약 근무를 시작했다", `${job.title} 근무를 위해 현장으로 향했다.`, {
+    type: "job",
+    source: job.title,
+    tags: ["알바", "출근", offer.jobId, miniGameSession ? "미니게임" : ""].filter(Boolean),
+  });
+  refreshPhoneHomePreview();
+  renderGame();
+}
+
+function completeJobMiniGameTask(itemId) {
+  const game = state.jobMiniGame;
+  if (state.scene !== "job-minigame" || !game) {
+    return;
+  }
+
+  const item = game.items.find((entry) => entry.id === itemId);
+  if (!item || item.resolved) {
+    return;
+  }
+
+  item.resolved = true;
+  if (item.target !== false) {
+    game.clearedTargets += 1;
+    spendEnergy(1);
+    state.headline = {
+      badge: "업무 처리",
+      text: `${item.label || item.shortLabel || "핵심 업무"}를 먼저 정리했다.`,
+    };
+  } else {
+    game.mistakes += 1;
+    spendEnergy(2);
+    state.stamina = Math.max(0, state.stamina - 1);
+    state.headline = {
+      badge: "동선 흔들림",
+      text: `${item.label || item.shortLabel || "불필요한 일"}에 시간을 써서 흐름이 조금 꼬였다.`,
+    };
+  }
+
+  if (game.clearedTargets >= game.totalTargets) {
+    finishJobMiniGame();
+    return;
+  }
+
+  renderGame();
+}
+
+function finishJobMiniGame() {
+  const game = state.jobMiniGame;
+  if (!game) {
+    return;
+  }
+
+  const perfect = game.mistakes === 0;
+  let bonus = Math.max(0, game.baseBonus - (game.mistakes * game.penaltyPerMistake));
+  if (perfect) {
+    bonus += game.perfectBonus || 0;
+  }
+  bonus = roundToHundred(bonus);
+
+  state.jobMiniGameResult = {
+    jobId: game.jobId,
+    bonus,
+    mistakes: game.mistakes,
+    perfect,
+  };
+  state.jobMiniGame = null;
+  state.scene = "incident";
+
+  const summaryLine = buildJobMiniGameSummary(state.jobMiniGameResult);
+  state.headline = {
+    badge: perfect ? "현장 정리 완료" : "현장 정리 마무리",
+    text: summaryLine,
+  };
+  recordActionMemory(`${JOB_LOOKUP?.[game.jobId]?.title || "알바"} 준비를 마쳤다`, summaryLine, {
+    type: "job",
+    source: JOB_LOOKUP?.[game.jobId]?.title || "알바",
+    tags: ["알바", "미니게임", game.jobId].filter(Boolean),
+  });
+  renderGame();
+}
+
 function startScheduledShiftLegacy() {
   const shiftStatus = getScheduledShiftStatus();
 
@@ -1893,6 +2637,10 @@ function startScheduledShiftLegacy() {
 
   state.timeSlot = Math.max(state.timeSlot, shiftStatus.startSlot) + shiftStatus.durationSlots;
   state.timeMinuteOffset = 0;
+  startWorkSceneForOffer(offer, {
+    clearScheduledShift: true,
+  });
+  return;
   state.currentOffer = offer;
   state.lastWorkedJobId = offer.jobId;
   state.jobVisits[offer.jobId] = (state.jobVisits[offer.jobId] || 0) + 1;
@@ -1932,27 +2680,67 @@ function waitInRoom() {
 }
 
 function wanderAroundOutside() {
-  const inAptAlley = getCurrentLocationId() === "apt-alley";
+  const locationId = getCurrentLocationId(state);
   const worldState = syncWorldState(state);
-  const npcPool = inAptAlley ? getAlleyNpcPool(state) : [];
-  const activeNpc = inAptAlley && npcPool.length && Math.random() < 0.38
-    ? pickWeightedEntry(npcPool)
-    : null;
-  const wanderTags = activeNpc?.tag ? ["이동", "산책", activeNpc.tag] : ["이동", "산책"];
+  const npcPool = getAlleyNpcPool(state, locationId);
   const locationLabel = getCurrentLocationLabel();
+  const activeNpc = pickWeightedEntry(npcPool);
+  const wanderTags = activeNpc?.tag
+    ? ["이동", "탐색", locationId, activeNpc.tag]
+    : ["이동", "탐색", locationId].filter(Boolean);
 
+  if (!locationId || !npcPool.length) {
+    state.headline = {
+      badge: "탐색 불가",
+      text: `${locationLabel}은 천천히 걸어봐도 지금은 특별히 만날 사람이 없다.`,
+    };
+    renderGame();
+    return;
+  }
+
+  if (hasUsedLocationWander(locationId, state)) {
+    setLocationWanderResult(
+      locationId,
+      `${locationLabel}은 오늘 이미 둘러봤다`,
+      [
+        "한 바퀴 돌며 사람 흐름을 이미 훑어본 곳이다.",
+        "더 둘러보기보다는 다른 장소로 이동하거나 눈에 들어온 사람에게 다가가는 편이 낫다.",
+      ],
+      state,
+    );
+    state.headline = {
+      badge: "탐색 완료",
+      text: `${locationLabel}은 오늘 이미 한 번 돌아봤다.`,
+    };
+    renderGame();
+    return;
+  }
+
+  markLocationWanderUsed(locationId, state);
   worldState.alleyNpcVisible = Boolean(activeNpc);
   worldState.alleyNpcId = activeNpc?.id || "";
+  worldState.activeNpcLocationId = activeNpc ? locationId : "";
+  setLocationWanderResult(
+    locationId,
+    activeNpc?.sceneTitle || `${locationLabel}을 천천히 돌아다녔다`,
+    Array.isArray(activeNpc?.sceneLines) && activeNpc.sceneLines.length
+      ? activeNpc.sceneLines
+      : [
+        `${locationLabel} 주변을 한 바퀴 돌며 사람들 얼굴을 훑어봤다.`,
+        "오늘 이 장소에서는 더 오래 머물기보다 다른 선택을 하는 편이 낫다.",
+      ],
+    state,
+  );
   state.headline = {
-    badge: activeNpc ? activeNpc.headlineBadge || "낯선 시선" : "동네 한 바퀴",
+    badge: activeNpc ? activeNpc.headlineBadge || "주변 탐색" : "주변 탐색",
     text: activeNpc
-      ? activeNpc.headlineText || "골목 끝에 누군가가 서 있다."
-      : "골목 주변을 천천히 돌아다니며 시간을 보낸다.",
+      ? activeNpc.headlineText || `${locationLabel}에서 낯선 얼굴 하나가 눈에 들어온다.`
+      : `${locationLabel} 주변을 천천히 걸으며 사람 흐름을 훑었다.`,
   };
   recordActionMemory(
-    "골목을 돌아다녔다",
+    `${locationLabel}을 돌아다녔다`,
     activeNpc
-      ? `${locationLabel}을 서성이다가 ${activeNpc.tag}과 눈이 마주쳤다.`
+      ? activeNpc.memoryBody || `${locationLabel}을 서성이다가 ${activeNpc.tag}과 눈이 마주쳤다.`
       : `${locationLabel} 주변을 천천히 걸으며 시간을 보냈다.`,
     {
       type: "travel",
@@ -1963,7 +2751,7 @@ function wanderAroundOutside() {
   if (typeof adjustHappiness === "function") {
     adjustHappiness(1, state);
   }
-  if (spendTimeSlots(TIME_COSTS.waitInRoom)) {
+  if (spendTimeSlots(TIME_COSTS.wanderOutside)) {
     advanceDayOrFinish();
     return;
   }
@@ -1980,10 +2768,11 @@ function approachAlleyNpc() {
 }
 
 function startNpcInteraction(npcId, source = "actor-click") {
+  const locationId = getCurrentLocationId(state);
   const activeNpc = getActiveAlleyNpcConfig(state);
   const npcConfig = activeNpc?.id === npcId
     ? activeNpc
-    : getAlleyNpcPool(state).find((entry) => entry.id === npcId) || null;
+    : getAlleyNpcPool(state, locationId).find((entry) => entry.id === npcId) || null;
 
   if (!npcId) {
     return false;
@@ -2005,9 +2794,18 @@ function startNpcInteraction(npcId, source = "actor-click") {
       clearAlleyNpcState(state);
     }
     state.headline = {
-      badge: npcConfig?.approachBadge || "골목",
+      badge: npcConfig?.approachBadge || "스친 사람",
       text: npcConfig?.approachText || "가까이 다가가자 상대가 짧게 반응하고 지나간다.",
     };
+    setLocationWanderResult(
+      locationId,
+      npcConfig?.approachBadge || `${getCurrentLocationLabel()}에서 짧게 스쳤다`,
+      [
+        npcConfig?.approachText || "가까이 다가가자 상대가 짧게 반응하고 지나간다.",
+        "더 오래 붙잡을 분위기는 아니라서 다시 주변을 둘러본다.",
+      ],
+      state,
+    );
   }
 
   renderGame();
@@ -2173,6 +2971,12 @@ function normalizeStateForCurrentRules() {
     syncOwnershipState(state);
   }
 
+  ensureHungerState(state);
+
+  if (typeof syncCasinoState === "function") {
+    syncCasinoState(state);
+  }
+
   if (typeof syncMetaRunState === "function") {
     syncMetaRunState(state);
   }
@@ -2267,6 +3071,9 @@ const ACTION_HANDLERS = {
     advanceStoryStep();
     renderGame();
   },
+  goToLivingRoom() {
+    prepareDay();
+  },
   cleanRoom() {
     return startRegisteredEvent("cleanRoom");
   },
@@ -2301,8 +3108,17 @@ const ACTION_HANDLERS = {
   "complete-bus-travel"() {
     completeBusTravel();
   },
+  "complete-walk-travel"() {
+    completeWalkTravel();
+  },
   "wait-seoul-rail"() {
     waitForSeoulRailEvent();
+  },
+  "open-bus-route-app"() {
+    openBusPhoneSurface("bus/home");
+  },
+  "open-bus-timetable-app"() {
+    openBusPhoneSurface("bus/timetable");
   },
   "study-office-prep"() {
     gainCareerPrep("office", {
@@ -2351,6 +3167,12 @@ const ACTION_HANDLERS = {
   },
   "buy-convenience-painkiller"() {
     buyConvenienceStoreItem("buy-convenience-painkiller", state);
+  },
+  "eat-mcdonalds-set"() {
+    visitMcDonaldsMenu("eat-mcdonalds-set", state);
+  },
+  "buy-mcdonalds-coffee"() {
+    visitMcDonaldsMenu("buy-mcdonalds-coffee", state);
   },
   "study-career-center-review"() {
     const currentMeetings = Number(state.social?.contacts?.careerCenterClerk?.meetings || 0);
@@ -2438,6 +3260,7 @@ function bindStaticEvents() {
   window.addEventListener("resize", () => {
     renderGame();
   });
+  window.addEventListener("scroll", handlePhoneScrollableInteraction, true);
 
   ui.phoneToggleButton?.addEventListener("click", togglePhonePanel);
   ui.phoneStageButton?.addEventListener("click", togglePhoneStage);
@@ -2447,11 +3270,63 @@ function bindStaticEvents() {
   ui.inventoryButton?.addEventListener("click", toggleInventoryLog);
   ui.inventoryCloseButton?.addEventListener("click", closeInventoryLog);
   ui.inventoryTabs?.addEventListener("click", handleInventoryTabClick);
+  ui.inventoryList?.addEventListener("click", handleInventoryListClick);
   ui.characterButton?.addEventListener("click", toggleCharacterLog);
   ui.characterCloseButton?.addEventListener("click", closeCharacterLog);
   ui.textbox?.addEventListener("click", handleTextboxClick);
   ui.phonePanel?.addEventListener("click", handlePhoneScreenClick);
   ui.phoneStage?.addEventListener("click", handlePhoneScreenClick);
+  ui.phonePanel?.addEventListener("input", handlePhoneScreenInput);
+  ui.phoneStage?.addEventListener("input", handlePhoneScreenInput);
+}
+
+function handlePhoneScreenInput(event) {
+  const amountInput = event.target?.closest?.("[data-trading-amount-input]");
+  if (amountInput && typeof setTradingTerminalDraftAmount === "function") {
+    setTradingTerminalDraftAmount(amountInput.dataset.tradingApp, amountInput.value, state);
+    return;
+  }
+
+  const disSearchInput = event.target?.closest?.("[data-dis-search-input]");
+  if (disSearchInput) {
+    const nextQuery = String(disSearchInput.value || "");
+    if (state.disSearchQuery !== nextQuery) {
+      state.disSearchQuery = nextQuery;
+      const selectionStart = typeof disSearchInput.selectionStart === "number"
+        ? disSearchInput.selectionStart
+        : nextQuery.length;
+
+      renderGame();
+
+      requestAnimationFrame(() => {
+        const nextInput = (ui.phoneAppScreen || ui.phoneStage || ui.phonePanel)
+          ?.querySelector?.("[data-dis-search-input]");
+        if (!nextInput) {
+          return;
+        }
+
+        nextInput.focus({ preventScroll: true });
+        if (typeof nextInput.setSelectionRange === "function") {
+          const cursor = Math.min(selectionStart, nextInput.value.length);
+          nextInput.setSelectionRange(cursor, cursor);
+        }
+      });
+    }
+    return;
+  }
+
+  const stockQtyInput = event.target?.closest?.("[data-stock-qty-input]");
+  if (!stockQtyInput || typeof setStockMarketDraftQuantity !== "function") {
+    const disGambleInput = event.target?.closest?.("[data-dis-gamble-input]");
+    if (!disGambleInput || typeof setDisGambleDraftAmount !== "function") {
+      return;
+    }
+
+    setDisGambleDraftAmount(disGambleInput.dataset.disGambleInput, disGambleInput.value, state);
+    return;
+  }
+
+  setStockMarketDraftQuantity(stockQtyInput.value, state);
 }
 
 function startGame() {
@@ -2570,12 +3445,23 @@ function handleInventoryTabClick(event) {
   renderGame();
 }
 
+function handleInventoryListClick(event) {
+  const useButton = event.target?.closest?.("[data-inventory-use-id]");
+  if (!useButton) {
+    return;
+  }
+
+  useInventoryConsumable(useButton.dataset.inventoryUseId, state);
+}
+
 function prepareDayStateLegacy(targetState = state) {
   targetState.timeSlot = DAY_START_TIME_SLOT;
   targetState.timeMinuteOffset = 0;
   targetState.scene = "room";
   targetState.currentOffer = null;
   targetState.currentIncident = null;
+  targetState.jobMiniGame = null;
+  targetState.jobMiniGameResult = null;
   targetState.lastResult = null;
   targetState.endingSummary = null;
   targetState.cleaningGame = null;
@@ -2584,6 +3470,24 @@ function prepareDayStateLegacy(targetState = state) {
   targetState.phoneView = "home";
   targetState.phoneUsedToday = false;
   targetState.jobApplicationDoneToday = false;
+  targetState.stocksUsedToday = false;
+  targetState.casinoUsedToday = false;
+  targetState.coinUsedToday = false;
+  if (typeof syncCasinoState === "function") {
+    const casinoState = syncCasinoState(targetState);
+    casinoState.usedToday = false;
+    casinoState.lastResult = null;
+    if (typeof createDefaultCasinoBlackjackState === "function") {
+      casinoState.blackjack = createDefaultCasinoBlackjackState();
+    }
+    if (typeof createDefaultCasinoSlotsState === "function") {
+      casinoState.slots = {
+        ...createDefaultCasinoSlotsState(),
+        bet: casinoState.slots?.bet || createDefaultCasinoSlotsState().bet,
+      };
+    }
+  }
+  // stockHolding / coinHolding는 날짜 넘겨도 유지 (다음날 확인용)
   if (targetState.nextDayShift && targetState.nextDayShift.day < targetState.day) {
     targetState.nextDayShift = null;
   }
@@ -2602,6 +3506,7 @@ function prepareDayStateLegacy(targetState = state) {
     ? getWorldLocationDistrictId(targetState.world.currentLocation, targetState.day)
     : targetState.world.currentDistrict;
   clearAlleyNpcState(targetState);
+  resetLocationWanderState(targetState);
   clearPendingTravelState(targetState);
   if (typeof resetDialogueState === "function") {
     resetDialogueState(targetState);
@@ -2669,38 +3574,450 @@ function finishPhoneAppTimeSpend(timeSpent) {
   return false;
 }
 
+function openBusPhoneSurface(route = "bus/home") {
+  if (!state.hasPhone) {
+    return;
+  }
+
+  const hasBusApp = typeof isPhoneAppInstalled === "function"
+    ? isPhoneAppInstalled("bus", state)
+    : false;
+
+  if (hasBusApp && typeof openPhoneRoute === "function") {
+    openPhoneRoute(route, state);
+    renderGame();
+    return;
+  }
+
+  if (typeof setPhoneAppStatus === "function") {
+    setPhoneAppStatus("playstore", {
+      kicker: "STORE",
+      title: "배금버스 앱이 필요함",
+      body: "플레이스토어에서 배금버스를 설치하면 노선도와 터미널 시간표를 폰에서 바로 볼 수 있다.",
+      tone: "accent",
+    }, state);
+  }
+
+  if (typeof openPhoneRoute === "function") {
+    openPhoneRoute("playstore/home", state);
+  }
+  renderGame();
+}
+
+function rideBusFromPhone(locationId = "") {
+  const targetLocation = String(locationId || "").trim();
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(state)
+    : "";
+  const canBoard = currentLocationId === "bus-stop" || currentLocationId === "bus-stop-map";
+
+  if (!targetLocation) {
+    return;
+  }
+
+  if (!canBoard) {
+    if (typeof setPhoneAppStatus === "function") {
+      setPhoneAppStatus("bus", {
+        kicker: "BUS",
+        title: "터미널 앞에서만 탑승 가능",
+        body: "배금시외버스터미널 앞이나 안내판 앞에서만 버스 탑승 버튼을 사용할 수 있다.",
+        tone: "fail",
+      }, state);
+    }
+    renderGame();
+    return;
+  }
+
+  if (targetLocation === "bus-stop") {
+    if (typeof setPhoneAppStatus === "function") {
+      setPhoneAppStatus("bus", {
+        kicker: "BUS",
+        title: "이미 터미널 앞에 서 있음",
+        body: "현재 위치가 배금시외버스터미널이므로 다른 정차 구간을 골라야 한다.",
+        tone: "accent",
+      }, state);
+    }
+    renderGame();
+    return;
+  }
+
+  handleOutsideOption({
+    action: "move",
+    targetLocation,
+    travelVia: "bus",
+  });
+}
+
+function buildEscapeEndingSummary() {
+  return {
+    noRanking: true,
+    title: "당신은 배금도시를 떠났다",
+    speaker: "메트로폴리스행 고속버스",
+    tags: ["도시 이탈", "새로운 자유"],
+    character: "",
+    backgroundConfig: typeof DAY01_WORLD_METROPOLIS_ENDING_BACKGROUND !== "undefined"
+      ? DAY01_WORLD_METROPOLIS_ENDING_BACKGROUND
+      : null,
+    lines: [
+      "고속버스를 타고 배금도시를 떠났다.",
+      "이번 선택은 랭킹에 반영되지 않았다.",
+      "당신은 새로운 자유를 찾아 도시 밖으로 나갔다.",
+    ],
+  };
+}
+
+function takeMetropolisExpressBus() {
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(state)
+    : "";
+  const canBoard = currentLocationId === "bus-stop" || currentLocationId === "bus-stop-map";
+
+  if (!canBoard) {
+    if (typeof setPhoneAppStatus === "function") {
+      setPhoneAppStatus("bus", {
+        kicker: "BUS",
+        title: "터미널에서만 고속버스 승차 가능",
+        body: "배금시외버스터미널 앞에 도착해야 메트로폴리스행 고속버스를 탈 수 있다.",
+        tone: "fail",
+      }, state);
+    }
+    renderGame();
+    return;
+  }
+
+  if (typeof closeMemoryPanel === "function") {
+    closeMemoryPanel(state);
+  }
+  if (typeof closeInventoryPanel === "function") {
+    closeInventoryPanel(state);
+  }
+  if (typeof patchPhoneSession === "function") {
+    patchPhoneSession(state, {
+      minimized: true,
+      stageExpanded: false,
+      route: "home",
+    });
+  }
+
+  clearPendingTravelState(state);
+  clearAlleyNpcState(state);
+  state.currentOffer = null;
+  state.currentIncident = null;
+  state.lastResult = null;
+  state.scene = "ending";
+  state.endingSummary = buildEscapeEndingSummary();
+  state.headline = {
+    badge: "도시 이탈",
+    text: "메트로폴리스행 고속버스가 배금도시 바깥으로 미끄러져 나간다.",
+  };
+  renderGame();
+}
+
+function refreshNewsFeed() {
+  const feedItems = typeof getDisInternetFeedEntries === "function"
+    ? getDisInternetFeedEntries(state)
+    : [];
+  const picked = feedItems.length
+    ? sample(feedItems)
+    : {
+        kicker: "NEWS",
+        title: "뉴스 대기",
+        body: "아직 불러올 수 있는 뉴스가 없습니다.",
+        tone: "accent",
+      };
+
+  setPhoneAppStatus("news", {
+    kicker: picked.kicker,
+    title: picked.title,
+    body: picked.body,
+    tone: picked.tone,
+  });
+  state.phonePreview = createPhoneResultPreview("news", picked.kicker, picked.title, picked.body);
+  setHeadline("📰 뉴스", picked.body);
+  finishPhoneAppTimeSpend({ type: "minor", amount: 1 });
+}
+
 function refreshDisInternetFeed() {
-  const locationLabel = typeof getCurrentLocationLabel === "function"
-    ? getCurrentLocationLabel(state)
-    : "배금시";
-  const economy = typeof getTodayEconomy === "function"
-    ? getTodayEconomy(state)
-    : null;
-  const market = typeof getStockMarketSnapshot === "function"
-    ? getStockMarketSnapshot(state)
-    : null;
-  const feedLines = [
-    economy
-      ? `${locationLabel} 생활물가 ${economy.priceIndex.toFixed(2)}배, 체감지수가 다시 갱신됐다.`
-      : `${locationLabel} 근처 공고가 다시 상단으로 올라왔다.`,
-    market
-      ? `오늘 장세는 ${market.marketTrend}, 예상 승률은 ${market.successChanceText} 수준이다.`
-      : `${state.day}일차 생존 팁이 커뮤니티 인기글에 떴다.`,
-    economy
-      ? `환율 체감지수 ${economy.exchangeIndex}, 거리 상인들 사이에서 긴장감이 돈다.`
-      : "역 앞 시세와 골목 소문이 새로 갱신됐다.",
-  ];
-  const message = sample(feedLines);
+  const feedItems = typeof getDisInternetFeedEntries === "function"
+    ? getDisInternetFeedEntries(state)
+    : [];
+  const picked = feedItems.length
+    ? sample(feedItems)
+    : {
+        kicker: "DIGGLE",
+        title: "검색 인덱스 대기",
+        body: "아직 반영된 실시간 이슈가 없습니다.",
+        tone: "accent",
+      };
 
   setPhoneAppStatus("dis", {
-    kicker: "LIVE",
-    title: "실시간 피드 새로고침",
-    body: message,
-    tone: "accent",
+    kicker: picked.kicker,
+    title: picked.title,
+    body: picked.body,
+    tone: picked.tone,
   });
-  state.phonePreview = createPhoneResultPreview("dis", "DIS", "인터넷 새로고침", message);
-  setHeadline("🌐 DIS 인터넷", message);
+  state.phonePreview = createPhoneResultPreview("dis", picked.kicker, picked.title, picked.body);
+  setHeadline("🌐 Diggle", picked.body);
   finishPhoneAppTimeSpend({ type: "minor", amount: 1 });
+}
+
+function runDisInternetSearch(actionTarget) {
+  const scopedRoot = actionTarget?.closest(".dis-search-panel")
+    || actionTarget?.closest(".dis-app")
+    || ui.phoneAppScreen
+    || ui.phoneStage;
+  const input = actionTarget?.dataset.query
+    ? null
+    : scopedRoot?.querySelector("[data-dis-search-input]");
+  const query = typeof actionTarget?.dataset.query === "string" && actionTarget.dataset.query.trim()
+    ? actionTarget.dataset.query.trim()
+    : String(input?.value || "").trim();
+  const summary = typeof getDisInternetSearchSummary === "function"
+    ? getDisInternetSearchSummary(query, state)
+    : {
+        kicker: "SEARCH",
+        title: "검색",
+        body: "검색 결과를 불러오지 못했습니다.",
+        tone: "accent",
+      };
+
+  state.disSearchQuery = query;
+  setPhoneAppStatus("dis", {
+    kicker: summary.kicker,
+    title: summary.title,
+    body: summary.body,
+    tone: summary.tone,
+  });
+  state.phonePreview = createPhoneResultPreview("dis", summary.kicker, summary.title, summary.body);
+  setHeadline("🌐 Diggle", summary.body);
+  renderGame();
+}
+
+function getDisGambleScope(actionTarget) {
+  return actionTarget?.closest(".dis-gamble-panel")
+    || actionTarget?.closest(".dis-gamble-app")
+    || actionTarget?.closest(".dis-app")
+    || ui.phoneAppScreen
+    || ui.phoneStage;
+}
+
+function ensureDisGambleDrafts(targetState = state) {
+  if (!targetState) {
+    return null;
+  }
+
+  if (!targetState.disGambleDrafts || typeof targetState.disGambleDrafts !== "object") {
+    targetState.disGambleDrafts = {
+      "odd-even": "1000",
+      ladder: "5000",
+    };
+  }
+
+  return targetState.disGambleDrafts;
+}
+
+function normalizeDisGambleGameId(gameId = "") {
+  return String(gameId || "").toLowerCase() === "ladder" ? "ladder" : "odd-even";
+}
+
+function setDisGambleDraftAmount(gameId, nextValue, targetState = state) {
+  const drafts = ensureDisGambleDrafts(targetState);
+  if (!drafts) {
+    return "";
+  }
+
+  const normalizedGameId = normalizeDisGambleGameId(gameId);
+  drafts[normalizedGameId] = String(nextValue ?? "").replace(/[^\d]/g, "");
+  return drafts[normalizedGameId];
+}
+
+function getDisGambleBetAmount(gameId, actionTarget) {
+  const scopedRoot = getDisGambleScope(actionTarget);
+  const input = scopedRoot?.querySelector(`[data-dis-gamble-input="${gameId}"]`);
+  const liveValue = String(input?.value ?? "").replace(/[^\d]/g, "");
+  if (liveValue) {
+    setDisGambleDraftAmount(gameId, liveValue, state);
+  }
+
+  const drafts = ensureDisGambleDrafts(state);
+  return Math.floor(Number(liveValue || drafts?.[normalizeDisGambleGameId(gameId)] || 0) || 0);
+}
+
+function setDisGambleOutcome({
+  title,
+  body,
+  tone = "accent",
+  kicker = "SHADOW",
+}) {
+  setPhoneAppStatus("dis", {
+    kicker,
+    title,
+    body,
+    tone,
+  });
+  state.phonePreview = createPhoneResultPreview("dis", kicker, title, body);
+  setHeadline("🌐 Diggle", body);
+}
+
+function validateDisGambleBet(gameId, actionTarget) {
+  const betAmount = getDisGambleBetAmount(gameId, actionTarget);
+  const balance = typeof getWalletBalance === "function"
+    ? getWalletBalance(state)
+    : state.money;
+
+  if (betAmount < 1000) {
+    setDisGambleOutcome({
+      title: "베팅 금액 오류",
+      body: "최소 1,000원 이상부터 걸 수 있습니다.",
+      tone: "fail",
+    });
+    renderGame();
+    return null;
+  }
+
+  if (betAmount > balance) {
+    setDisGambleOutcome({
+      title: "현금 부족",
+      body: "손에 쥔 현금보다 큰 금액은 걸 수 없습니다.",
+      tone: "fail",
+    });
+    renderGame();
+    return null;
+  }
+
+  if (typeof spendCash === "function" && !spendCash(betAmount, state)) {
+    setDisGambleOutcome({
+      title: "정산 실패",
+      body: "지갑 정리에 실패해서 베팅을 진행하지 못했습니다.",
+      tone: "fail",
+    });
+    renderGame();
+    return null;
+  }
+
+  if (typeof spendCash !== "function") {
+    state.money = Math.max(0, state.money - betAmount);
+  }
+
+  return betAmount;
+}
+
+function isDisGambleScamTriggered(betAmount = 0) {
+  const normalizedBet = Math.max(0, Math.floor(Number(betAmount) || 0));
+  const scamChance = normalizedBet >= 50000 ? 0.18 : 0.12;
+  return Math.random() < scamChance;
+}
+
+function runDisOddEven(actionTarget) {
+  const betAmount = validateDisGambleBet("odd-even", actionTarget);
+  if (!betAmount) {
+    return;
+  }
+
+  const choice = actionTarget?.dataset.choice === "even" ? "짝" : "홀";
+  const choiceKey = actionTarget?.dataset.choice === "even" ? "even" : "odd";
+
+  if (isDisGambleScamTriggered(betAmount)) {
+    const message = `홀짝 정산이 지연된다는 문구만 남기고 사이트가 닫혔다. ${formatMoney(betAmount)}은 돌아오지 않았다.`;
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(-betAmount);
+    }
+    setDisGambleOutcome({
+      title: "먹튀 발생",
+      body: message,
+      tone: "fail",
+    });
+    finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+    return;
+  }
+
+  const rolledNumber = Math.floor(Math.random() * 10) + 1;
+  const resultKey = rolledNumber % 2 === 0 ? "even" : "odd";
+
+  if (choiceKey === resultKey) {
+    const payout = betAmount * 2;
+    if (typeof earnCash === "function") {
+      earnCash(payout, state);
+    } else {
+      state.money += payout;
+    }
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(betAmount);
+    }
+    setDisGambleOutcome({
+      title: "홀짝 적중",
+      body: `${rolledNumber}이 떠서 ${choice}이 맞았습니다. ${formatMoney(payout)}을 정산받았습니다.`,
+      tone: "success",
+    });
+  } else {
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(-betAmount);
+    }
+    setDisGambleOutcome({
+      title: "홀짝 실패",
+      body: `${rolledNumber}이 떠서 ${choice} 선택이 빗나갔습니다. ${formatMoney(betAmount)}을 잃었습니다.`,
+      tone: "fail",
+    });
+  }
+
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+function runDisLadder(actionTarget) {
+  const betAmount = validateDisGambleBet("ladder", actionTarget);
+  if (!betAmount) {
+    return;
+  }
+
+  const selectedLane = String(actionTarget?.dataset.lane || "left");
+  const laneLabels = {
+    left: "좌",
+    center: "중",
+    right: "우",
+  };
+
+  if (isDisGambleScamTriggered(betAmount)) {
+    const message = `사다리 결과 창이 열리기 직전에 링크가 끊겼다. ${formatMoney(betAmount)}은 먹튀 처리됐다.`;
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(-betAmount);
+    }
+    setDisGambleOutcome({
+      title: "먹튀 발생",
+      body: message,
+      tone: "fail",
+    });
+    finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+    return;
+  }
+
+  const winningLane = sample(["left", "center", "right"]);
+  if (selectedLane === winningLane) {
+    const payout = Math.round(betAmount * 2.4);
+    if (typeof earnCash === "function") {
+      earnCash(payout, state);
+    } else {
+      state.money += payout;
+    }
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(payout - betAmount);
+    }
+    setDisGambleOutcome({
+      title: "사다리 적중",
+      body: `${laneLabels[winningLane]} 줄이 당첨으로 열렸습니다. ${formatMoney(payout)}을 정산받았습니다.`,
+      tone: "success",
+    });
+  } else {
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(-betAmount);
+    }
+    setDisGambleOutcome({
+      title: "사다리 실패",
+      body: `${laneLabels[winningLane]} 줄이 당첨이었습니다. 선택한 ${laneLabels[selectedLane] || "좌"} 줄은 꽝이어서 ${formatMoney(betAmount)}을 잃었습니다.`,
+      tone: "fail",
+    });
+  }
+
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
 }
 
 function installPhoneAppFromStore(appId) {
@@ -3213,6 +4530,104 @@ function runStudyDistrictEvent({
   renderGame();
 }
 
+/*
+function useInventoryConsumable(itemId, targetState = state) {
+  const definition = typeof getInventoryItemDefinition === "function"
+    ? getInventoryItemDefinition(itemId)
+    : null;
+  const hungerRestore = Math.max(0, Math.round(Number(definition?.hungerRestore) || 0));
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  const hungerState = ensureHungerState(targetState);
+
+  if (!definition || !definition.id || !definition.useLabel || hungerRestore <= 0) {
+    return false;
+  }
+
+  if (hungerState.value >= hungerMax) {
+    targetState.headline = {
+      badge: "배고픔 안정",
+      text: `${definition.label}은 지금 먹지 않아도 될 만큼 배고픔이 버텨 주고 있다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof consumeInventoryItem === "function" && !consumeInventoryItem(definition.id, 1, targetState)) {
+    targetState.headline = {
+      badge: "사용 실패",
+      text: `${definition.label}이 인벤토리에 남아 있지 않다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  restoreHunger(hungerRestore, targetState, { resetProgress: true });
+  targetState.headline = {
+    badge: "허기 달램",
+    text: `${definition.label}으로 배고픔을 달래 포만감을 ${targetState.hunger}/${hungerMax}까지 회복했다.`,
+  };
+
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory(`${definition.label}을 챙겨 먹었다`, definition.useMemoryBody || `${definition.label}으로 배고픔을 달랬다.`, {
+      type: "food",
+      source: "인벤토리",
+      tags: ["인벤토리", "배고픔", definition.id],
+    });
+  }
+
+  renderGame();
+  return true;
+}
+
+*/
+function useInventoryConsumable(itemId, targetState = state) {
+  const definition = typeof getInventoryItemDefinition === "function"
+    ? getInventoryItemDefinition(itemId)
+    : null;
+  const hungerRestore = Math.max(0, Math.round(Number(definition?.hungerRestore) || 0));
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  const hungerState = ensureHungerState(targetState);
+
+  if (!definition || !definition.id || !definition.useLabel || hungerRestore <= 0) {
+    return false;
+  }
+
+  if (hungerState.value >= hungerMax) {
+    targetState.headline = {
+      badge: "배고픔 안정",
+      text: `${definition.label}은 지금 먹지 않아도 될 만큼 배고픔이 버텨 주고 있다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof consumeInventoryItem === "function" && !consumeInventoryItem(definition.id, 1, targetState)) {
+    targetState.headline = {
+      badge: "사용 실패",
+      text: `${definition.label}이 인벤토리에 남아 있지 않다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  restoreHunger(hungerRestore, targetState, { resetProgress: true });
+  targetState.headline = {
+    badge: "허기 달램",
+    text: `${definition.label}으로 배고픔을 달래 포만감을 ${targetState.hunger}/${hungerMax}까지 회복했다.`,
+  };
+
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory(`${definition.label} 사용`, definition.useMemoryBody || `${definition.label}으로 배고픔을 달랬다.`, {
+      type: "food",
+      source: "인벤토리",
+      tags: ["인벤토리", "배고픔", definition.id],
+    });
+  }
+
+  renderGame();
+  return true;
+}
+
 const PLASTIC_SURGERY_COST = 10000000;
 const CONVENIENCE_STORE_CATALOG = Object.freeze({
   "buy-convenience-water": Object.freeze({
@@ -3232,6 +4647,25 @@ const CONVENIENCE_STORE_CATALOG = Object.freeze({
     label: "진통제",
     price: 3500,
     memoryBody: "몸 상태가 흔들릴 때 버티기 좋게 진통제를 하나 챙겼다.",
+  }),
+});
+const MCDONALDS_MENU_CATALOG = Object.freeze({
+  "eat-mcdonalds-set": Object.freeze({
+    label: "버거 세트",
+    price: 6900,
+    hungerGain: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3,
+    energyGain: 8,
+    happinessGain: 2,
+    slots: 1,
+    memoryBody: "맥도날드 배금사거리점에서 버거 세트를 먹으며 잠깐 숨을 돌렸다.",
+  }),
+  "buy-mcdonalds-coffee": Object.freeze({
+    label: "커피",
+    price: 2500,
+    energyGain: 3,
+    happinessGain: 1,
+    slots: 1,
+    memoryBody: "카운터에서 막 나온 커피를 받아 들고 사거리 쪽 풍경을 잠깐 바라봤다.",
   }),
 });
 
@@ -3378,6 +4812,66 @@ function buyConvenienceStoreItem(actionId, targetState = state) {
   return true;
 }
 
+function visitMcDonaldsMenu(actionId, targetState = state) {
+  const menu = MCDONALDS_MENU_CATALOG[actionId];
+  if (!menu || !targetState) {
+    return false;
+  }
+
+  if (typeof canAfford === "function" && !canAfford(menu.price, targetState)) {
+    targetState.headline = {
+      badge: "주문 실패",
+      text: `${menu.label} 가격인 ${formatMoney(menu.price)}이 부족하다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof spendCash === "function" && !spendCash(menu.price, targetState)) {
+    targetState.headline = {
+      badge: "주문 실패",
+      text: `${menu.label} 결제 도중 주문이 취소됐다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  const energyCap = typeof ENERGY_MAX === "number"
+    ? ENERGY_MAX
+    : (typeof BASE_ENERGY === "number" ? BASE_ENERGY : 100);
+  targetState.energy = Math.min(
+    energyCap,
+    Math.max(0, Number(targetState.energy || 0)) + Math.max(0, Number(menu.energyGain || 0)),
+  );
+
+  if (Number(menu.hungerGain) > 0) {
+    restoreHunger(menu.hungerGain, targetState, { resetProgress: true });
+  }
+
+  if (typeof adjustHappiness === "function" && menu.happinessGain) {
+    adjustHappiness(menu.happinessGain, targetState);
+  }
+
+  targetState.headline = {
+    badge: "식사 완료",
+    text: `${menu.label}로 잠깐 숨을 돌리며 다시 움직일 힘을 챙겼다.`,
+  };
+
+  recordActionMemory(`${menu.label}로 한숨 돌렸다`, menu.memoryBody, {
+    type: "food",
+    source: getCurrentLocationLabel(),
+    tags: ["맥도날드", "식사"],
+  });
+
+  if (spendTimeSlots(Math.max(0, Number(menu.slots || 0)))) {
+    advanceDayOrFinish();
+    return true;
+  }
+
+  renderGame();
+  return true;
+}
+
 function runStocksTrade() {
   if (state.phoneUsedToday) {
     return;
@@ -3453,6 +4947,228 @@ function runStocksTrade() {
   finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
 }
 
+// ── 주식: 매수 진입 ────────────────────────────────────────
+function runStocksEnter() {
+  if (state.stocksUsedToday || state.stockHolding) return;
+
+  const betInput = document.getElementById("stk-bet-input")
+    || document.querySelector(".stk-app .gbl-bet-input");
+  const betAmount = betInput ? Math.floor(Number(betInput.value) || 0) : 0;
+  const balance = typeof getWalletBalance === "function" ? getWalletBalance(state) : state.money;
+
+  if (betAmount < 1000) {
+    setPhoneAppStatus("stocks", { kicker: "STOCKS", title: "금액 오류", body: "최소 1,000원 이상 입력하세요.", tone: "fail" });
+    renderGame(); return;
+  }
+  if (betAmount > balance) {
+    setPhoneAppStatus("stocks", { kicker: "STOCKS", title: "잔고 부족", body: "보유 현금보다 많은 금액은 투자할 수 없습니다.", tone: "fail" });
+    renderGame(); return;
+  }
+
+  if (typeof spendCash === "function") spendCash(betAmount);
+  else state.money = Math.max(0, state.money - betAmount);
+
+  state.stockHolding = { betAmount, buyDay: state.day };
+  state.stocksUsedToday = true;
+
+  const message = `${formatMoney(betAmount)}을 증권 시장에 투자했다. 내일 결과를 확인하자.`;
+  setPhoneAppStatus("stocks", { kicker: "STOCKS", title: "매수 완료", body: message, tone: "accent" });
+  setHeadline("📈 증권", message);
+  recordActionMemory("주식을 매수했다", message, { type: "finance", source: "증권 앱", tags: ["증권", "매수"] });
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+// ── 주식: 매도 실현 ────────────────────────────────────────
+function runStocksSell() {
+  if (state.stocksUsedToday || !state.stockHolding) return;
+
+  const market = typeof getStockMarketSnapshot === "function" ? getStockMarketSnapshot(state) : null;
+  const returnRate = market ? market.stockDailyReturnRate : 0;
+  const holding = state.stockHolding;
+  const currentValue = Math.round(holding.betAmount * (1 + returnRate));
+  const pnl = currentValue - holding.betAmount;
+
+  if (typeof earnCash === "function") earnCash(currentValue);
+  else state.money += currentValue;
+
+  showMoneyEffect(pnl);
+  state.stockHolding = null;
+  state.stocksUsedToday = true;
+
+  const pnlSign = pnl >= 0 ? "+" : "";
+  const tone = pnl >= 0 ? "success" : "fail";
+  const message = `보유 주식을 ${formatMoney(currentValue)}에 매도했다. 손익: ${pnlSign}${formatMoney(pnl)} (${(returnRate * 100).toFixed(1)}%)`;
+  setPhoneAppStatus("stocks", { kicker: "MARKET CLOSE", title: pnl >= 0 ? "매도 수익" : "매도 손실", body: message, tone });
+  setHeadline("📈 증권", message);
+  recordActionMemory("주식을 매도했다", message, { type: "finance", source: "증권 앱", tags: ["증권", pnl >= 0 ? "수익" : "손실"] });
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+// ── 주식: 보유 유지 ────────────────────────────────────────
+function runStocksHold() {
+  if (state.stocksUsedToday || !state.stockHolding) return;
+  state.stocksUsedToday = true;
+  const message = "오늘은 매도하지 않기로 했다. 내일 다시 확인하자.";
+  setPhoneAppStatus("stocks", { kicker: "STOCKS", title: "보유 유지", body: message, tone: "accent" });
+  setHeadline("📈 증권", message);
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+// ── 카지노: 즉시 베팅 ──────────────────────────────────────
+function runCasinoBet() {
+  if (typeof openPhoneRoute === "function") {
+    openPhoneRoute(CASINO_ROUTES.blackjack, state);
+  }
+  renderGame();
+}
+
+// ── 코인: 매수 진입 ────────────────────────────────────────
+function runCoinEnter() {
+  if (state.coinUsedToday || state.coinHolding) return;
+
+  const betInput = document.getElementById("coin-bet-input")
+    || document.querySelector(".coin-app .gbl-bet-input");
+  const betAmount = betInput ? Math.floor(Number(betInput.value) || 0) : 0;
+  const balance = typeof getWalletBalance === "function" ? getWalletBalance(state) : state.money;
+
+  const selectedRadio = document.querySelector(".coin-tab-radio:checked");
+  const coinType = selectedRadio ? selectedRadio.value : "MAMC";
+
+  if (betAmount < 1000) {
+    setPhoneAppStatus("coin", { kicker: "COIN", title: "금액 오류", body: "최소 1,000원 이상 입력하세요.", tone: "fail" });
+    renderGame(); return;
+  }
+  if (betAmount > balance) {
+    setPhoneAppStatus("coin", { kicker: "COIN", title: "잔고 부족", body: "보유 현금보다 많은 금액은 매수할 수 없습니다.", tone: "fail" });
+    renderGame(); return;
+  }
+
+  if (typeof spendCash === "function") spendCash(betAmount);
+  else state.money = Math.max(0, state.money - betAmount);
+
+  const coinInfo = typeof getCoinTypeInfo === "function" ? getCoinTypeInfo(coinType) : { label: coinType };
+  state.coinHolding = { betAmount, buyDay: state.day, coinType };
+  state.coinUsedToday = true;
+
+  const message = `${coinInfo.label}(${coinType}) ${formatMoney(betAmount)}어치를 매수했다. 내일 결과를 확인하자.`;
+  setPhoneAppStatus("coin", { kicker: "COIN", title: "매수 완료", body: message, tone: "accent" });
+  setHeadline("🪙 코인", message);
+  recordActionMemory("코인을 매수했다", message, { type: "finance", source: "코인 앱", tags: ["코인", "매수", coinType] });
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+// ── 코인: 매도 실현 ────────────────────────────────────────
+function runCoinSell() {
+  if (state.coinUsedToday || !state.coinHolding) return;
+
+  const holding = state.coinHolding;
+  const returnRate = typeof getCoinDailyReturnRate === "function"
+    ? getCoinDailyReturnRate(holding.coinType, state)
+    : 0;
+  const currentValue = Math.round(holding.betAmount * (1 + returnRate));
+  const pnl = currentValue - holding.betAmount;
+
+  if (typeof earnCash === "function") earnCash(currentValue);
+  else state.money += currentValue;
+
+  showMoneyEffect(pnl);
+  state.coinHolding = null;
+  state.coinUsedToday = true;
+
+  const coinInfo = typeof getCoinTypeInfo === "function" ? getCoinTypeInfo(holding.coinType) : { label: holding.coinType };
+  const pnlSign = pnl >= 0 ? "+" : "";
+  const tone = pnl >= 0 ? "success" : "fail";
+  const message = `${coinInfo.label} 매도 완료. ${formatMoney(currentValue)} 수령. 손익: ${pnlSign}${formatMoney(pnl)} (${(returnRate * 100).toFixed(1)}%)`;
+  setPhoneAppStatus("coin", { kicker: "COIN", title: pnl >= 0 ? "매도 수익" : "매도 손실", body: message, tone });
+  setHeadline("🪙 코인", message);
+  recordActionMemory("코인을 매도했다", message, { type: "finance", source: "코인 앱", tags: ["코인", pnl >= 0 ? "수익" : "손실"] });
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+// ── 코인: 보유 유지 ────────────────────────────────────────
+function runCoinHold() {
+  if (state.coinUsedToday || !state.coinHolding) return;
+  state.coinUsedToday = true;
+  const coinInfo = typeof getCoinTypeInfo === "function" ? getCoinTypeInfo(state.coinHolding.coinType) : { label: state.coinHolding.coinType };
+  const message = `${coinInfo.label} 보유를 유지하기로 했다. 내일 다시 확인하자.`;
+  setPhoneAppStatus("coin", { kicker: "COIN", title: "보유 유지", body: message, tone: "accent" });
+  setHeadline("🪙 코인", message);
+  finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
+}
+
+function handleTradingTerminalAction(phoneAction, actionTarget) {
+  if (typeof ensureTradingTerminalState !== "function") {
+    return false;
+  }
+
+  const appId = actionTarget?.dataset.appId;
+
+  if (phoneAction === "terminal-set-mode") {
+    setTradingTerminalMode(appId, actionTarget.dataset.mode, state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-set-asset") {
+    setTradingTerminalAsset(appId, actionTarget.dataset.asset, state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-toggle-chart") {
+    toggleTradingTerminalChart(appId, state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-set-leverage") {
+    setTradingTerminalLeverage(appId, Number(actionTarget.dataset.leverage) || 5, state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-set-pct") {
+    setTradingTerminalQuickAmount(appId, Number(actionTarget.dataset.pct) || 0, state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-spot-buy") {
+    if (tradeTradingTerminalSpot(appId, "buy", state)) {
+      renderGame();
+    } else {
+      renderGame();
+    }
+    return true;
+  }
+
+  if (phoneAction === "terminal-spot-sell") {
+    tradeTradingTerminalSpot(appId, "sell", state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-futures-long") {
+    tradeTradingTerminalFutures(appId, "long", state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-futures-short") {
+    tradeTradingTerminalFutures(appId, "short", state);
+    renderGame();
+    return true;
+  }
+
+  if (phoneAction === "terminal-close-position") {
+    closeTradingTerminalPosition(appId, actionTarget.dataset.positionId, state);
+    renderGame();
+    return true;
+  }
+
+  return false;
+}
+
 function orderDeliveryMeal() {
   if (state.phoneUsedToday) {
     return;
@@ -3482,6 +5198,7 @@ function orderDeliveryMeal() {
   } else {
     state.money = Math.max(0, state.money - cost);
   }
+  restoreHunger(typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3, state, { resetProgress: true });
   showMoneyEffect(-cost);
 
   const message = economy
@@ -3642,8 +5359,52 @@ function handlePhoneScreenClickLegacy(event) {
     return;
   }
 
+  if (phoneAction === "bus-ride-to-stop") {
+    rideBusFromPhone(actionTarget.dataset.locationId);
+    return;
+  }
+
+  if (phoneAction === "bus-take-express") {
+    takeMetropolisExpressBus();
+    return;
+  }
+
   if (phoneAction === "refresh-dis-feed") {
     refreshDisInternetFeed();
+    return;
+  }
+
+  if (phoneAction === "refresh-news-feed") {
+    refreshNewsFeed();
+    return;
+  }
+
+  if (phoneAction === "dis-run-search") {
+    runDisInternetSearch(actionTarget);
+    return;
+  }
+
+  if (phoneAction === "dis-set-gamble-bet") {
+    setDisGambleDraftAmount(actionTarget.dataset.gameId, actionTarget.dataset.amount, state);
+    renderGame();
+    return;
+  }
+
+  if (typeof handleStockMarketAction === "function" && handleStockMarketAction(phoneAction, actionTarget)) {
+    return;
+  }
+
+  if (handleTradingTerminalAction(phoneAction, actionTarget)) {
+    return;
+  }
+
+  if (phoneAction === "dis-play-odd-even") {
+    runDisOddEven(actionTarget);
+    return;
+  }
+
+  if (phoneAction === "dis-play-ladder") {
+    runDisLadder(actionTarget);
     return;
   }
 
@@ -3689,6 +5450,96 @@ function handlePhoneScreenClickLegacy(event) {
 
   if (phoneAction === "run-stocks-trade") {
     runStocksTrade();
+    return;
+  }
+
+  if (phoneAction === "run-stocks-enter") {
+    runStocksEnter();
+    return;
+  }
+
+  if (phoneAction === "run-stocks-sell") {
+    runStocksSell();
+    return;
+  }
+
+  if (phoneAction === "run-stocks-hold") {
+    runStocksHold();
+    return;
+  }
+
+  if (phoneAction === "run-casino-bet") {
+    runCasinoBet();
+    return;
+  }
+
+  if (phoneAction === "casino-fill-exchange") {
+    fillCasinoExchangeDraft(actionTarget.dataset.direction, Number(actionTarget.dataset.amount) || 0);
+    return;
+  }
+
+  if (phoneAction === "casino-exchange-in") {
+    runCasinoExchangeIn();
+    return;
+  }
+
+  if (phoneAction === "casino-exchange-out") {
+    runCasinoExchangeOut();
+    return;
+  }
+
+  if (phoneAction === "casino-add-bet") {
+    addCasinoBlackjackBet(Number(actionTarget.dataset.amount) || 0);
+    return;
+  }
+
+  if (phoneAction === "casino-reset-bet") {
+    resetCasinoBlackjackBet();
+    return;
+  }
+
+  if (phoneAction === "casino-start-blackjack") {
+    startCasinoBlackjackRound();
+    return;
+  }
+
+  if (phoneAction === "casino-hit") {
+    casinoBlackjackHit();
+    return;
+  }
+
+  if (phoneAction === "casino-stand") {
+    casinoBlackjackStand();
+    return;
+  }
+
+  if (phoneAction === "casino-double") {
+    casinoBlackjackDoubleDown();
+    return;
+  }
+
+  if (phoneAction === "casino-set-ace") {
+    setCasinoBlackjackAcePreference(Number(actionTarget.dataset.ace) || 11);
+    return;
+  }
+
+  if (phoneAction === "casino-slot-set-bet") {
+    setCasinoSlotBet(Number(actionTarget.dataset.amount) || CASINO_SLOT_MIN_BET);
+    return;
+  }
+
+  if (phoneAction === "run-coin-enter") {
+    runCoinEnter();
+    return;
+  }
+
+  if (phoneAction === "run-coin-sell") {
+    runCoinSell();
+    return;
+  }
+
+  if (phoneAction === "run-coin-hold") {
+    runCoinHold();
     return;
   }
 
@@ -3800,6 +5651,10 @@ function startScheduledShift() {
 
   state.timeSlot = Math.max(state.timeSlot, shiftStatus.startSlot) + shiftStatus.durationSlots;
   state.timeMinuteOffset = 0;
+  startWorkSceneForOffer(offer, {
+    clearScheduledShift: true,
+  });
+  return;
   state.currentOffer = offer;
   state.lastWorkedJobId = offer.jobId;
   state.jobVisits[offer.jobId] = (state.jobVisits[offer.jobId] || 0) + 1;
@@ -3870,6 +5725,8 @@ function prepareDayState(targetState = state) {
   targetState.scene = "room";
   targetState.currentOffer = null;
   targetState.currentIncident = null;
+  targetState.jobMiniGame = null;
+  targetState.jobMiniGameResult = null;
   targetState.lastResult = null;
   targetState.endingSummary = null;
   targetState.cleaningGame = null;
@@ -3877,6 +5734,9 @@ function prepareDayState(targetState = state) {
   targetState.phoneStageExpanded = false;
   targetState.phoneView = "home";
   targetState.phoneUsedToday = false;
+  targetState.stocksUsedToday = false;
+  targetState.casinoUsedToday = false;
+  targetState.coinUsedToday = false;
   targetState.phonePreview = createPhoneHomePreview(targetState.day);
   const nextDailyOffers = buildDayOffersForState(targetState);
   targetState.headline = {
@@ -3890,6 +5750,7 @@ function prepareDayState(targetState = state) {
     ? getWorldLocationDistrictId(targetState.world.currentLocation, targetState.day)
     : targetState.world.currentDistrict;
   clearAlleyNpcState(targetState);
+  resetLocationWanderState(targetState);
   clearPendingTravelState(targetState);
 
   if (typeof resetDialogueState === "function") {
@@ -3979,8 +5840,52 @@ function handlePhoneScreenClick(event) {
     return;
   }
 
+  if (phoneAction === "bus-ride-to-stop") {
+    rideBusFromPhone(actionTarget.dataset.locationId);
+    return;
+  }
+
+  if (phoneAction === "bus-take-express") {
+    takeMetropolisExpressBus();
+    return;
+  }
+
   if (phoneAction === "refresh-dis-feed") {
     refreshDisInternetFeed();
+    return;
+  }
+
+  if (phoneAction === "refresh-news-feed") {
+    refreshNewsFeed();
+    return;
+  }
+
+  if (phoneAction === "dis-run-search") {
+    runDisInternetSearch(actionTarget);
+    return;
+  }
+
+  if (phoneAction === "dis-set-gamble-bet") {
+    setDisGambleDraftAmount(actionTarget.dataset.gameId, actionTarget.dataset.amount, state);
+    renderGame();
+    return;
+  }
+
+  if (typeof handleStockMarketAction === "function" && handleStockMarketAction(phoneAction, actionTarget)) {
+    return;
+  }
+
+  if (handleTradingTerminalAction(phoneAction, actionTarget)) {
+    return;
+  }
+
+  if (phoneAction === "dis-play-odd-even") {
+    runDisOddEven(actionTarget);
+    return;
+  }
+
+  if (phoneAction === "dis-play-ladder") {
+    runDisLadder(actionTarget);
     return;
   }
 
@@ -4039,6 +5944,96 @@ function handlePhoneScreenClick(event) {
 
   if (phoneAction === "run-stocks-trade") {
     runStocksTrade();
+    return;
+  }
+
+  if (phoneAction === "run-stocks-enter") {
+    runStocksEnter();
+    return;
+  }
+
+  if (phoneAction === "run-stocks-sell") {
+    runStocksSell();
+    return;
+  }
+
+  if (phoneAction === "run-stocks-hold") {
+    runStocksHold();
+    return;
+  }
+
+  if (phoneAction === "run-casino-bet") {
+    runCasinoBet();
+    return;
+  }
+
+  if (phoneAction === "casino-fill-exchange") {
+    fillCasinoExchangeDraft(actionTarget.dataset.direction, Number(actionTarget.dataset.amount) || 0);
+    return;
+  }
+
+  if (phoneAction === "casino-exchange-in") {
+    runCasinoExchangeIn();
+    return;
+  }
+
+  if (phoneAction === "casino-exchange-out") {
+    runCasinoExchangeOut();
+    return;
+  }
+
+  if (phoneAction === "casino-add-bet") {
+    addCasinoBlackjackBet(Number(actionTarget.dataset.amount) || 0);
+    return;
+  }
+
+  if (phoneAction === "casino-reset-bet") {
+    resetCasinoBlackjackBet();
+    return;
+  }
+
+  if (phoneAction === "casino-start-blackjack") {
+    startCasinoBlackjackRound();
+    return;
+  }
+
+  if (phoneAction === "casino-hit") {
+    casinoBlackjackHit();
+    return;
+  }
+
+  if (phoneAction === "casino-stand") {
+    casinoBlackjackStand();
+    return;
+  }
+
+  if (phoneAction === "casino-double") {
+    casinoBlackjackDoubleDown();
+    return;
+  }
+
+  if (phoneAction === "casino-set-ace") {
+    setCasinoBlackjackAcePreference(Number(actionTarget.dataset.ace) || 11);
+    return;
+  }
+
+  if (phoneAction === "casino-slot-set-bet") {
+    setCasinoSlotBet(Number(actionTarget.dataset.amount) || CASINO_SLOT_MIN_BET);
+    return;
+  }
+
+  if (phoneAction === "run-coin-enter") {
+    runCoinEnter();
+    return;
+  }
+
+  if (phoneAction === "run-coin-sell") {
+    runCoinSell();
+    return;
+  }
+
+  if (phoneAction === "run-coin-hold") {
+    runCoinHold();
     return;
   }
 
@@ -4225,7 +6220,18 @@ function chooseIncidentOption(index) {
     state.seenIncidents.add(incident.id);
   }
 
-  const pay = calculatePay(state.currentOffer.pay, choice);
+  const miniGameResult = state.jobMiniGameResult?.jobId === state.currentOffer?.jobId
+    ? state.jobMiniGameResult
+    : null;
+  const miniGameBonus = Number.isFinite(miniGameResult?.bonus)
+    ? Number(miniGameResult.bonus)
+    : 0;
+  const pay = roundToHundred(calculatePay(state.currentOffer.pay, choice) + miniGameBonus);
+  const resultLines = Array.isArray(choice.result) ? [...choice.result] : [];
+  const miniGameSummary = buildJobMiniGameSummary(miniGameResult);
+  if (miniGameSummary) {
+    resultLines.unshift(miniGameSummary);
+  }
   if (typeof earnCash === "function") {
     earnCash(pay);
   } else {
@@ -4243,8 +6249,9 @@ function chooseIncidentOption(index) {
 
   state.lastResult = {
     pay,
-    lines: choice.result,
+    lines: resultLines,
   };
+  state.jobMiniGameResult = null;
 
   state.headline = choice.changes?.news
     ? {
@@ -4284,6 +6291,7 @@ function goOutside() {
     ? getWorldLocationDistrictId(state.world.currentLocation, state.day)
     : state.world.currentDistrict;
   clearAlleyNpcState(state);
+  clearWanderResultState(state);
   clearPendingTravelState(state);
   state.scene = "outside";
   state.headline = {
@@ -4305,6 +6313,8 @@ function completeBusTravel() {
 
   if (!targetLocation || !locationMap?.[targetLocation]) {
     worldState.currentLocation = "bus-stop";
+    clearAlleyNpcState(state);
+    clearWanderResultState(state);
     clearPendingTravelState(state);
     renderGame();
     return;
@@ -4321,6 +6331,8 @@ function completeBusTravel() {
   if (targetLocation && !worldState.unlockedLocations.includes(targetLocation)) {
     worldState.unlockedLocations.push(targetLocation);
   }
+  clearAlleyNpcState(state);
+  clearWanderResultState(state);
   clearPendingTravelState(state);
   state.headline = {
     badge: "버스 도착",
@@ -4330,6 +6342,49 @@ function completeBusTravel() {
     type: "travel",
     source: "버스",
     tags: ["이동", "버스", targetLocation],
+  });
+  renderGame();
+}
+
+function completeWalkTravel() {
+  const worldState = syncWorldState(state);
+  const targetLocation = worldState.pendingTravelTarget;
+  const locationMap = getDayWorldLocationMap(state.day);
+
+  if (!targetLocation || !locationMap?.[targetLocation]) {
+    worldState.currentLocation = getDayHomeLocationId(state.day) || "apt-alley";
+    clearAlleyNpcState(state);
+    clearWanderResultState(state);
+    clearPendingTravelState(state);
+    renderGame();
+    return;
+  }
+
+  worldState.currentLocation = targetLocation;
+  worldState.currentDistrict = worldState.pendingTravelDistrict
+    || (typeof getWorldLocationDistrictId === "function"
+      ? getWorldLocationDistrictId(targetLocation, state.day)
+      : worldState.currentDistrict);
+  if (targetLocation === "bus-stop-map") {
+    setWorldTerminalTab("route", state);
+  }
+  if (worldState.currentDistrict && !worldState.unlockedDistricts.includes(worldState.currentDistrict)) {
+    worldState.unlockedDistricts.push(worldState.currentDistrict);
+  }
+  if (targetLocation && !worldState.unlockedLocations.includes(targetLocation)) {
+    worldState.unlockedLocations.push(targetLocation);
+  }
+  clearAlleyNpcState(state);
+  clearWanderResultState(state);
+  clearPendingTravelState(state);
+  state.headline = {
+    badge: "도보 도착",
+    text: `${locationMap[targetLocation].label}에 걸어서 도착했다.`,
+  };
+  recordActionMemory("걸어서 이동했다", `${locationMap[targetLocation].label}에 걸어서 도착했다.`, {
+    type: "travel",
+    source: "도보",
+    tags: ["이동", "도보", targetLocation],
   });
   renderGame();
 }
@@ -4401,6 +6456,13 @@ function handleWorldKeyDown(event) {
 }
 
 function handleTextboxClick(event) {
+  const terminalTabTarget = event.target?.closest?.("[data-terminal-tab]");
+  if (terminalTabTarget) {
+    setWorldTerminalTab(terminalTabTarget.dataset.terminalTab, state);
+    renderGame();
+    return;
+  }
+
   if (!event.target || event.target.closest("#choices, button, a, input, textarea, select")) {
     return;
   }
@@ -4420,7 +6482,14 @@ function handleOutsideOption(action) {
     const currentLocationId = getCurrentLocationId();
     const currentLocation = getCurrentOutsideSceneConfig();
     const locationMap = getDayWorldLocationMap(state.day);
-    const shouldUseBusTravel = currentLocationId === "bus-stop-map" && option.travelVia === "bus";
+    const shouldUseBusTravel = (currentLocationId === "bus-stop-map" || currentLocationId === "bus-stop")
+      && option.travelVia === "bus";
+    const walkTravelMinutes = shouldUseBusTravel
+      ? TIME_SLOT_MINUTES
+      : estimateWalkTravelMinutes(currentLocationId, option.targetLocation, state);
+    const travelSlots = shouldUseBusTravel
+      ? TIME_COSTS.moveBetweenScenes
+      : Math.max(TIME_COSTS.moveBetweenScenes, Math.round(walkTravelMinutes / TIME_SLOT_MINUTES));
     const canMove = !Array.isArray(currentLocation?.exits)
       || currentLocation.exits.includes(option.targetLocation);
     const currentLabel = currentLocation?.label || getCurrentLocationLabel();
@@ -4430,7 +6499,7 @@ function handleOutsideOption(action) {
       return;
     }
 
-    if (spendTimeSlots(TIME_COSTS.moveBetweenScenes)) {
+    if (spendTimeSlots(travelSlots)) {
       advanceDayOrFinish();
       return;
     }
@@ -4445,24 +6514,21 @@ function handleOutsideOption(action) {
         tags: ["이동", "버스", option.targetLocation],
       });
     } else {
-      state.world.currentLocation = option.targetLocation;
-      state.world.currentDistrict = typeof getWorldLocationDistrictId === "function"
+      state.world.pendingTravelTarget = option.targetLocation;
+      state.world.pendingTravelDistrict = typeof getWorldLocationDistrictId === "function"
         ? getWorldLocationDistrictId(option.targetLocation, state.day)
-        : state.world.currentDistrict;
-      if (state.world.currentDistrict && !state.world.unlockedDistricts.includes(state.world.currentDistrict)) {
-        state.world.unlockedDistricts.push(state.world.currentDistrict);
-      }
-      if (option.targetLocation && !state.world.unlockedLocations.includes(option.targetLocation)) {
-        state.world.unlockedLocations.push(option.targetLocation);
-      }
-      clearPendingTravelState(state);
+        : state.world.pendingTravelDistrict;
+      state.world.pendingTravelSource = currentLabel;
+      state.world.pendingTravelMinutes = walkTravelMinutes;
+      state.world.currentLocation = "walk-travel";
       recordActionMemory(`${targetLabel}로 걸어갔다`, `${currentLabel}에서 나와 ${targetLabel} 쪽으로 발걸음을 옮겼다.`, {
         type: "travel",
         source: currentLabel,
-        tags: ["이동", option.targetLocation],
+        tags: ["이동", "도보", option.targetLocation],
       });
     }
     clearAlleyNpcState(state);
+    clearWanderResultState(state);
     state.headline = {
       badge: "",
       text: "",
@@ -4488,6 +6554,7 @@ function returnHomeFromOutside() {
     ? getWorldLocationDistrictId(state.world.currentLocation, state.day)
     : state.world.currentDistrict;
   clearAlleyNpcState(state);
+  clearWanderResultState(state);
   clearPendingTravelState(state);
   state.scene = "room";
   state.headline = {

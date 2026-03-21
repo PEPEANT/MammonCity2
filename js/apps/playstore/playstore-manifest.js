@@ -1,3 +1,20 @@
+function buildPlayStoreCatalogRowMarkup(app) {
+  return `
+    <div class="playstore-row">
+      <div class="playstore-row-copy">
+        <div class="playstore-row-title">${escapePhoneAppHtml(`${app.icon} ${app.label}`)}</div>
+        <div class="playstore-row-meta">${escapePhoneAppHtml(app.storeCategory || "앱")}</div>
+      </div>
+      ${buildPhoneAppActionButtonMarkup({
+        action: "install-phone-app",
+        label: "설치",
+        data: { "app-id": app.id },
+        className: "playstore-install-btn",
+      })}
+    </div>
+  `;
+}
+
 function getPlayStoreAppManifest(targetState = state) {
   return {
     id: "playstore",
@@ -19,35 +36,30 @@ function getPlayStoreAppManifest(targetState = state) {
         : [];
 
       const catalogMarkup = catalog.length
-        ? catalog.map((app) => buildPhoneAppCardMarkup({
-            label: app.storeCategory || "추천 앱",
-            title: `${app.icon} ${app.label}`,
-            body: app.storeDescription || "새 앱을 설치해 생활 루프를 확장합니다.",
-            actionsHtml: buildPhoneAppActionButtonMarkup({
-              action: "install-phone-app",
-              label: "설치",
-              data: { "app-id": app.id },
-            }),
-          })).join("")
-        : '<div class="phone-job-empty">지금 설치할 수 있는 앱이 없습니다.</div>';
+        ? catalog.map((app) => buildPlayStoreCatalogRowMarkup(app)).join("")
+        : '<div class="phone-job-empty">설치 가능한 앱이 없습니다.</div>';
 
       const installedMarkup = installedApps.length
-        ? installedApps.map((app) => `<span class="phone-job-tag">${escapePhoneAppHtml(`${app.icon} ${app.label}`)}</span>`).join("")
-        : '<span class="phone-job-tag">아직 추가 설치한 앱이 없습니다.</span>';
+        ? installedApps.map((app) => `
+            <span class="playstore-installed-chip">${escapePhoneAppHtml(`${app.icon} ${app.label}`)}</span>
+          `).join("")
+        : '<span class="playstore-installed-chip is-empty">추가 설치 앱 없음</span>';
 
       return `
-        ${buildPhoneAppScreenHeaderMarkup({
-          kicker: "PLAY STORE",
-          title: "앱 설치 센터",
-          note: "필요한 앱을 설치해서 폰 홈 화면에 추가합니다.",
-          showHomeButton: !stageMode,
-        })}
-        ${buildPhoneAppStatusMarkup("playstore")}
-        <section class="phone-app-card">
-          <div class="phone-app-card-label">설치된 추가 앱</div>
-          <div class="phone-job-tags">${installedMarkup}</div>
-        </section>
-        ${catalogMarkup}
+        <div class="playstore-app">
+          ${buildPhoneAppScreenHeaderMarkup({
+            title: "앱",
+            showHomeButton: !stageMode,
+          })}
+          ${buildPhoneAppStatusMarkup("playstore")}
+          <section class="playstore-installed-block">
+            <div class="playstore-section-title">설치 앱</div>
+            <div class="playstore-installed-list">${installedMarkup}</div>
+          </section>
+          <section class="playstore-list">
+            ${catalogMarkup}
+          </section>
+        </div>
       `;
     },
   };

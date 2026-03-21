@@ -268,6 +268,46 @@ body {
   color: #9a9a9a;
 }
 
+.dev-section.location-nav .dev-section-body {
+  max-height: 200px;
+}
+
+.dev-location-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.dev-location-btn {
+  appearance: none;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 9px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dev-location-btn:hover {
+  background: #e8f0fe;
+  border-color: rgba(66, 133, 244, 0.55);
+  color: #1a4bbf;
+}
+
+.dev-location-btn.is-current {
+  background: #e8f0fe;
+  border-color: #4285f4;
+  color: #1a4bbf;
+  font-weight: 700;
+}
+
 .dev-editor-status {
   color: #cdb06e;
 }
@@ -557,6 +597,7 @@ body {
   right: var(--phone-panel-width);
   bottom: 112px;
   z-index: 13;
+  pointer-events: none;
 }
 
 #trash-game-layer.is-hidden {
@@ -564,6 +605,24 @@ body {
 }
 
 #game.phone-collapsed #trash-game-layer {
+  right: 0;
+}
+
+#job-minigame-layer {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: var(--phone-panel-width);
+  bottom: 112px;
+  z-index: 13;
+  pointer-events: none;
+}
+
+#job-minigame-layer.is-hidden {
+  display: none;
+}
+
+#game.phone-collapsed #job-minigame-layer {
   right: 0;
 }
 
@@ -597,6 +656,7 @@ body {
   position: absolute;
   inset: 0;
   overflow: visible;
+  pointer-events: none;
 }
 
 #trash-items.dev-position-active {
@@ -649,19 +709,19 @@ body {
 /* 2. 헤드라인: 텍스트박스 바로 위 floating */
 #headline-strip {
   position: absolute;
-  top: 48px;
+  top: 52px;
   left: 18px;
   right: auto;
-  max-width: min(380px, calc(100% - var(--phone-panel-width) - 36px));
+  max-width: min(520px, calc(100% - var(--phone-panel-width) - 36px));
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 16px;
-  background: rgba(8, 11, 20, 0.58);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(8, 11, 20, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.22);
   z-index: 15;
 }
 
@@ -670,15 +730,15 @@ body {
 }
 
 #game.phone-collapsed #headline-strip {
-  max-width: min(380px, calc(100% - 36px));
+  max-width: min(520px, calc(100% - 36px));
 }
 
 /* 3. 텍스트박스: 반투명 RPG 대사창 */
 #textbox {
   position: absolute;
-  bottom: 16px;
+  bottom: 20px;
   left: 18px;
-  right: calc(var(--phone-panel-width) + 18px);
+  right: calc(var(--phone-panel-width) + 20px);
   width: auto;
   max-width: none;
   min-height: 0;
@@ -690,7 +750,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
+  gap: 14px;
 }
 
 #game.phone-collapsed #textbox {
@@ -702,7 +762,7 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  width: min(100%, 680px);
+  width: min(100%, 760px);
   align-self: center;
   margin-bottom: 0;
 }
@@ -761,9 +821,9 @@ body {
 
   /* 모바일: 폰 패널이 하단 → 텍스트박스/선택지 right: 0 */
   #textbox {
-    bottom: 12px;
+    bottom: 14px;
     left: 12px;
-    right: calc(var(--phone-panel-width) + 12px);
+    right: calc(var(--phone-panel-width) + 14px);
   }
 
   #choice-bar {
@@ -776,10 +836,15 @@ body {
   #headline-strip {
     top: 44px;
     left: 12px;
-    max-width: calc(100% - var(--phone-panel-width) - 24px);
+    max-width: calc(100% - var(--phone-panel-width) - 26px);
   }
 
   #trash-game-layer {
+    right: 0;
+    bottom: 106px;
+  }
+
+  #job-minigame-layer {
     right: 0;
     bottom: 106px;
   }

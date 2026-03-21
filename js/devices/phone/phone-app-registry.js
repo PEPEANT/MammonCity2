@@ -1,13 +1,16 @@
 function getPhoneAppRegistry(targetState = state) {
   const manifestGetters = [
     typeof getDisAppManifest === "function" ? getDisAppManifest : null,
+    typeof getNewsAppManifest === "function" ? getNewsAppManifest : null,
     typeof getPlayStoreAppManifest === "function" ? getPlayStoreAppManifest : null,
+    typeof getBusAppManifest === "function" ? getBusAppManifest : null,
     typeof getCallAppManifest === "function" ? getCallAppManifest : null,
     typeof getGalleryAppManifest === "function" ? getGalleryAppManifest : null,
     typeof getBankAppManifest === "function" ? getBankAppManifest : null,
     typeof getJobsAppManifest === "function" ? getJobsAppManifest : null,
     typeof getDeliveryAppManifest === "function" ? getDeliveryAppManifest : null,
     typeof getStocksAppManifest === "function" ? getStocksAppManifest : null,
+    typeof getCoinAppManifest === "function" ? getCoinAppManifest : null,
     typeof getVideoAppManifest === "function" ? getVideoAppManifest : null,
   ].filter(Boolean);
 
@@ -81,13 +84,29 @@ function buildPhoneRouteScreenMarkup(route, options = {}, targetState = state) {
   }
 
   if (typeof manifest.buildScreenMarkup === "function") {
-    return manifest.buildScreenMarkup({
+    const screenMarkup = manifest.buildScreenMarkup({
       ...options,
       route: routeInfo.route,
       appId: routeInfo.appId,
       screenId: routeInfo.screenId,
       targetState,
     });
+
+    const screenClasses = [
+      "phone-route-screen",
+      manifest.screenMode === "fullbleed" ? "is-fullbleed" : "",
+      routeInfo.appId ? `is-app-${routeInfo.appId}` : "",
+    ].filter(Boolean).join(" ");
+
+    return `
+      <div
+        class="${screenClasses}"
+        data-phone-app-root="${routeInfo.appId || ""}"
+        data-phone-screen-id="${routeInfo.screenId || "home"}"
+      >
+        ${screenMarkup}
+      </div>
+    `;
   }
 
   return '<div class="phone-job-empty">앱 화면 준비 중입니다.</div>';

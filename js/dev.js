@@ -52,6 +52,7 @@
     buildDayButtons(editor.sections.days.body);
     buildStatControls(editor.sections.stats.body);
     buildEventReplayEditor(panel);
+    buildLocationNavEditor(panel);
     buildPositionEditor(panel);
     buildNarrationEditor(panel);
     buildStateDisplay(editor.sections.state.body);
@@ -376,13 +377,12 @@
     sceneLine.id = "dev-replay-scene";
 
     const dayField = buildSelectEditorField("일차", "dev-replay-day");
-    const totalDays = Math.max(typeof MAX_DAYS === "number" ? MAX_DAYS : 0, 30);
-    for (let day = 1; day <= totalDays; day += 1) {
+    [1, 7].forEach((day) => {
       const option = document.createElement("option");
       option.value = String(day);
       option.textContent = `${day}일차`;
       dayField.input.appendChild(option);
-    }
+    });
 
     const presetField = buildSelectEditorField("이벤트", "dev-replay-preset");
 
@@ -429,6 +429,57 @@
     editor.replayDay = state?.day || 1;
     dayField.input.value = String(editor.replayDay);
     syncReplayPresetOptions(true);
+  }
+
+  function buildLocationNavEditor(panel) {
+    const sectionEntry = createEditorSection(panel, "location-nav", "location", "장소 이동");
+    const section = sectionEntry.body;
+
+    function renderLocationButtons() {
+      section.textContent = "";
+
+      const day = typeof state !== "undefined" ? (state.day || 1) : 1;
+      const locationMap = typeof getDayWorldLocationMap === "function"
+        ? getDayWorldLocationMap(day)
+        : null;
+
+      if (!locationMap || typeof locationMap !== "object") {
+        const empty = document.createElement("div");
+        empty.className = "dev-editor-note";
+        empty.textContent = "장소 데이터 없음";
+        section.appendChild(empty);
+        return;
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "dev-location-grid";
+
+      const currentLoc = (typeof state !== "undefined" && state?.world?.currentLocation) || "";
+
+      Object.entries(locationMap).forEach(([locationId, locationData]) => {
+        if (!locationData || typeof locationData !== "object") return;
+        const label = locationData.label || locationId;
+        const btn = document.createElement("button");
+        btn.className = "dev-location-btn" + (locationId === currentLoc ? " is-current" : "");
+        btn.textContent = label;
+        btn.title = locationId;
+        btn.addEventListener("click", () => {
+          if (typeof state === "undefined") return;
+          if (state.scene !== "outside") {
+            state.scene = "outside";
+          }
+          state.world.currentLocation = locationId;
+          if (typeof renderGame === "function") renderGame();
+        });
+        grid.appendChild(btn);
+      });
+
+      section.appendChild(grid);
+    }
+
+    renderLocationButtons();
+    editor.elements.locationNavSection = sectionEntry.section;
+    editor.elements.renderLocationButtons = renderLocationButtons;
   }
 
   function buildPositionEditorLegacy(panel) {
@@ -2704,6 +2755,9 @@
       }
       refreshEventReplayEditor();
       refreshNarrationEditor();
+      if (typeof editor.elements.renderLocationButtons === "function") {
+        editor.elements.renderLocationButtons();
+      }
       return result;
     };
 

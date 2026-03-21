@@ -79,6 +79,13 @@ function getNpcDialogueStartNodeId(npcId = "", targetState = state, context = {}
     return presentation.startNodeId;
   }
 
+  if (typeof entry.startNodeSelector === "function") {
+    const selectedNodeId = entry.startNodeSelector(targetState, context, presentation);
+    if (selectedNodeId && entry.nodes?.[selectedNodeId]) {
+      return selectedNodeId;
+    }
+  }
+
   if (entry.startNodeId && entry.nodes?.[entry.startNodeId]) {
     return entry.startNodeId;
   }
@@ -127,7 +134,11 @@ function startNpcDialogue(npcId, options = {}, targetState = state) {
   }
 
   if (typeof patchNpcRelation === "function") {
-    patchNpcRelation(resolvedNpcId, { met: true }, targetState);
+    patchNpcRelation(resolvedNpcId, {
+      met: true,
+      meetingsDelta: 1,
+      lastSeenDay: targetState?.day || 0,
+    }, targetState);
   }
 
   const dialogueState = syncDialogueState(targetState);

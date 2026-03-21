@@ -61,7 +61,6 @@ function buildShortTermJobsContent(viewModel) {
           <div class="phone-job-card-title">${escapeJobsAppHtml(job.emoji)} ${escapeJobsAppHtml(job.title)}</div>
           <div class="phone-job-pay">${formatJobsAppCash(offer.pay)}</div>
         </div>
-        <div class="phone-job-card-body">${escapeJobsAppHtml(job.description || "오늘 바로 연결되는 단기 공고입니다.")}</div>
         <div class="phone-job-meta">
           <div class="phone-job-tags">${tags}</div>
           <button
@@ -134,9 +133,7 @@ function buildCareerPrepSummary(viewModel) {
 
   return `
     <section class="phone-app-card is-accent">
-      <div class="phone-app-card-label">CAREER PREP</div>
-      <div class="phone-app-card-title">준비 상태</div>
-      <div class="phone-app-card-body">도서관에서 준비도를 쌓고, 시험장에서 자격을 얻으면 직장지원 루트가 열린다.</div>
+      <div class="phone-app-card-title">준비</div>
       <div class="phone-career-summary-grid">${prepCards}</div>
       <div class="phone-career-cert-row">
         ${certTags || '<span class="phone-job-tag">보유 자격 없음</span>'}
@@ -217,8 +214,6 @@ function buildCareerJobsContent(viewModel) {
           <div class="phone-job-card-title">${escapeJobsAppHtml(offer.emoji)} ${escapeJobsAppHtml(offer.title)}</div>
           <div class="phone-job-pay">${formatJobsAppPercent(offer.successChance)}</div>
         </div>
-        <div class="phone-job-card-body">${escapeJobsAppHtml(offer.description || "준비와 자격이 필요한 직장지원 공고입니다.")}</div>
-        <div class="phone-job-card-note">합격 시 ${escapeJobsAppHtml(JOB_LOOKUP[offer.unlockJobId]?.title || "새 루트")} 공고가 풀립니다.</div>
         <div class="phone-job-meta">
           <div class="phone-job-tags">
             ${(offer.requirementTags || []).map((tag) => `<span class="phone-job-tag">${escapeJobsAppHtml(tag)}</span>`).join("")}
@@ -271,9 +266,6 @@ function buildJobsAppScreenMarkup({ showHomeButton = true, stageMode = false } =
       };
 
   const trackTitle = viewModel.activeTrack === "career" ? "직장지원" : "단기알바";
-  const trackNote = viewModel.activeTrack === "career"
-    ? "준비도와 자격을 쌓아 장기 루트를 여는 공고들입니다."
-    : "오늘 바로 연결되는 단기 공고들입니다.";
   const contentMarkup = viewModel.activeTrack === "career"
     ? buildCareerJobsContent(viewModel)
     : buildShortTermJobsContent(viewModel);
@@ -281,9 +273,7 @@ function buildJobsAppScreenMarkup({ showHomeButton = true, stageMode = false } =
   return `
     <div class="phone-app-screen-top ${stageMode ? "is-stage-mode" : ""}">
       <div class="phone-app-screen-copy">
-        <span class="phone-app-screen-kicker">JOB APP</span>
         <div class="phone-app-screen-title">${escapeJobsAppHtml(trackTitle)}</div>
-        <div class="phone-app-screen-note">${escapeJobsAppHtml(trackNote)}</div>
       </div>
       ${showHomeButton ? '<button class="phone-app-mini-btn" type="button" data-phone-action="close-phone-view">홈</button>' : ""}
     </div>

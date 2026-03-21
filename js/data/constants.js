@@ -9,6 +9,12 @@ const SLEEP_STAMINA_MAX = 200;
 const SLEEP_STAMINA_GAIN = 10;
 const ENERGY_MAX = 200;
 const SLEEP_ENERGY_GAIN = 10;
+const LEGACY_HUNGER_MAX = 3;
+const LEGACY_HUNGER_DECAY_INTERVAL_MINUTES = 7 * 60;
+const HUNGER_SYSTEM_VERSION = 2;
+const HUNGER_MAX = 5;
+const HUNGER_DECAY_INTERVAL_MINUTES = 4.5 * 60;
+const HUNGER_HOSPITAL_COST = 100000;
 
 const RANK_TABLE = [
   { min: 2800000, label: "S", title: "배금도시 전설", comment: "돈 냄새를 제일 빨리 맡는 사람으로 기록됐다." },
