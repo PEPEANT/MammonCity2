@@ -124,6 +124,21 @@ function buildCityMapGraph(targetState = state) {
   const graph = new Map();
 
   getCityMapLinks(targetState).forEach((link) => {
+    const forwardMinutes = typeof adjustTravelMinutesForOwnedVehicle === "function"
+      ? adjustTravelMinutesForOwnedVehicle(link.minutes, {
+          fromLocationId: link.from,
+          toLocationId: link.to,
+          mode: link.mode,
+        }, targetState)
+      : link.minutes;
+    const backwardMinutes = typeof adjustTravelMinutesForOwnedVehicle === "function"
+      ? adjustTravelMinutesForOwnedVehicle(link.minutes, {
+          fromLocationId: link.to,
+          toLocationId: link.from,
+          mode: link.mode,
+        }, targetState)
+      : link.minutes;
+
     if (!graph.has(link.from)) {
       graph.set(link.from, []);
     }
@@ -131,12 +146,12 @@ function buildCityMapGraph(targetState = state) {
       graph.set(link.to, []);
     }
 
-    graph.get(link.from).push({ ...link, next: link.to });
+    graph.get(link.from).push({ ...link, minutes: forwardMinutes, next: link.to });
     graph.get(link.to).push({
       from: link.to,
       to: link.from,
       next: link.from,
-      minutes: link.minutes,
+      minutes: backwardMinutes,
       mode: link.mode,
     });
   });
@@ -259,7 +274,9 @@ function getCityMapTravelSummary(targetLocationId = "", targetState = state) {
       targetLabel: targetNode.fullLabel || targetNode.label,
       minutes: fallbackMinutes,
       slots: Math.max(1, Math.ceil(fallbackMinutes / 30)),
-      methodLabel: "도보",
+      methodLabel: typeof getTravelMethodLabelForMode === "function"
+        ? getTravelMethodLabelForMode("walk", targetState)
+        : "도보",
       durationLabel,
       arrivalLabel: getCityMapArrivalClockLabel(fallbackMinutes, targetState),
       routeText: buildCityMapRouteText([currentAnchorId, targetLocationId], targetState),
@@ -270,9 +287,10 @@ function getCityMapTravelSummary(targetLocationId = "", targetState = state) {
   }
 
   const uniqueModes = [...new Set(bestRoute.modes)];
-  const methodLabel = uniqueModes.length > 1
-    ? "도보 + 버스"
-    : (uniqueModes[0] === "bus" ? "버스" : "도보");
+  const resolvedModeLabels = uniqueModes.map((mode) => typeof getTravelMethodLabelForMode === "function"
+    ? getTravelMethodLabelForMode(mode, targetState)
+    : (mode === "bus" ? "버스" : "도보"));
+  const methodLabel = resolvedModeLabels.join(" + ");
   const durationLabel = typeof formatTravelDurationLabel === "function"
     ? formatTravelDurationLabel(bestRoute.minutes)
     : `${bestRoute.minutes}분`;

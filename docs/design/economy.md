@@ -150,6 +150,11 @@
 - 이자를 못 갚으면 사채업자 이벤트 발동
 - 범죄도 높으면 빚을 범죄로 해결하는 선택지 등장
 
+대출, 담보, 연체, 압류의 상세 구조는 별도 문서로 분리한다.
+
+- 상세 규칙 문서: `docs/design/bank-loans-and-collateral.md`
+- 현금/은행 분리와 출생 자산 패키지: `docs/design/wealth-and-cashflow.md`
+
 ---
 
 ## 9. 세계이벤트와 경제 연동

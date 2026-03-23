@@ -1,5 +1,11 @@
 function cloneJobsOfferSnapshot(offer) {
-  return offer ? { ...offer } : null;
+  return offer
+    ? {
+        ...offer,
+        requirementTags: [...(offer.requirementTags || [])],
+        unmetRequirements: [...(offer.unmetRequirements || [])],
+      }
+    : null;
 }
 
 function cloneScheduledShiftSnapshot(shift) {

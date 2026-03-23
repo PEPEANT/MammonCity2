@@ -14,6 +14,14 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
     description: "현재 쓰고 있는 기본 스마트폰이다.",
     equipmentSlot: "phone",
   }),
+  "phone-used-premium": Object.freeze({
+    id: "phone-used-premium",
+    category: "equipment",
+    label: "중고 프리미엄 스마트폰",
+    icon: "📱",
+    description: "호박마켓에서 구한 상위 모델 스마트폰이다. 화면 상태가 좋아서 오래 쓸 만하다.",
+    equipmentSlot: "phone",
+  }),
   "bag-basic": Object.freeze({
     id: "bag-basic",
     category: "equipment",
@@ -22,6 +30,21 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
     description: "초반 소지품을 정리해 들고 다닐 수 있는 기본 가방이다.",
     equipmentSlot: "bag",
     slotBonus: 0,
+  }),
+  "outfit-suit": Object.freeze({
+    id: "outfit-suit",
+    category: "equipment",
+    label: "정장 세트",
+    icon: "👔",
+    description: "면접이나 사무 출근 때 체면을 챙기기 좋은 기본 정장 세트다.",
+    equipmentSlot: "outfit",
+  }),
+  "appliance-mini-fridge": Object.freeze({
+    id: "appliance-mini-fridge",
+    category: "asset",
+    label: "미니 냉장고",
+    icon: "🧊",
+    description: "원룸이나 자취방에 두기 좋은 소형 가전이다.",
   }),
   "water-bottle": Object.freeze({
     id: "water-bottle",
@@ -146,6 +169,37 @@ const OWNED_VEHICLE_CATALOG = Object.freeze({
   }),
 });
 
+const OWNED_VEHICLE_TRAVEL_PROFILES = Object.freeze({
+  bicycle: Object.freeze({
+    id: "bicycle",
+    label: "자전거",
+    shortLabel: "자전거",
+    sameDistrictMultiplier: 0.72,
+    crossDistrictMultiplier: 0.84,
+  }),
+  "used-motorbike": Object.freeze({
+    id: "used-motorbike",
+    label: "오토바이",
+    shortLabel: "오토바이",
+    sameDistrictMultiplier: 0.54,
+    crossDistrictMultiplier: 0.68,
+  }),
+  "used-car": Object.freeze({
+    id: "used-car",
+    label: "차량",
+    shortLabel: "차량",
+    sameDistrictMultiplier: 0.58,
+    crossDistrictMultiplier: 0.72,
+  }),
+  "foreign-car": Object.freeze({
+    id: "foreign-car",
+    label: "차량",
+    shortLabel: "고급차",
+    sameDistrictMultiplier: 0.5,
+    crossDistrictMultiplier: 0.64,
+  }),
+});
+
 function getInventoryTabs() {
   return INVENTORY_TABS.map((tab) => ({ ...tab }));
 }
@@ -167,6 +221,7 @@ function createDefaultInventoryState() {
     equipped: {
       phone: "phone-basic",
       bag: "bag-basic",
+      outfit: null,
     },
   };
 }
@@ -176,12 +231,101 @@ function createDefaultOwnershipState() {
     residence: "parents-room",
     home: null,
     vehicle: null,
+    homeAsset: null,
+    vehicleAsset: null,
   };
 }
 
 function normalizeOwnedAssetId(value) {
   const normalized = String(value || "").trim();
   return normalized || null;
+}
+
+function getOwnedAssetCatalogDefinition(kind = "", assetId = "") {
+  const normalizedKind = String(kind || "").trim().toLowerCase();
+  if (normalizedKind === "home") {
+    return getOwnedHomeDefinition(assetId);
+  }
+  if (normalizedKind === "vehicle") {
+    return getOwnedVehicleDefinition(assetId);
+  }
+  return null;
+}
+
+function getOwnedAssetMarketListing(kind = "", assetId = "") {
+  const normalizedKind = String(kind || "").trim().toLowerCase();
+  const normalizedAssetId = normalizeOwnedAssetId(assetId);
+  if (!normalizedKind || !normalizedAssetId || typeof getMarketListingCatalog !== "function") {
+    return null;
+  }
+
+  return getMarketListingCatalog().find((listing) => (
+    normalizedKind === "home"
+      ? listing.homeId === normalizedAssetId
+      : listing.vehicleId === normalizedAssetId
+  )) || null;
+}
+
+function getOwnedAssetFallbackEstimatedValue(kind = "", assetId = "") {
+  const listing = getOwnedAssetMarketListing(kind, assetId);
+  if (Number.isFinite(listing?.resalePrice)) {
+    return Math.max(0, Math.round(Number(listing.resalePrice) || 0));
+  }
+  if (Number.isFinite(listing?.price)) {
+    const rawPrice = Math.max(0, Number(listing.price) || 0);
+    const multiplier = String(kind || "").trim().toLowerCase() === "home" ? 0.78 : 0.72;
+    return Math.max(0, Math.round(rawPrice * multiplier));
+  }
+  return 0;
+}
+
+function normalizeOwnedAssetRecord(record = null, kind = "", fallbackAssetId = "") {
+  const normalizedKind = String(kind || "").trim().toLowerCase();
+  const assetId = normalizeOwnedAssetId(record?.assetId) || normalizeOwnedAssetId(fallbackAssetId);
+  if (!assetId || !["home", "vehicle"].includes(normalizedKind)) {
+    return null;
+  }
+
+  const definition = getOwnedAssetCatalogDefinition(normalizedKind, assetId);
+  const listing = getOwnedAssetMarketListing(normalizedKind, assetId);
+  const acquiredDay = Math.max(1, Math.round(Number(record?.acquiredDay) || 1));
+  const fallbackEstimatedValue = getOwnedAssetFallbackEstimatedValue(normalizedKind, assetId);
+
+  return {
+    kind: normalizedKind,
+    assetId,
+    listingId: String(record?.listingId || listing?.id || ""),
+    label: String(record?.label || definition?.label || assetId),
+    icon: String(record?.icon || definition?.icon || (normalizedKind === "home" ? "🏠" : "🚗")),
+    acquiredDay,
+    acquiredSource: String(record?.acquiredSource || record?.source || "system"),
+    purchasePrice: Math.max(0, Math.round(Number(record?.purchasePrice) || 0)),
+    estimatedValue: Math.max(
+      0,
+      Math.round(
+        Number.isFinite(record?.estimatedValue)
+          ? Number(record.estimatedValue)
+          : fallbackEstimatedValue
+      )
+    ),
+    lastValuationDay: Math.max(
+      acquiredDay,
+      Math.round(Number(record?.lastValuationDay) || acquiredDay)
+    ),
+    note: String(record?.note || ""),
+    isStarterAsset: Boolean(record?.isStarterAsset),
+  };
+}
+
+function createOwnedAssetRecord(kind = "", assetId = "", record = {}, targetState = state) {
+  const currentDay = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  return normalizeOwnedAssetRecord({
+    acquiredDay: currentDay,
+    lastValuationDay: currentDay,
+    ...record,
+    kind,
+    assetId,
+  }, kind, assetId);
 }
 
 function syncOwnershipState(targetState = state) {
@@ -198,7 +342,16 @@ function syncOwnershipState(targetState = state) {
     residence: normalizeOwnedAssetId(ownershipState.residence) || defaults.residence,
     home: normalizeOwnedAssetId(ownershipState.home),
     vehicle: normalizeOwnedAssetId(ownershipState.vehicle),
+    homeAsset: null,
+    vehicleAsset: null,
   };
+
+  targetState.ownership.homeAsset = targetState.ownership.home
+    ? normalizeOwnedAssetRecord(ownershipState.homeAsset, "home", targetState.ownership.home)
+    : null;
+  targetState.ownership.vehicleAsset = targetState.ownership.vehicle
+    ? normalizeOwnedAssetRecord(ownershipState.vehicleAsset, "vehicle", targetState.ownership.vehicle)
+    : null;
 
   return targetState.ownership;
 }
@@ -277,11 +430,15 @@ function syncInventoryState(targetState = state) {
     equipped: {
       phone: inventoryState.equipped?.phone || defaults.equipped.phone,
       bag: inventoryState.equipped?.bag || defaults.equipped.bag,
+      outfit: Object.prototype.hasOwnProperty.call(inventoryState.equipped || {}, "outfit")
+        ? inventoryState.equipped.outfit
+        : defaults.equipped.outfit,
     },
   };
 
   ensureEquippedInventoryItem("phone", defaults.equipped.phone, targetState.inventory);
   ensureEquippedInventoryItem("bag", defaults.equipped.bag, targetState.inventory);
+  ensureEquippedInventoryItem("outfit", defaults.equipped.outfit, targetState.inventory);
 
   return targetState.inventory;
 }
@@ -310,6 +467,121 @@ function getOwnedHomeDefinition(homeId = "") {
 
 function getOwnedVehicleDefinition(vehicleId = "") {
   return OWNED_VEHICLE_CATALOG[String(vehicleId || "").trim()] || null;
+}
+
+function getOwnedHomeAssetRecord(targetState = state) {
+  const ownershipState = syncOwnershipState(targetState);
+  return ownershipState.homeAsset ? { ...ownershipState.homeAsset } : null;
+}
+
+function getOwnedVehicleAssetRecord(targetState = state) {
+  const ownershipState = syncOwnershipState(targetState);
+  return ownershipState.vehicleAsset ? { ...ownershipState.vehicleAsset } : null;
+}
+
+function getOwnedAssetRecord(kind = "", targetState = state) {
+  const normalizedKind = String(kind || "").trim().toLowerCase();
+  if (normalizedKind === "home") {
+    return getOwnedHomeAssetRecord(targetState);
+  }
+  if (normalizedKind === "vehicle") {
+    return getOwnedVehicleAssetRecord(targetState);
+  }
+  return null;
+}
+
+function getOwnershipAssetPortfolio(targetState = state) {
+  const portfolio = [];
+  const homeAsset = getOwnedHomeAssetRecord(targetState);
+  const vehicleAsset = getOwnedVehicleAssetRecord(targetState);
+
+  if (homeAsset) {
+    portfolio.push(homeAsset);
+  }
+  if (vehicleAsset) {
+    portfolio.push(vehicleAsset);
+  }
+
+  return portfolio;
+}
+
+function getOwnershipTotalAssetValue(targetState = state) {
+  return getOwnershipAssetPortfolio(targetState).reduce((sum, asset) => (
+    sum + Math.max(0, Math.round(Number(asset?.estimatedValue) || 0))
+  ), 0);
+}
+
+function getOwnershipNetWorth(targetState = state) {
+  const liquidFunds = typeof getTotalLiquidFunds === "function"
+    ? getTotalLiquidFunds(targetState)
+    : (
+      (typeof getWalletBalance === "function"
+        ? getWalletBalance(targetState)
+        : Math.max(0, Number(targetState?.money) || 0))
+      + Math.max(0, Number(targetState?.bank?.balance) || 0)
+    );
+  const assetValue = getOwnershipTotalAssetValue(targetState);
+  const debtOutstanding = typeof getBankLoanSummary === "function"
+    ? Math.max(0, Number(getBankLoanSummary(targetState)?.totalOutstanding) || 0)
+    : 0;
+
+  return liquidFunds + assetValue - debtOutstanding;
+}
+
+function getOwnedVehicleTravelProfile(targetState = state) {
+  const ownershipState = syncOwnershipState(targetState);
+  const vehicleId = String(ownershipState?.vehicle || "").trim();
+  if (!vehicleId) {
+    return null;
+  }
+
+  return OWNED_VEHICLE_TRAVEL_PROFILES[vehicleId] || null;
+}
+
+function getTravelMethodLabelForMode(mode = "walk", targetState = state) {
+  const normalizedMode = String(mode || "walk").trim().toLowerCase();
+  if (normalizedMode === "bus") {
+    return "버스";
+  }
+
+  const travelProfile = getOwnedVehicleTravelProfile(targetState);
+  if (normalizedMode === "walk" && travelProfile?.label) {
+    return travelProfile.label;
+  }
+
+  return "도보";
+}
+
+function adjustTravelMinutesForOwnedVehicle(baseMinutes = 0, {
+  fromLocationId = "",
+  toLocationId = "",
+  mode = "walk",
+} = {}, targetState = state) {
+  const normalizedBase = Math.max(1, Math.round(Number(baseMinutes) || 0));
+  const normalizedMode = String(mode || "walk").trim().toLowerCase();
+  if (normalizedMode !== "walk") {
+    return normalizedBase;
+  }
+
+  const travelProfile = getOwnedVehicleTravelProfile(targetState);
+  if (!travelProfile) {
+    return normalizedBase;
+  }
+
+  const day = targetState?.day || 1;
+  const fromDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(fromLocationId, day)
+    : "";
+  const toDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(toLocationId, day)
+    : "";
+  const sameDistrict = Boolean(fromDistrict && toDistrict && fromDistrict === toDistrict);
+  const multiplier = sameDistrict
+    ? Number(travelProfile.sameDistrictMultiplier)
+    : Number(travelProfile.crossDistrictMultiplier);
+  const adjusted = Math.round(normalizedBase * (Number.isFinite(multiplier) ? multiplier : 1));
+
+  return Math.max(8, adjusted);
 }
 
 function getInventorySlotLimit(targetState = state) {
@@ -346,12 +618,23 @@ function setEquippedInventoryItem(slot, itemId, targetState = state) {
   }
 
   const inventoryState = syncInventoryState(targetState);
-  if (normalizedItemId && !hasInventoryItem(normalizedItemId, targetState)) {
+  if (normalizedItemId && !inventoryStateHasItem(normalizedItemId, inventoryState)) {
     return null;
   }
 
   inventoryState.equipped[normalizedSlot] = normalizedItemId || null;
   return inventoryState.equipped[normalizedSlot];
+}
+
+function getInventoryItemQuantity(itemId, targetState = state) {
+  const normalizedItemId = String(itemId || "").trim();
+  if (!normalizedItemId) {
+    return 0;
+  }
+
+  const inventoryState = syncInventoryState(targetState);
+  const item = inventoryState.items.find((entry) => entry.id === normalizedItemId);
+  return normalizeInventoryQuantity(item?.qty ?? 0);
 }
 
 function grantInventoryItem(itemId, quantity = 1, targetState = state) {
@@ -395,22 +678,41 @@ function consumeInventoryItem(itemId, quantity = 1, targetState = state) {
   const defaults = createDefaultInventoryState();
   ensureEquippedInventoryItem("phone", defaults.equipped.phone, inventoryState);
   ensureEquippedInventoryItem("bag", defaults.equipped.bag, inventoryState);
+  ensureEquippedInventoryItem("outfit", defaults.equipped.outfit, inventoryState);
 
   return true;
 }
 
-function setOwnedHome(homeId, targetState = state) {
+function setOwnedHome(homeId, targetState = state, record = {}) {
   const ownershipState = syncOwnershipState(targetState);
-  ownershipState.home = normalizeOwnedAssetId(homeId);
+  const previousHomeId = ownershipState.home;
+  const nextHomeId = normalizeOwnedAssetId(homeId);
+  const baseRecord = previousHomeId === nextHomeId && ownershipState.homeAsset
+    ? ownershipState.homeAsset
+    : {};
+  ownershipState.home = nextHomeId;
+  ownershipState.homeAsset = nextHomeId
+    ? createOwnedAssetRecord("home", nextHomeId, { ...baseRecord, ...(record || {}) }, targetState)
+    : null;
   if (ownershipState.home) {
     ownershipState.residence = ownershipState.home;
+  } else if (ownershipState.residence === previousHomeId || !ownershipState.residence) {
+    ownershipState.residence = createDefaultOwnershipState().residence;
   }
   return ownershipState.home;
 }
 
-function setOwnedVehicle(vehicleId, targetState = state) {
+function setOwnedVehicle(vehicleId, targetState = state, record = {}) {
   const ownershipState = syncOwnershipState(targetState);
-  ownershipState.vehicle = normalizeOwnedAssetId(vehicleId);
+  const previousVehicleId = ownershipState.vehicle;
+  const nextVehicleId = normalizeOwnedAssetId(vehicleId);
+  const baseRecord = previousVehicleId === nextVehicleId && ownershipState.vehicleAsset
+    ? ownershipState.vehicleAsset
+    : {};
+  ownershipState.vehicle = nextVehicleId;
+  ownershipState.vehicleAsset = nextVehicleId
+    ? createOwnedAssetRecord("vehicle", nextVehicleId, { ...baseRecord, ...(record || {}) }, targetState)
+    : null;
   return ownershipState.vehicle;
 }
 
@@ -444,7 +746,13 @@ function buildInventoryEntryFromItem(item, targetState = state) {
 
   Object.entries(inventoryState.equipped || {}).forEach(([slot, equippedItemId]) => {
     if (equippedItemId === definition.id) {
-      badges.push(slot === "phone" ? "사용 중" : slot === "bag" ? "착용 중" : "장착 중");
+      badges.push(
+        slot === "phone"
+          ? "사용 중"
+          : (slot === "bag" || slot === "outfit")
+            ? "착용 중"
+            : "장착 중"
+      );
     }
   });
 
@@ -467,6 +775,8 @@ function buildOwnershipInventoryEntries(targetState = state) {
   const documentEntries = [];
   const carryEntries = [];
   const assetEntries = [];
+  const homeAsset = getOwnedHomeAssetRecord(targetState);
+  const vehicleAsset = getOwnedVehicleAssetRecord(targetState);
 
   const homeDefinition = getOwnedHomeDefinition(ownershipState.home);
   if (homeDefinition) {
@@ -485,7 +795,12 @@ function buildOwnershipInventoryEntries(targetState = state) {
       category: "asset",
       label: homeDefinition.label,
       icon: homeDefinition.icon || "🏠",
-      description: homeDefinition.description || "",
+      description: [
+        homeDefinition.description || "",
+        homeAsset?.estimatedValue > 0 && typeof formatCash === "function"
+          ? `현재 평가 ${formatCash(homeAsset.estimatedValue)}`
+          : "",
+      ].filter(Boolean).join(" · "),
       quantity: 1,
       badges: ["부동산"],
       source: "ownership",
@@ -509,7 +824,12 @@ function buildOwnershipInventoryEntries(targetState = state) {
       category: "asset",
       label: vehicleDefinition.label,
       icon: vehicleDefinition.icon || "🚗",
-      description: vehicleDefinition.description || "",
+      description: [
+        vehicleDefinition.description || "",
+        vehicleAsset?.estimatedValue > 0 && typeof formatCash === "function"
+          ? `현재 평가 ${formatCash(vehicleAsset.estimatedValue)}`
+          : "",
+      ].filter(Boolean).join(" · "),
       quantity: 1,
       badges: ["차량"],
       source: "ownership",

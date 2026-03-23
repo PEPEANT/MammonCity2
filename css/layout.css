@@ -991,6 +991,11 @@ body {
   padding: clamp(24px, 6vw, 48px);
 }
 
+#start-screen[data-screen-mode="origin"] {
+  background: #000;
+  align-items: center;
+}
+
 #start-screen.is-hidden {
   display: none;
 }

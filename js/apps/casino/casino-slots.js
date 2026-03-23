@@ -1,9 +1,10 @@
 const CASINO_SLOT_SYMBOLS = Object.freeze([
-  { id: "dice", char: "🎲", color: "#ffffff", payout: 50 },
-  { id: "dia", char: "💎", color: "#44aadd", payout: 30 },
-  { id: "bell", char: "🔔", color: "#ffd700", payout: 15 },
-  { id: "grape", char: "🍇", color: "#9933ff", payout: 10 },
-  { id: "cherry", char: "🍒", color: "#ff3366", payout: 2 },
+  { id: "bar",    char: "BAR", color: "#ffd35a", payout: 80 },
+  { id: "seven",  char: "7",   color: "#ff4d6a", payout: 40 },
+  { id: "star",   char: "★",   color: "#c8d8ff", payout: 20 },
+  { id: "bell",   char: "🔔",  color: "#ffc44d", payout: 10 },
+  { id: "clover", char: "♣",   color: "#4affaa", payout: 5  },
+  { id: "cherry", char: "🍒",  color: "#ff6b7a", payout: 2  },
 ]);
 
 const CASINO_SLOT_SYMBOL_LOOKUP = Object.freeze(
@@ -194,6 +195,20 @@ function buildCasinoSlotsScreenMarkup({ stageMode = false, targetState = state }
                 ${slotsState.phase === "spinning" ? "disabled" : ""}
               >${escapePhoneAppHtml(formatMoney(amount))}</button>
             `).join("")}
+            <button
+              class="casino-slot-bet-btn is-max"
+              type="button"
+              data-phone-action="casino-slot-set-bet"
+              data-amount="${Math.min(chipBalance, 500000)}"
+              ${slotsState.phase === "spinning" ? "disabled" : ""}
+            >MAX</button>
+          </div>
+
+          <div class="casino-slot-paytable">
+            <span class="casino-slot-pay-row"><span class="is-bar">BAR</span> × 3 → 80배</span>
+            <span class="casino-slot-pay-row"><span class="is-seven">7</span> × 3 → 40배</span>
+            <span class="casino-slot-pay-row"><span class="is-star">★</span> × 3 → 20배</span>
+            <span class="casino-slot-pay-row"><span class="is-bell">🔔</span> × 3 → 10배</span>
           </div>
         </div>
       </div>

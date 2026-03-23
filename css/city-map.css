@@ -206,6 +206,10 @@
   fill: rgba(255, 176, 66, 0.15);
 }
 
+.city-map-zone.zone-industrial {
+  fill: rgba(118, 136, 255, 0.15);
+}
+
 .city-map-zone-label {
   font-size: 3.2px;
   font-weight: 700;
@@ -312,6 +316,10 @@
 
 .city-map-node.tone-commercial .city-map-node-core {
   border-color: rgba(255, 201, 120, 0.34);
+}
+
+.city-map-node.tone-industrial .city-map-node-core {
+  border-color: rgba(145, 162, 255, 0.36);
 }
 
 .city-map-node.is-selected .city-map-node-core {
@@ -830,8 +838,8 @@
     right: auto;
     bottom: auto;
     left: 50%;
-    width: 600px;
-    height: min(820px, 84vh);
+    width: min(1120px, 92vw);
+    height: min(760px, 88vh);
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.13);
     box-shadow:
@@ -845,38 +853,99 @@
   }
 
   .city-map-header {
-    padding: 16px 22px 12px;
+    padding: 18px 24px 14px;
   }
 
   .city-map-title {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .city-map-current-bar {
-    padding: 8px 22px;
+    padding: 10px 24px;
   }
 
   .city-map-legend {
-    padding: 9px 22px 10px;
+    padding: 10px 24px 12px;
     gap: 16px;
   }
 
+  .city-map-canvas-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 31vw, 372px);
+    align-items: stretch;
+  }
+
+  .city-map-board {
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  .city-map-board-grid {
+    background-size: 34px 34px;
+  }
+
+  /* 데스크탑: 맵과 이동 카드를 아예 분리 */
   .city-map-travel-card {
-    left: 50%;
-    right: auto;
-    bottom: 18px;
-    width: min(390px, calc(100% - 36px));
-    max-height: calc(100% - 36px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
-    transform: translateX(-50%) translateY(100%);
+    position: relative;
+    inset: auto;
+    width: auto;
+    max-height: none;
+    border-radius: 0;
+    border: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(10, 12, 17, 0.97);
+    backdrop-filter: blur(4px);
+    transform: none;
+    transition: none;
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.02);
+    overflow-y: auto;
+    padding: 20px 20px 22px;
   }
 
   #city-map-overlay.is-open .city-map-travel-card {
-    transform: translateX(-50%) translateY(0);
+    transform: none;
   }
 
   .city-map-travel-card-handle {
     display: none;
+  }
+
+  .city-map-travel-card-header {
+    margin-bottom: 14px;
+  }
+
+  .city-map-destination-icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .city-map-destination-name {
+    font-size: 17px;
+  }
+
+  .city-map-destination-note {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .city-map-method-chip {
+    padding: 10px 11px;
+  }
+
+  .city-map-travel-summary,
+  .city-map-travel-route {
+    padding: 12px 14px;
+  }
+
+  .city-map-travel-summary-value.is-time {
+    font-size: 20px;
+  }
+
+  .city-map-travel-summary-value.is-arrival {
+    font-size: 16px;
+  }
+
+  .city-map-travel-btn {
+    min-height: 46px;
   }
 }

@@ -38,7 +38,12 @@ function buildPhoneAppActionButtonMarkup({
   className = "phone-job-apply",
 } = {}) {
   const attrs = Object.entries(data)
-    .map(([key, value]) => `data-${key}="${escapePhoneAppHtml(value)}"`)
+    .map(([key, value]) => {
+      const attrName = String(key || "")
+        .replace(/([A-Z])/g, "-$1")
+        .toLowerCase();
+      return `data-${attrName}="${escapePhoneAppHtml(value)}"`;
+    })
     .join(" ");
 
   return `

@@ -1,4 +1,16 @@
 function getBankTransactionIcon(amount = 0, type = "general") {
+  if (type === "loan-origination") {
+    return "₩";
+  }
+  if (type === "loan-payment") {
+    return "⇣";
+  }
+  if (type === "loan-overdue") {
+    return "!";
+  }
+  if (type === "loan-seizure") {
+    return "⚠";
+  }
   if (type === "deposit") {
     return "↓";
   }
@@ -7,6 +19,12 @@ function getBankTransactionIcon(amount = 0, type = "general") {
   }
   if (type === "transfer") {
     return "↗";
+  }
+  if (type === "asset-purchase") {
+    return "▣";
+  }
+  if (type === "asset-sale") {
+    return "◫";
   }
   return amount >= 0 ? "↓" : "↑";
 }
@@ -19,9 +37,11 @@ function buildBankTransactionsMarkup(viewModel) {
   return `
     <div class="bank-tx-list">
       ${viewModel.transactions.slice(0, 6).map((transaction) => {
-        const isInflow = transaction.amount >= 0;
+        const isInflow = transaction.direction === "in"
+          || (transaction.direction !== "out" && transaction.amount >= 0);
         const icon = getBankTransactionIcon(transaction.amount, transaction.type);
-        const amountText = `${isInflow ? "+" : "-"}${formatCash(Math.abs(transaction.amount))}`;
+        const amountText = transaction.displayAmountLabel
+          || `${isInflow ? "+" : "-"}${formatCash(Math.abs(transaction.amount))}`;
 
         return `
           <article class="bank-tx-item">
@@ -37,6 +57,129 @@ function buildBankTransactionsMarkup(viewModel) {
         `;
       }).join("")}
     </div>
+  `;
+}
+
+function buildBankLoanSummaryMarkup(viewModel) {
+  const summary = viewModel.loanSummary || {
+    activeCount: 0,
+    totalOutstanding: 0,
+    dueThisTurn: 0,
+    overdueCount: 0,
+  };
+
+  return `
+    <div class="bank-loan-summary-grid">
+      <div class="bank-loan-summary-card">
+        <div class="bank-stat-label">진행 중 대출</div>
+        <div class="bank-stat-value">${escapePhoneAppHtml(String(summary.activeCount || 0))}</div>
+      </div>
+      <div class="bank-loan-summary-card">
+        <div class="bank-stat-label">남은 원금</div>
+        <div class="bank-stat-value">${escapePhoneAppHtml(formatCash(summary.totalOutstanding || 0))}</div>
+      </div>
+      <div class="bank-loan-summary-card">
+        <div class="bank-stat-label">이번 턴 예정</div>
+        <div class="bank-stat-value">${escapePhoneAppHtml(formatCash(summary.dueThisTurn || 0))}</div>
+      </div>
+      <div class="bank-loan-summary-card">
+        <div class="bank-stat-label">연체 횟수</div>
+        <div class="bank-stat-value${summary.overdueCount ? " is-out" : ""}">${escapePhoneAppHtml(String(summary.overdueCount || 0))}</div>
+      </div>
+    </div>
+  `;
+}
+
+function buildBankLoanProductCardMarkup(product) {
+  const disabled = !product.available;
+  const rateText = `${Math.round((Number(product.interestRate) || 0) * 100)}%`;
+  return `
+    <article class="bank-loan-card${disabled ? " is-disabled" : ""}">
+      <div class="bank-loan-top">
+        <div>
+          <div class="bank-loan-title">${escapePhoneAppHtml(product.label)}</div>
+          <div class="bank-loan-desc">${escapePhoneAppHtml(product.description)}</div>
+        </div>
+        <div class="bank-loan-badge">${escapePhoneAppHtml(disabled ? "잠김" : "실행 가능")}</div>
+      </div>
+      <div class="bank-loan-meta">
+        <span>한도 ${escapePhoneAppHtml(formatCash(product.principal || 0))}</span>
+        <span>금리 ${escapePhoneAppHtml(rateText)}</span>
+        <span>${escapePhoneAppHtml(String(product.termTurns || 0))}턴</span>
+      </div>
+      <div class="bank-loan-meta">
+        <span>예상 상환 ${escapePhoneAppHtml(formatCash(product.installmentAmount || 0))}</span>
+        <span>${escapePhoneAppHtml(product.collateralLabel || "무담보")}</span>
+      </div>
+      <div class="bank-loan-desc${disabled ? " is-out" : ""}">
+        ${escapePhoneAppHtml(product.unavailableReason || "이번 턴에 바로 실행할 수 있다.")}
+      </div>
+      <div class="bank-loan-actions">
+        ${buildPhoneAppActionButtonMarkup({
+          action: "bank-take-loan",
+          label: "대출 실행",
+          disabled,
+          data: { loanType: product.type },
+          className: "bank-submit-btn",
+        })}
+      </div>
+    </article>
+  `;
+}
+
+function buildBankActiveLoanCardMarkup(loan) {
+  const closed = loan.status === "paid" || loan.status === "seized";
+  const rateText = `${Math.round((Number(loan.interestRate) || 0) * 100)}%`;
+  const badgeText = loan.status === "paid"
+    ? "상환 완료"
+    : (loan.status === "seized" ? "압류 종료" : (loan.overdueCount > 0 ? `연체 ${loan.overdueCount}` : "진행 중"));
+  return `
+    <article class="bank-loan-card${closed ? " is-disabled" : ""}">
+      <div class="bank-loan-top">
+        <div>
+          <div class="bank-loan-title">${escapePhoneAppHtml(loan.label)}</div>
+          <div class="bank-loan-desc">${escapePhoneAppHtml(loan.collateralLabel || "무담보")}</div>
+        </div>
+        <div class="bank-loan-badge">${escapePhoneAppHtml(badgeText)}</div>
+      </div>
+      <div class="bank-loan-meta">
+        <span>남은 잔액 ${escapePhoneAppHtml(formatCash(loan.remainingPrincipal || 0))}</span>
+        <span>금리 ${escapePhoneAppHtml(rateText)}</span>
+      </div>
+      <div class="bank-loan-meta">
+        <span>다음 상환 ${escapePhoneAppHtml(formatCash(loan.installmentAmount || 0))}</span>
+        <span>${escapePhoneAppHtml(String(loan.nextDueTurn || 0))}턴 납부</span>
+      </div>
+      <div class="bank-loan-actions">
+        ${buildPhoneAppActionButtonMarkup({
+          action: "bank-repay-loan-minimum",
+          label: "최소 상환",
+          disabled: closed,
+          data: { loanId: loan.id },
+          className: "bank-secondary-btn",
+        })}
+        ${buildPhoneAppActionButtonMarkup({
+          action: "bank-repay-loan-full",
+          label: "전액 상환",
+          disabled: closed,
+          data: { loanId: loan.id },
+          className: "bank-submit-btn",
+        })}
+      </div>
+    </article>
+  `;
+}
+
+function buildBankLoanResolutionMarkup(viewModel) {
+  if (!viewModel.lastLoanResolution) {
+    return "";
+  }
+
+  return `
+    <section class="phone-app-card bank-loan-resolution is-${escapePhoneAppHtml(viewModel.lastLoanResolution.tone || "accent")}">
+      <div class="phone-app-card-title">${escapePhoneAppHtml(viewModel.lastLoanResolution.title || "대출 상태")}</div>
+      <div class="bank-loan-desc">${escapePhoneAppHtml(viewModel.lastLoanResolution.body || "")}</div>
+    </section>
   `;
 }
 
@@ -103,6 +246,11 @@ function buildBankHomeScreenMarkup(viewModel, { stageMode = false } = {}) {
           label: "송금하기",
           className: "bank-hero-btn is-primary",
         })}
+        ${buildPhoneRouteButtonMarkup({
+          route: "bank/loans",
+          label: "대출 / 상환",
+          className: "bank-hero-btn",
+        })}
         ${buildPhoneAppActionButtonMarkup({
           action: "bank-deposit-cash",
           label: "전액 입금",
@@ -122,6 +270,14 @@ function buildBankHomeScreenMarkup(viewModel, { stageMode = false } = {}) {
         <div class="bank-stat-value">${escapePhoneAppHtml(String(viewModel.transactionCount))}</div>
       </section>
       <section class="bank-stat-card">
+        <div class="bank-stat-label">자산 가치</div>
+        <div class="bank-stat-value">${escapePhoneAppHtml(formatCash(viewModel.totalAssetValue || 0))}</div>
+      </section>
+      <section class="bank-stat-card">
+        <div class="bank-stat-label">순자산</div>
+        <div class="bank-stat-value">${escapePhoneAppHtml(formatCash(viewModel.netWorth || 0))}</div>
+      </section>
+      <section class="bank-stat-card">
         <div class="bank-stat-label">누적 입금</div>
         <div class="bank-stat-value is-in">+${escapePhoneAppHtml(formatCash(viewModel.totalInflow))}</div>
       </section>
@@ -135,6 +291,18 @@ function buildBankHomeScreenMarkup(viewModel, { stageMode = false } = {}) {
       ${buildBankQuickAmountButtons("bank-deposit-cash", viewModel.depositAmounts, true, "전액 입금", depositDisabled)}
       ${buildBankQuickAmountButtons("bank-withdraw-cash", viewModel.withdrawAmounts, true, "전액 출금", withdrawDisabled)}
     </section>
+    <section class="phone-app-card">
+      <div class="phone-app-card-title">대출 현황</div>
+      ${buildBankLoanSummaryMarkup(viewModel)}
+      <div class="bank-loan-actions">
+        ${buildPhoneRouteButtonMarkup({
+          route: "bank/loans",
+          label: "대출 화면 열기",
+          className: "bank-secondary-btn",
+        })}
+      </div>
+    </section>
+    ${buildBankLoanResolutionMarkup(viewModel)}
     <section class="phone-app-card">
       <div class="phone-app-card-title">거래</div>
       ${buildBankTransactionsMarkup(viewModel)}
@@ -204,6 +372,53 @@ function buildBankTransferScreenMarkup(viewModel, { stageMode = false } = {}) {
   `;
 }
 
+function buildBankLoansScreenMarkup(viewModel, { stageMode = false } = {}) {
+  const activeLoans = viewModel.loans.filter((loan) => loan.status !== "paid" && loan.status !== "seized");
+  return `
+    <div class="bank-transfer-screen">
+      ${buildPhoneAppScreenHeaderMarkup({
+        title: "대출 / 상환",
+        showHomeButton: !stageMode,
+      })}
+      ${buildPhoneAppStatusMarkup("bank")}
+      <section class="phone-app-card">
+        <div class="phone-app-card-title">대출 요약</div>
+        ${buildBankLoanSummaryMarkup(viewModel)}
+      </section>
+      ${buildBankLoanResolutionMarkup(viewModel)}
+      <section class="phone-app-card">
+        <div class="phone-app-card-title">대출 상품</div>
+        <div class="bank-loan-list">
+          ${viewModel.loanProducts.map((product) => buildBankLoanProductCardMarkup(product)).join("")}
+        </div>
+      </section>
+      <section class="phone-app-card">
+        <div class="phone-app-card-title">진행 중 대출</div>
+        <div class="bank-loan-list">
+          ${activeLoans.length
+            ? activeLoans.map((loan) => buildBankActiveLoanCardMarkup(loan)).join("")
+            : '<div class="bank-empty-state">진행 중인 대출이 없습니다.</div>'}
+        </div>
+      </section>
+      <section class="phone-app-card">
+        <div class="phone-app-card-title">빠른 이동</div>
+        <div class="bank-loan-actions">
+          ${buildPhoneRouteButtonMarkup({
+            route: "bank/home",
+            label: "대시보드",
+            className: "bank-secondary-btn",
+          })}
+          ${buildPhoneRouteButtonMarkup({
+            route: "bank/transfer",
+            label: "송금",
+            className: "bank-secondary-btn",
+          })}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function getBankAppManifest(targetState = state) {
   const viewModel = typeof createBankAppViewModel === "function"
     ? createBankAppViewModel(targetState)
@@ -229,6 +444,10 @@ function getBankAppManifest(targetState = state) {
 
       if (screenId === "transfer") {
         return buildBankTransferScreenMarkup(viewModel, { stageMode });
+      }
+
+      if (screenId === "loans") {
+        return buildBankLoansScreenMarkup(viewModel, { stageMode });
       }
 
       return buildBankHomeScreenMarkup(viewModel, { stageMode });

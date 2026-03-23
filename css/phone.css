@@ -898,6 +898,25 @@
   color: #fff;
 }
 
+.phone-job-workplace {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.phone-job-workplace-title {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.45;
+  color: rgba(232, 240, 255, 0.92);
+}
+
+.phone-job-workplace-meta {
+  font-size: 10px;
+  line-height: 1.45;
+  color: rgba(197, 211, 233, 0.78);
+}
+
 .phone-app-card-label {
   font-size: 9px;
   font-weight: 800;
@@ -3567,6 +3586,97 @@
   color: rgba(200, 215, 240, 0.72);
 }
 
+.bank-loan-summary-grid,
+.bank-loan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bank-loan-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.bank-loan-summary-card,
+.bank-loan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bank-loan-card.is-disabled,
+.bank-loan-resolution.is-fail {
+  border-color: rgba(248, 113, 113, 0.18);
+  background: rgba(73, 20, 20, 0.34);
+}
+
+.bank-loan-resolution.is-warning {
+  border-color: rgba(245, 158, 11, 0.18);
+  background: rgba(87, 54, 17, 0.30);
+}
+
+.bank-loan-resolution.is-success,
+.bank-loan-resolution.is-accent {
+  border-color: rgba(96, 165, 250, 0.18);
+  background: rgba(23, 42, 77, 0.34);
+}
+
+.bank-loan-top,
+.bank-loan-meta,
+.bank-loan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bank-loan-meta {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px 10px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: rgba(216, 229, 251, 0.74);
+}
+
+.bank-loan-title {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.3;
+  color: #ffffff;
+}
+
+.bank-loan-desc {
+  font-size: 10px;
+  line-height: 1.55;
+  color: rgba(216, 229, 251, 0.74);
+}
+
+.bank-loan-desc.is-out {
+  color: #fca5a5;
+}
+
+.bank-loan-badge {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bank-loan-actions {
+  flex-wrap: wrap;
+}
+
 /* DIS stage 확대 */
 #phone-stage .dis-index-value   { font-size: 17px; }
 #phone-stage .dis-headline-text { font-size: 14px; }
@@ -4135,203 +4245,412 @@
   color: #f8f4eb;
 }
 
-.casino-home-screen {
+/* ── CSM: NEON SHADOW 스테이지 로비 ──────────────────── */
+@keyframes csm-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.82; }
+  94% { opacity: 1; }
+  97% { opacity: 0.9; }
+  98% { opacity: 1; }
+}
+
+@keyframes csm-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.88); }
+}
+
+.csm-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+  padding: 10px 14px 18px;
+  background: #04050a;
+  color: #b8cce0;
+}
+
+/* Fake browser chrome bar */
+.csm-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.csm-chrome-icon {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.csm-chrome-url {
+  flex: 1;
+  font-size: 11px;
+  font-family: monospace;
+  color: rgba(180, 210, 240, 0.55);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.csm-chrome-conn {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 7px;
+  border-radius: 999px;
+}
+
+.csm-chrome-conn.is-ok {
+  background: rgba(0, 229, 255, 0.12);
+  color: #00e5ff;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.csm-chrome-conn.is-scam {
+  background: rgba(255, 60, 60, 0.14);
+  color: #ff6060;
+  border: 1px solid rgba(255, 60, 60, 0.22);
+}
+
+/* Brand hero */
+.csm-hero {
+  padding: 18px 0 14px;
+  text-align: center;
+}
+
+.csm-brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.92;
+  gap: 0;
+}
+
+.csm-brand-neon {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #00e5ff;
+  text-shadow:
+    0 0 8px rgba(0, 229, 255, 1),
+    0 0 24px rgba(0, 200, 240, 0.7),
+    0 0 60px rgba(0, 180, 220, 0.3);
+  animation: csm-flicker 8s infinite;
+}
+
+.csm-brand-shadow {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #f000c8;
+  text-shadow:
+    0 0 8px rgba(240, 0, 200, 1),
+    0 0 24px rgba(200, 0, 180, 0.7),
+    0 0 60px rgba(160, 0, 140, 0.3);
+  animation: csm-flicker 8s 0.4s infinite;
+}
+
+.csm-hero-sub {
+  margin-top: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(180, 210, 240, 0.4);
+}
+
+/* Balance row */
+.csm-bal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.csm-bal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.csm-bal-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(180, 210, 240, 0.36);
+}
+
+.csm-bal-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: #c8ddf0;
+}
+
+.csm-bal-val.is-chip {
+  color: #00e5ff;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+
+.csm-bal-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.csm-exchange-btn {
+  flex-shrink: 0;
+  appearance: none;
+  border: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  color: #00e5ff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.csm-exchange-btn:hover {
+  background: rgba(0, 229, 255, 0.18);
+}
+
+/* Game room buttons */
+.csm-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.csm-room-btn {
+  display: flex;
+  align-items: center;
   gap: 14px;
-  color: #0f172a;
-}
-
-.casino-home-hero {
-  padding: 16px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top right, rgba(110, 168, 255, 0.36), transparent 34%),
-    linear-gradient(180deg, rgba(17, 33, 68, 0.96) 0%, rgba(12, 22, 46, 0.98) 100%);
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.22);
-}
-
-.casino-home-screen .casino-app-kicker {
-  color: rgba(201, 219, 255, 0.82);
-}
-
-.casino-home-screen .casino-app-title {
-  color: #f8fbff;
-  font-size: 22px;
-}
-
-.casino-home-screen .casino-app-note {
-  color: rgba(231, 239, 255, 0.88);
-  font-size: 13px;
-}
-
-.casino-home-screen .casino-mini-btn {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: #f8fbff;
-}
-
-.casino-home-balance-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.casino-home-balance-card {
-  padding: 13px 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.casino-home-balance-label {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #64748b;
-}
-
-.casino-home-balance-value {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.casino-home-section-label {
-  padding-left: 2px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #334155;
-}
-
-.casino-home-route-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.casino-home-route-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
   text-align: left;
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.csm-room-btn:hover {
+  transform: translateX(3px);
+}
+
+.csm-room-btn.is-bj {
+  background:
+    radial-gradient(circle at left center, rgba(0, 220, 100, 0.12) 0%, transparent 55%),
+    rgba(8, 20, 14, 0.9);
+  border-color: rgba(0, 200, 100, 0.18);
+}
+
+.csm-room-btn.is-bj:hover {
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.csm-room-btn.is-sl {
+  background:
+    radial-gradient(circle at left center, rgba(180, 0, 240, 0.12) 0%, transparent 55%),
+    rgba(12, 8, 20, 0.9);
+  border-color: rgba(160, 0, 220, 0.18);
+}
+
+.csm-room-btn.is-sl:hover {
+  border-color: rgba(240, 0, 200, 0.3);
+}
+
+.csm-room-emblem {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(200, 220, 255, 0.8);
+  letter-spacing: 0.04em;
+}
+
+.csm-room-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 13px 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  gap: 3px;
 }
 
-.casino-home-route-head,
-.casino-home-status-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+.csm-room-name {
+  font-size: 17px;
+  font-weight: 900;
+  color: #dce8f8;
+  letter-spacing: -0.01em;
 }
 
-.casino-home-route-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.csm-room-code {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(180, 210, 240, 0.42);
+  text-transform: uppercase;
 }
 
-.casino-home-route-kicker,
-.casino-home-status-kicker {
+.csm-room-tag {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.14em;
-  color: #64748b;
-}
-
-.casino-home-route-title,
-.casino-home-status-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.casino-home-route-tag {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  background: #e2e8f0;
-  color: #334155;
-}
-
-.casino-home-route-body {
-  font-size: 13px;
-  line-height: 1.58;
-  color: #334155;
-}
-
-.casino-home-route-card.is-exchange {
-  background: linear-gradient(180deg, rgba(243, 249, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
-  border-color: rgba(56, 189, 248, 0.28);
-}
-
-.casino-home-route-card.is-exchange .casino-home-route-tag {
-  background: rgba(14, 165, 233, 0.14);
-  color: #0f4c81;
-}
-
-.casino-home-route-card.is-blackjack {
-  background: linear-gradient(180deg, rgba(243, 250, 245, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
-  border-color: rgba(34, 197, 94, 0.24);
-}
-
-.casino-home-route-card.is-blackjack .casino-home-route-tag {
-  background: rgba(34, 197, 94, 0.14);
-  color: #166534;
-}
-
-.casino-home-route-card.is-slots {
-  background: linear-gradient(180deg, rgba(245, 246, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
-  border-color: rgba(99, 102, 241, 0.24);
-}
-
-.casino-home-route-card.is-slots .casino-home-route-tag {
-  background: rgba(99, 102, 241, 0.14);
-  color: #4338ca;
-}
-
-.casino-home-status-card {
-  padding: 16px;
-  border-radius: 22px;
-  color: #eff6ff;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
-}
-
-.casino-home-status-title {
-  color: #f8fbff;
-}
-
-.casino-home-status-card .casino-home-status-kicker {
-  color: rgba(214, 228, 255, 0.76);
-}
-
-.casino-home-status-badge {
-  flex-shrink: 0;
-  padding: 7px 11px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 11px;
-  font-weight: 800;
   letter-spacing: 0.08em;
-  color: #f8fbff;
 }
 
-.casino-home-status-body {
-  margin-top: 10px;
+.csm-room-tag.is-open {
+  background: rgba(0, 229, 255, 0.12);
+  color: #00e5ff;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.csm-room-tag.is-live {
+  background: rgba(255, 40, 80, 0.16);
+  color: #ff6070;
+  border: 1px solid rgba(255, 40, 80, 0.22);
+}
+
+.csm-room-tag.is-done {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(180, 210, 240, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Status notice bar */
+.csm-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.csm-notice.is-open {
+  background: rgba(0, 229, 255, 0.05);
+  border-color: rgba(0, 229, 255, 0.12);
+}
+
+.csm-notice.is-live {
+  background: rgba(255, 40, 80, 0.07);
+  border-color: rgba(255, 40, 80, 0.16);
+}
+
+.csm-notice.is-done {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.csm-notice.is-scam {
+  background: rgba(255, 100, 0, 0.08);
+  border-color: rgba(255, 100, 0, 0.18);
+}
+
+.csm-notice-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: csm-pulse 2s infinite;
+}
+
+.csm-notice.is-open .csm-notice-dot { color: #00e5ff; }
+.csm-notice.is-live .csm-notice-dot { color: #ff4050; }
+.csm-notice.is-done .csm-notice-dot { color: rgba(180, 210, 240, 0.3); animation: none; }
+.csm-notice.is-scam .csm-notice-dot { color: #ff6000; }
+
+.csm-notice-text {
+  flex: 1;
   font-size: 13px;
-  line-height: 1.6;
-  color: rgba(239, 246, 255, 0.9);
+  font-weight: 700;
+  color: rgba(200, 220, 240, 0.8);
+}
+
+.csm-notice-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(200, 220, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ── Casino Slot Paytable ─────────────────────────────── */
+.casino-slot-paytable {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 8px 0 4px;
+}
+
+.casino-slot-pay-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 245, 220, 0.62);
+}
+
+.casino-slot-pay-row .is-bar {
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffd35a;
+  letter-spacing: 0.08em;
+}
+
+.casino-slot-pay-row .is-seven {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ff6b7a;
+}
+
+.casino-slot-pay-row .is-star {
+  font-size: 13px;
+  color: #c8d8ff;
+}
+
+.casino-slot-pay-row .is-bell {
+  font-size: 13px;
+}
+
+/* ── Slot Bet MAX button ─────────────────────────────── */
+.casino-slot-bet-btn.is-max {
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  color: #00e5ff;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.casino-slot-bet-btn.is-max.is-active,
+.casino-slot-bet-btn.is-max:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.18);
 }
 
 .casino-app-top,
@@ -7227,4 +7546,171 @@
   .news-app-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ══════════════════════════════════════════════════════
+   패널 컴팩트 모드
+   #phone-panel 내 앱 화면 — 좁은 패널에서 핵심만 표시
+   펼치기(#phone-stage)에서는 전체 UI 그대로 유지
+══════════════════════════════════════════════════════ */
+
+/* 하단 힌트 바 — 패널에서만 표시 */
+.phone-compact-bar {
+  display: none;
+}
+
+#phone-panel .phone-compact-bar {
+  display: flex;
+  position: sticky;
+  bottom: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px 10px;
+  background: linear-gradient(0deg, rgba(6, 10, 20, 1) 0%, rgba(6, 10, 20, 0) 100%);
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 기본 — 가로 오버플로우 차단 */
+#phone-panel .phone-app-screen {
+  overflow-x: hidden;
+}
+
+#phone-panel .phone-app-screen * {
+  max-width: 100%;
+}
+
+/* ── 마켓 (호박마켓) ─────────────────────── */
+#phone-panel .phone-app-screen .market-app-header-nav,
+#phone-panel .phone-app-screen .market-app-header-search,
+#phone-panel .phone-app-screen .market-app-header-desktop-actions,
+#phone-panel .phone-app-screen .market-bottom-nav,
+#phone-panel .phone-app-screen .market-floating-write,
+#phone-panel .phone-app-screen .market-app-mobile-filter {
+  display: none !important;
+}
+
+#phone-panel .phone-app-screen .market-product-card-thumb {
+  width: 68px;
+  min-width: 68px;
+  height: 68px;
+}
+
+#phone-panel .phone-app-screen .market-product-card {
+  padding: 10px 0;
+  gap: 10px;
+}
+
+#phone-panel .phone-app-screen .market-product-card-stats {
+  display: none;
+}
+
+#phone-panel .phone-app-screen .market-product-art {
+  display: none;
+}
+
+#phone-panel .phone-app-screen .market-app-home-body {
+  padding-bottom: 8px;
+}
+
+#phone-panel .phone-app-screen .market-app-shell {
+  padding-bottom: 0;
+}
+
+/* ── 뉴스 (Google News) ─────────────────── */
+#phone-panel .phone-app-screen .news-top-tabs,
+#phone-panel .phone-app-screen .news-app-header-right,
+#phone-panel .phone-app-screen .news-app-search-row,
+#phone-panel .phone-app-screen .news-drawer-layer,
+#phone-panel .phone-app-screen .news-story-tools,
+#phone-panel .phone-app-screen .news-story-card-tools {
+  display: none !important;
+}
+
+#phone-panel .phone-app-screen .news-hero-visual,
+#phone-panel .phone-app-screen .news-story-card-visual {
+  display: none !important;
+}
+
+#phone-panel .phone-app-screen .news-hero-card,
+#phone-panel .phone-app-screen .news-story-card {
+  flex-direction: column;
+}
+
+#phone-panel .phone-app-screen .news-hero-title {
+  font-size: 14px;
+  -webkit-line-clamp: 2;
+}
+
+#phone-panel .phone-app-screen .news-hero-summary {
+  font-size: 12px;
+  -webkit-line-clamp: 2;
+}
+
+#phone-panel .phone-app-screen .news-story-card-title {
+  font-size: 13px;
+}
+
+#phone-panel .phone-app-screen .news-google-logo {
+  gap: 1px;
+}
+
+#phone-panel .phone-app-screen .news-google-logo span {
+  font-size: 18px;
+}
+
+/* ── 버스 ────────────────────────────────── */
+#phone-panel .phone-app-screen .bus-phone-stop-action {
+  display: none;
+}
+
+#phone-panel .phone-app-screen .bus-phone-hero-stats {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+#phone-panel .phone-app-screen .bus-phone-hero-stat {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* ── 은행 ────────────────────────────────── */
+#phone-panel .phone-app-screen .bank-hero-actions {
+  flex-wrap: wrap;
+}
+
+#phone-panel .phone-app-screen .bank-hero-btn {
+  flex: 1 1 calc(50% - 4px);
+  font-size: 12px;
+  padding: 8px 6px;
+}
+
+/* ── 주식 ────────────────────────────────── */
+#phone-panel .phone-app-screen .stock-market-book-card,
+#phone-panel .phone-app-screen .stock-market-chart-card {
+  display: none;
+}
+
+#phone-panel .phone-app-screen .stock-market-stage {
+  gap: 8px;
+  padding: 12px 8px 16px;
+}
+
+/* ── DIS / 갤러리 / 공통 앱 카드 ──────────── */
+#phone-panel .phone-app-screen .phone-app-card {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+#phone-panel .phone-app-screen .phone-app-card-body {
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

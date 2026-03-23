@@ -5,14 +5,14 @@
 
 ## 현재 프로토타입 요약
 
-- 현재 플레이 범위는 `7일` 프로토타입이다.
-- 핵심 루프는 `1일차 프롤로그 -> 방청소 -> 스마트폰 공고 -> 다음날 예약 출근 -> 바깥 이동/생활 앱/기억 확인 -> 7일차 정산 랭킹`이다.
-- `30일 구조`, 장기 도시 확장, 본격적인 엔딩 분기, 대형 경제 확장은 아직 설계 문서 쪽에 있다.
+- 현재 플레이 범위는 `12턴` 프로토타입이다.
+- 핵심 루프는 `1턴 시작 프롤로그 -> 출생 패키지 선택 -> 스마트폰 공고/은행/호박마켓 -> 바깥 이동/생활 앱/기억 확인 -> 12턴 정산 랭킹`이다.
+- 장기 도시 확장, 본격적인 엔딩 분기, 대형 경제 확장은 아직 설계 문서 쪽에 있다.
 
 ## 먼저 읽을 문서
 
 - [early-progression.md](./early-progression.md)  
-  현재 7일 프로토타입의 흐름과 마감 구조를 정리한 문서.
+  현재 프로토타입의 흐름과 마감 구조를 정리한 문서.
 
 - [phone-system.md](./phone-system.md)  
   스마트폰 사용 시점, 공고 앱 루프, 예약 근무 흐름을 설명하는 문서.
@@ -59,6 +59,9 @@
   `localStorage` 기반 저장 구조 문서.
 
 ## 설계 아이디어 문서
+
+- [design/bank-loans-and-collateral.md](./design/bank-loans-and-collateral.md)  
+  일반 대출, 차량/집 담보 대출, 턴 시작 자동 상환, 연체 누적, 압류 발동 설계 문서.
 
 - [design/city-map-navigation.md](./design/city-map-navigation.md)  
   바깥 이동을 `지도 버튼 -> 전체 지도 -> 소요시간 확인 카드` 흐름으로 바꾸는 개편 계획 문서.
@@ -110,6 +113,9 @@
 
 - [design/spoon-start.md](./design/spoon-start.md)  
   새 게임 시작 시 1회만 실행하는 수저 등급 추첨과 초기 자산 차이 설계 문서.
+
+- [design/wealth-and-cashflow.md](./design/wealth-and-cashflow.md)  
+  출생 자산 패키지, 현금/은행 분리, 급여 입금, 자산 매매 대금 흐름을 묶는 설계 문서.
 
 - [design/special-events.md](./design/special-events.md)  
   특수 이벤트와 미니게임 확장 설계 문서.

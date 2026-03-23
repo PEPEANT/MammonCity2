@@ -271,16 +271,28 @@ function estimateWalkTravelMinutes(fromLocationId = "", toLocationId = "", targe
     ? getWorldLocationDistrictId(toLocationId, day)
     : "";
 
-  if (fromDistrict && toDistrict && fromDistrict !== toDistrict) {
-    return TIME_SLOT_MINUTES * 3;
-  }
-
   const nearbyResidentialStops = new Set(["apt-alley", "bus-stop", "bus-stop-map"]);
   if (nearbyResidentialStops.has(fromLocationId) && nearbyResidentialStops.has(toLocationId)) {
-    return TIME_SLOT_MINUTES;
+    return typeof adjustTravelMinutesForOwnedVehicle === "function"
+      ? adjustTravelMinutesForOwnedVehicle(TIME_SLOT_MINUTES, {
+          fromLocationId,
+          toLocationId,
+          mode: "walk",
+        }, targetState)
+      : TIME_SLOT_MINUTES;
   }
 
-  return TIME_SLOT_MINUTES * 2;
+  const baseMinutes = fromDistrict && toDistrict && fromDistrict !== toDistrict
+    ? TIME_SLOT_MINUTES * 3
+    : TIME_SLOT_MINUTES * 2;
+
+  return typeof adjustTravelMinutesForOwnedVehicle === "function"
+    ? adjustTravelMinutesForOwnedVehicle(baseMinutes, {
+        fromLocationId,
+        toLocationId,
+        mode: "walk",
+      }, targetState)
+    : baseMinutes;
 }
 
 function getAlleyNpcPool(targetState = state, locationId = getCurrentLocationId(targetState)) {

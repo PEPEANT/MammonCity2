@@ -666,167 +666,7 @@
   }
 
   function buildPositionEditorLegacy(panel) {
-    const sectionEntry = createEditorSection(panel, "position-editor", "position", "위치 편집");
-    const section = sectionEntry.body;
-
-    const label = document.createElement("div");
-    label.className = "dev-section-label";
-    label.textContent = "위치 편집";
-
-    const actions = document.createElement("div");
-    actions.className = "dev-position-actions";
-
-    const toggleButton = buildEditorButton("위치 편집 켜기");
-    const saveButton = buildEditorButton("로컬 저장");
-    const copyButton = buildEditorButton("복사");
-    const resetButton = buildEditorButton("초기화");
-
-    toggleButton.addEventListener("click", () => setEditorEnabled(!editor.enabled));
-    saveButton.addEventListener("click", () => persistCurrentLayout("현재 배치를 브라우저에 저장했습니다."));
-    copyButton.addEventListener("click", copyCurrentLayout);
-    resetButton.addEventListener("click", resetCurrentLayout);
-
-    actions.append(toggleButton, saveButton, copyButton, resetButton);
-
-    const sceneLine = document.createElement("div");
-    sceneLine.className = "dev-editor-line";
-    sceneLine.id = "dev-position-scene";
-
-    const selectionLine = document.createElement("div");
-    selectionLine.className = "dev-editor-line";
-    selectionLine.id = "dev-position-selection";
-
-    const readout = document.createElement("pre");
-    readout.className = "dev-editor-readout";
-    readout.id = "dev-position-readout";
-
-    const actorFields = document.createElement("div");
-    actorFields.className = "dev-editor-inputs";
-
-    const heightLabel = document.createElement("label");
-    heightLabel.className = "dev-editor-field";
-    const heightSpan = document.createElement("span");
-    heightSpan.textContent = "height";
-    const heightInput = document.createElement("input");
-    heightInput.type = "number";
-    heightInput.id = "dev-actor-height";
-    heightInput.min = "1";
-    heightInput.max = "100";
-    heightInput.step = "0.5";
-    heightInput.disabled = true;
-    heightInput.addEventListener("input", () => {
-      heightInput.dataset.dirty = "1";
-    });
-    heightLabel.append(heightSpan, heightInput);
-
-    const zLabel = document.createElement("label");
-    zLabel.className = "dev-editor-field";
-    const zSpan = document.createElement("span");
-    zSpan.textContent = "z";
-    const zInput = document.createElement("input");
-    zInput.type = "number";
-    zInput.id = "dev-actor-z";
-    zInput.min = "0";
-    zInput.max = "99";
-    zInput.step = "1";
-    zInput.disabled = true;
-    zInput.addEventListener("input", () => {
-      zInput.dataset.dirty = "1";
-    });
-    zLabel.append(zSpan, zInput);
-
-    const rotateField = buildPositionField("rotate", "dev-actor-rotate", {
-      min: "-180",
-      max: "180",
-      step: "1",
-    });
-
-    const facingField = document.createElement("label");
-    facingField.className = "dev-editor-field";
-    const facingSpan = document.createElement("span");
-    facingSpan.textContent = "flip";
-    const facingSelect = document.createElement("select");
-    facingSelect.id = "dev-actor-facing";
-    facingSelect.disabled = true;
-    facingSelect.innerHTML = `
-      <option value="1">normal</option>
-      <option value="-1">mirror</option>
-    `;
-    facingSelect.addEventListener("change", () => {
-      facingSelect.dataset.dirty = "1";
-    });
-    facingField.append(facingSpan, facingSelect);
-
-    const cropTopField = buildPositionField("crop top", "dev-crop-top", {
-      min: "0",
-      max: "90",
-      step: "1",
-    });
-    const cropRightField = buildPositionField("crop right", "dev-crop-right", {
-      min: "0",
-      max: "90",
-      step: "1",
-    });
-    const cropBottomField = buildPositionField("crop bottom", "dev-crop-bottom", {
-      min: "0",
-      max: "90",
-      step: "1",
-    });
-    const cropLeftField = buildPositionField("crop left", "dev-crop-left", {
-      min: "0",
-      max: "90",
-      step: "1",
-    });
-
-    const applyButton = buildEditorButton("배우 적용");
-    applyButton.classList.add("single");
-    applyButton.disabled = true;
-    applyButton.addEventListener("click", applySelectedTransformSettings);
-
-    actorFields.append(
-      heightLabel,
-      zLabel,
-      rotateField.wrapper,
-      facingField,
-      cropTopField.wrapper,
-      cropRightField.wrapper,
-      cropBottomField.wrapper,
-      cropLeftField.wrapper,
-      applyButton,
-    );
-
-    const note = document.createElement("div");
-    note.className = "dev-editor-note";
-    note.textContent = "드래그 배치는 코드 파일이 아니라 현재 브라우저의 localStorage에만 저장됩니다.";
-
-    const status = document.createElement("div");
-    status.className = "dev-editor-status";
-    status.id = "dev-position-status";
-    status.textContent = "편집 꺼짐";
-
-    section.append(actions, note, status);
-
-    Object.assign(editor.elements, {
-      section: sectionEntry.section,
-      toggleButton,
-      saveButton,
-      copyButton,
-      resetButton,
-      sceneLine,
-      selectionLine,
-      readout,
-      sizeLabel: heightSpan,
-      heightInput,
-      zInput,
-      rotateInput: rotateField.input,
-      facingSelect,
-      cropTopInput: cropTopField.input,
-      cropRightInput: cropRightField.input,
-      cropBottomInput: cropBottomField.input,
-      cropLeftInput: cropLeftField.input,
-      applyButton,
-      status,
-    });
+    return buildPositionEditor(panel);
   }
 
   function buildPositionEditor(panel) {
@@ -1572,33 +1412,7 @@
   }
 
   function getEditorContextLegacy() {
-    if (state.scene === "cleanup" && state.cleaningGame) {
-      const visibleItems = state.cleaningGame.items.filter((item) => !item.collected);
-      return {
-        kind: "trash",
-        key: `day${padDay(state.day)}:cleanup:${state.cleaningGame.eventId || "default"}`,
-        label: `${state.day}턴 cleanup`,
-        itemIds: visibleItems.map((item) => item.id),
-        sourceItems: visibleItems.map((item) => ({ id: item.id, image: item.image })),
-      };
-    }
-
-    const actorSource = getActorSourceData();
-    if (actorSource.length && getActorElements().length) {
-      const segments = [`day${padDay(state.day)}`, state.scene];
-      if (state.scene === "prologue") {
-        segments.push(state.storyKey || "intro", `step${state.storyStep}`);
-      }
-
-      return {
-        kind: "actors",
-        key: segments.join(":"),
-        label: segments.join(" / "),
-        sourceItems: actorSource.map((actor) => ({ ...actor })),
-      };
-    }
-
-    return null;
+    return getEditorContext();
   }
 
   function getActorSourceData() {
@@ -1615,33 +1429,7 @@
   }
 
   function applyStoredLayoutLegacy(context) {
-    if (!context) {
-      return;
-    }
-
-    const saved = editor.store[context.key];
-    if (!saved?.items) {
-      return;
-    }
-
-    if (context.kind === "actors") {
-      getActorElements().forEach((element, index) => {
-        const item = saved.items[index];
-        if (!item) return;
-        applyActorLayout(element, item);
-      });
-      return;
-    }
-
-    if (context.kind === "trash") {
-      const itemMap = new Map(saved.items.map((item) => [item.id, item]));
-      getTrashElements().forEach((element, index) => {
-        const itemId = context.itemIds[index];
-        const item = itemMap.get(itemId);
-        if (!item) return;
-        applyTrashLayout(element, item);
-      });
-    }
+    return applyStoredLayout(context);
   }
 
   function decorateEditableElements(context) {
@@ -2148,131 +1936,7 @@
   }
 
   function syncPositionEditorDisplayLegacy(context) {
-    const {
-      toggleButton,
-      saveButton,
-      copyButton,
-      resetButton,
-      sceneLine,
-      selectionLine,
-      readout,
-      sizeLabel,
-      heightInput,
-      zInput,
-      rotateInput,
-      facingSelect,
-      cropTopInput,
-      cropRightInput,
-      cropBottomInput,
-      cropLeftInput,
-      applyButton,
-    } = editor.elements;
-
-    if (!toggleButton) {
-      return;
-    }
-
-    toggleButton.textContent = editor.enabled ? "위치 편집 끄기" : "위치 편집 켜기";
-    toggleButton.classList.toggle("is-active", editor.enabled);
-
-    if (!context) {
-      editor.contextKey = "";
-      editor.selection = null;
-      saveButton.disabled = true;
-      copyButton.disabled = true;
-      resetButton.disabled = true;
-      applyButton.disabled = true;
-      heightInput.disabled = true;
-      zInput.disabled = true;
-      rotateInput.disabled = true;
-      facingSelect.disabled = true;
-      cropTopInput.disabled = true;
-      cropRightInput.disabled = true;
-      cropBottomInput.disabled = true;
-      cropLeftInput.disabled = true;
-      editor.formSelectionKey = "";
-      sceneLine.textContent = "scene: editable target 없음";
-      selectionLine.textContent = "selection: none";
-      readout.textContent = "좌표 없음";
-      return;
-    }
-
-    editor.contextKey = context.key;
-    saveButton.disabled = false;
-    copyButton.disabled = false;
-    resetButton.disabled = false;
-    sceneLine.textContent = `scene: ${context.label}`;
-
-    const selected = getSelectedElement(context);
-    if (!selected) {
-      selectionLine.textContent = "selection: none";
-      readout.textContent = context.kind === "actors"
-        ? "left: -\nbottom: -\nsize: -\nzIndex: -\nrotate: -\nflip: -"
-        : "x: -\ny: -\nsize: -\nzIndex: -\nrotate: -\nflip: -";
-      applyButton.disabled = true;
-      heightInput.disabled = true;
-      zInput.disabled = true;
-      rotateInput.disabled = true;
-      facingSelect.disabled = true;
-      cropTopInput.disabled = true;
-      cropRightInput.disabled = true;
-      cropBottomInput.disabled = true;
-      cropLeftInput.disabled = true;
-      editor.formSelectionKey = "";
-      return;
-    }
-
-    const isActor = context.kind === "actors";
-    const layout = isActor ? readActorLayout(selected) : readTrashLayout(selected);
-    selectionLine.textContent = isActor
-      ? `selection: actor ${editor.selection.itemId}`
-      : `selection: ${editor.selection.itemId}`;
-
-    readout.textContent = isActor
-      ? [
-          `left: ${formatNumber(layout.left)}%`,
-          `bottom: ${formatNumber(layout.bottom)}px`,
-          `size: ${formatNumber(layout.height)}%`,
-          `zIndex: ${layout.zIndex}`,
-          `rotate: ${formatNumber(layout.rotation)}deg`,
-          `flip: ${layout.facing === -1 ? "mirror" : "normal"}`,
-          `crop: ${formatNumber(layout.cropTop)} / ${formatNumber(layout.cropRight)} / ${formatNumber(layout.cropBottom)} / ${formatNumber(layout.cropLeft)}`,
-        ].join("\n")
-      : [
-          `x: ${formatNumber(layout.x)}%`,
-          `y: ${formatNumber(layout.y)}%`,
-          `size: ${formatNumber(layout.size)}px`,
-          `zIndex: ${layout.zIndex}`,
-          `rotate: ${formatNumber(layout.rotation)}deg`,
-          `flip: ${layout.facing === -1 ? "mirror" : "normal"}`,
-          `crop: ${formatNumber(layout.cropTop)} / ${formatNumber(layout.cropRight)} / ${formatNumber(layout.cropBottom)} / ${formatNumber(layout.cropLeft)}`,
-        ].join("\n");
-
-    sizeLabel.textContent = isActor ? "size (%)" : "size (px)";
-    heightInput.max = isActor ? "180" : "240";
-    heightInput.step = isActor ? "0.5" : "1";
-    heightInput.disabled = false;
-    zInput.disabled = false;
-    rotateInput.disabled = false;
-    facingSelect.disabled = false;
-    cropTopInput.disabled = false;
-    cropRightInput.disabled = false;
-    cropBottomInput.disabled = false;
-    cropLeftInput.disabled = false;
-    applyButton.disabled = false;
-
-    const formSelectionKey = `${context.key}:${editor.selection.itemId}`;
-    if (editor.formSelectionKey !== formSelectionKey) {
-      heightInput.value = formatNumber(isActor ? layout.height : layout.size);
-      zInput.value = String(layout.zIndex);
-      rotateInput.value = formatNumber(layout.rotation);
-      facingSelect.value = String(layout.facing);
-      cropTopInput.value = formatNumber(layout.cropTop);
-      cropRightInput.value = formatNumber(layout.cropRight);
-      cropBottomInput.value = formatNumber(layout.cropBottom);
-      cropLeftInput.value = formatNumber(layout.cropLeft);
-      editor.formSelectionKey = formSelectionKey;
-    }
+    return syncPositionEditorDisplay(context);
   }
 
   function selectEditable(context, itemId) {
@@ -2456,58 +2120,15 @@
   }
 
   function persistCurrentLayoutLegacy(message = "브라우저 저장 완료") {
-    const context = getEditorContext();
-    if (!context) {
-      setStatus("저장할 위치 데이터가 없습니다.");
-      return false;
-    }
-
-    const captured = captureCurrentLayout(context);
-    if (!captured.length) {
-      setStatus("저장할 위치 데이터가 없습니다.");
-      return false;
-    }
-
-    editor.store[context.key] = {
-      version: DEV_LAYOUT_VERSION,
-      kind: context.kind,
-      label: context.label,
-      savedAt: Date.now(),
-      items: captured,
-    };
-    saveLayoutStore();
-    setStatus(message);
-    return true;
+    return persistCurrentLayout(message);
   }
 
   function resetCurrentLayoutLegacy() {
-    const context = getEditorContext();
-    if (!context) {
-      setStatus("초기화할 위치 데이터가 없습니다.");
-      return;
-    }
-
-    delete editor.store[context.key];
-    saveLayoutStore();
-    setStatus("현재 씬의 로컬 위치 저장을 지웠습니다.");
-
-    if (typeof renderGame === "function") {
-      renderGame();
-    } else {
-      refreshPositionEditor();
-    }
+    return resetCurrentLayout();
   }
 
   async function copyCurrentLayoutLegacy() {
-    const context = getEditorContext();
-    if (!context) {
-      setStatus("복사할 위치 데이터가 없습니다.");
-      return;
-    }
-
-    const payload = formatLayoutForCopy(context, captureCurrentLayout(context));
-    const copied = await copyText(payload);
-    setStatus(copied ? "클립보드에 복사했습니다." : "복사에 실패했습니다.");
+    return copyCurrentLayout();
   }
 
   function captureCurrentLayout(context) {
@@ -2582,70 +2203,7 @@
   }
 
   function formatLayoutForCopyLegacy(context, items) {
-    if (!items.length) {
-      return "[]";
-    }
-
-    if (context.kind === "actors") {
-      const lines = items.map((item) => {
-        const parts = [
-          `src: ${quoteString(item.src || "")}`,
-          `alt: ${quoteString(item.alt || "")}`,
-          `left: ${formatNumber(item.left)}`,
-          `bottom: ${formatNumber(item.bottom)}`,
-          `height: ${formatNumber(item.height)}`,
-          `zIndex: ${item.zIndex}`,
-        ];
-
-        if (item.facing != null && item.facing !== 1) {
-          parts.push(`facing: ${item.facing}`);
-        }
-        if (item.rotation != null && item.rotation !== 0) {
-          parts.push(`rotation: ${formatNumber(item.rotation)}`);
-        }
-        if (item.cropTop || item.cropRight || item.cropBottom || item.cropLeft) {
-          parts.push(`cropTop: ${formatNumber(item.cropTop || 0)}`);
-          parts.push(`cropRight: ${formatNumber(item.cropRight || 0)}`);
-          parts.push(`cropBottom: ${formatNumber(item.cropBottom || 0)}`);
-          parts.push(`cropLeft: ${formatNumber(item.cropLeft || 0)}`);
-        }
-
-        return `  {\n    ${parts.join(",\n    ")}\n  }`;
-      });
-
-      return `[\n${lines.join(",\n")}\n]`;
-    }
-
-    const trashLines = items.map((item) => {
-      const parts = [
-        `id: ${quoteString(item.id || "")}`,
-        `image: ${quoteString(item.image || "")}`,
-        `x: ${formatNumber(item.x)}`,
-        `y: ${formatNumber(item.y)}`,
-      ];
-
-      if (item.size != null && item.size !== 96) {
-        parts.push(`size: ${Math.round(item.size)}`);
-      }
-      if (item.zIndex != null && item.zIndex !== 1) {
-        parts.push(`zIndex: ${item.zIndex}`);
-      }
-      if (item.facing != null && item.facing !== 1) {
-        parts.push(`facing: ${item.facing}`);
-      }
-      if (item.rotation != null && item.rotation !== 0) {
-        parts.push(`rotation: ${formatNumber(item.rotation)}`);
-      }
-      if (item.cropTop || item.cropRight || item.cropBottom || item.cropLeft) {
-        parts.push(`cropTop: ${formatNumber(item.cropTop || 0)}`);
-        parts.push(`cropRight: ${formatNumber(item.cropRight || 0)}`);
-        parts.push(`cropBottom: ${formatNumber(item.cropBottom || 0)}`);
-        parts.push(`cropLeft: ${formatNumber(item.cropLeft || 0)}`);
-      }
-
-      return `  {\n    ${parts.join(",\n    ")}\n  }`;
-    });
-    return `[\n${trashLines.join(",\n")}\n]`;
+    return formatLayoutForCopy(context, items);
   }
 
   function getDayKey(day = state?.day || 1) {

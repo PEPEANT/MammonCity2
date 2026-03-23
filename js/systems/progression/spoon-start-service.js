@@ -7,7 +7,12 @@ const SPOON_START_TIERS = Object.freeze([
     bracket: "상위 1%",
     summary: "부족함 거의 없는 출발",
     toneLabel: "금빛",
-    initialCash: 320000,
+    initialCash: 300000,
+    walletCash: 300000,
+    bankBalance: 12000000,
+    starterAssetIds: Object.freeze(["phone-used-premium", "outfit-suit"]),
+    starterVehicleId: "used-car",
+    safetyNetLevel: "large",
     startHappiness: 62,
     accent: "#f4c24d",
     accentSoft: "rgba(244, 194, 77, 0.18)",
@@ -23,7 +28,12 @@ const SPOON_START_TIERS = Object.freeze([
     bracket: "상위 5%",
     summary: "안정적인 지원이 있는 출발",
     toneLabel: "은빛",
-    initialCash: 200000,
+    initialCash: 150000,
+    walletCash: 150000,
+    bankBalance: 4000000,
+    starterAssetIds: Object.freeze(["phone-used-premium", "outfit-suit"]),
+    starterVehicleId: "used-motorbike",
+    safetyNetLevel: "medium",
     startHappiness: 55,
     accent: "#cbd5e1",
     accentSoft: "rgba(203, 213, 225, 0.16)",
@@ -39,7 +49,12 @@ const SPOON_START_TIERS = Object.freeze([
     bracket: "상위 20%",
     summary: "무난하지만 직접 굴려야 한다",
     toneLabel: "동빛",
-    initialCash: 120000,
+    initialCash: 70000,
+    walletCash: 70000,
+    bankBalance: 800000,
+    starterAssetIds: Object.freeze(["outfit-suit"]),
+    starterVehicleId: "bicycle",
+    safetyNetLevel: "small",
     startHappiness: 48,
     accent: "#cf7c56",
     accentSoft: "rgba(207, 124, 86, 0.16)",
@@ -55,7 +70,12 @@ const SPOON_START_TIERS = Object.freeze([
     bracket: "중간권",
     summary: "버티려면 계산이 필요한 출발",
     toneLabel: "강철빛",
-    initialCash: 60000,
+    initialCash: 40000,
+    walletCash: 40000,
+    bankBalance: 150000,
+    starterAssetIds: Object.freeze([]),
+    starterVehicleId: "",
+    safetyNetLevel: "thin",
     startHappiness: 43,
     accent: "#7f95b2",
     accentSoft: "rgba(127, 149, 178, 0.16)",
@@ -72,6 +92,11 @@ const SPOON_START_TIERS = Object.freeze([
     summary: "가진 건 적지만 뒤집을 여지는 남아 있다",
     toneLabel: "흙빛",
     initialCash: 20000,
+    walletCash: 20000,
+    bankBalance: 0,
+    starterAssetIds: Object.freeze([]),
+    starterVehicleId: "",
+    safetyNetLevel: "none",
     startHappiness: 38,
     accent: "#8d5b37",
     accentSoft: "rgba(141, 91, 55, 0.16)",
@@ -93,6 +118,14 @@ const DEFAULT_SPOON_START_THEME = Object.freeze({
   sceneOverlay: "",
 });
 
+const SPOON_START_SAFETY_NET_LABELS = Object.freeze({
+  large: "가족 지원 넉넉",
+  medium: "가족 지원 있음",
+  small: "소액 지원 가능",
+  thin: "지원 거의 없음",
+  none: "지원 없음",
+});
+
 function getSpoonStartTier(tierId = "") {
   const normalized = String(tierId || "").trim().toLowerCase();
   return SPOON_START_TIER_LOOKUP[normalized] || null;
@@ -110,6 +143,11 @@ function createDefaultSpoonStartState() {
     summary: "",
     toneLabel: "",
     initialCash: 0,
+    walletCash: 0,
+    bankBalance: 0,
+    starterAssetIds: [],
+    starterVehicleId: "",
+    safetyNetLevel: "none",
     startHappiness: 45,
     accent: DEFAULT_SPOON_START_THEME.accent,
     applied: false,
@@ -125,6 +163,11 @@ function createAppliedSpoonStartState(tierId = "") {
     summary: tier.summary,
     toneLabel: tier.toneLabel,
     initialCash: tier.initialCash,
+    walletCash: tier.walletCash,
+    bankBalance: tier.bankBalance,
+    starterAssetIds: [...(tier.starterAssetIds || [])],
+    starterVehicleId: tier.starterVehicleId || "",
+    safetyNetLevel: tier.safetyNetLevel || "none",
     startHappiness: tier.startHappiness,
     accent: tier.accent,
     applied: true,
@@ -170,6 +213,69 @@ function drawSpoonStartTierId() {
   return getDefaultSpoonStartTier().id;
 }
 
+function formatSpoonStartAmount(amount = 0) {
+  const safeAmount = Math.max(0, Math.round(Number(amount) || 0));
+  return `${safeAmount.toLocaleString("ko-KR")}원`;
+}
+
+function getSpoonStartSafetyNetLabel(level = "") {
+  const normalized = String(level || "").trim().toLowerCase();
+  return SPOON_START_SAFETY_NET_LABELS[normalized] || SPOON_START_SAFETY_NET_LABELS.none;
+}
+
+function getSpoonStartStarterAssetLabels(tierId = "") {
+  const tier = typeof tierId === "object" && tierId
+    ? tierId
+    : getSpoonStartTier(tierId);
+  if (!tier) {
+    return [];
+  }
+
+  const labels = [];
+  const vehicleId = String(tier.starterVehicleId || "").trim();
+  if (vehicleId && typeof getOwnedVehicleDefinition === "function") {
+    const vehicle = getOwnedVehicleDefinition(vehicleId);
+    if (vehicle?.label) {
+      labels.push(vehicle.label);
+    }
+  }
+
+  (tier.starterAssetIds || []).forEach((itemId) => {
+    if (typeof getInventoryItemDefinition !== "function") {
+      return;
+    }
+    const definition = getInventoryItemDefinition(itemId);
+    if (definition?.label) {
+      labels.push(definition.label);
+    }
+  });
+
+  return labels;
+}
+
+function getSpoonStartPackageChipLabels(tierId = "") {
+  const tier = typeof tierId === "object" && tierId
+    ? tierId
+    : getSpoonStartTier(tierId);
+  if (!tier) {
+    return [];
+  }
+
+  const chips = [
+    `손 현금 ${formatSpoonStartAmount(tier.walletCash)}`,
+    `계좌 ${formatSpoonStartAmount(tier.bankBalance)}`,
+  ];
+  const assetLabels = getSpoonStartStarterAssetLabels(tier);
+  if (assetLabels.length === 1) {
+    chips.push(`시작 자산 ${assetLabels[0]}`);
+  } else if (assetLabels.length > 1) {
+    chips.push(`시작 자산 ${assetLabels[0]} 외 ${assetLabels.length - 1}`);
+  } else {
+    chips.push(getSpoonStartSafetyNetLabel(tier.safetyNetLevel));
+  }
+  return chips;
+}
+
 function applySpoonStartPackage(targetState = state, tierId = "") {
   if (!targetState || typeof targetState !== "object") {
     return createDefaultSpoonStartState();
@@ -177,7 +283,57 @@ function applySpoonStartPackage(targetState = state, tierId = "") {
 
   const originState = createAppliedSpoonStartState(tierId);
   targetState.startingOrigin = { ...originState };
-  targetState.money = originState.initialCash;
+  targetState.money = originState.walletCash;
+
+  if (typeof setBankBalance === "function") {
+    setBankBalance(originState.bankBalance, targetState);
+  } else {
+    if (!targetState.bank || typeof targetState.bank !== "object") {
+      targetState.bank = typeof createDefaultBankState === "function"
+        ? createDefaultBankState()
+        : { balance: 0, transactions: [], transferDraft: { recipient: "", amount: "" } };
+    }
+    targetState.bank.balance = Math.max(0, Math.round(Number(originState.bankBalance) || 0));
+  }
+
+  if (typeof patchBankDomainState === "function") {
+    patchBankDomainState(targetState, { transactions: [] });
+  } else if (Array.isArray(targetState.bank?.transactions)) {
+    targetState.bank.transactions = [];
+  }
+
+  if (originState.bankBalance > 0 && typeof recordBankTransaction === "function") {
+    recordBankTransaction({
+      title: "출생 자산 예치금",
+      amount: originState.bankBalance,
+      type: "origin",
+      direction: "in",
+      note: `${originState.label} 출생 패키지`,
+    }, targetState);
+  }
+
+  if (Array.isArray(originState.starterAssetIds)) {
+    originState.starterAssetIds.forEach((itemId) => {
+      if (typeof grantInventoryItem === "function") {
+        grantInventoryItem(itemId, 1, targetState);
+      }
+      if (typeof getInventoryItemDefinition === "function" && typeof setEquippedInventoryItem === "function") {
+        const definition = getInventoryItemDefinition(itemId);
+        if (definition?.equipmentSlot) {
+          setEquippedInventoryItem(definition.equipmentSlot, itemId, targetState);
+        }
+      }
+    });
+  }
+
+  if (originState.starterVehicleId && typeof setOwnedVehicle === "function") {
+    setOwnedVehicle(originState.starterVehicleId, targetState, {
+      acquiredSource: "origin",
+      purchasePrice: 0,
+      note: `${originState.label} 출생 패키지`,
+      isStarterAsset: true,
+    });
+  }
 
   if (typeof setHappinessValue === "function") {
     setHappinessValue(originState.startHappiness, targetState);

@@ -114,7 +114,7 @@ const JOBS = [
   },
   {
     id: "delivery",
-    title: "점심 배달",
+    title: "근거리 배달",
     emoji: "🛵",
     tone: "ember",
     category: "이동",
@@ -122,8 +122,59 @@ const JOBS = [
     payMax: 108000,
     sceneBackground: JOB_SCENE_BACKGROUNDS.delivery,
     minigame: JOB_MINIGAME_DEFINITIONS.delivery,
-    description: "피크 시간대 주문을 몰아서 뛰는 배달 콜.",
+    description: "자전거와 오토바이로 점심 주문을 몰아서 처리하는 입문 배달 콜.",
+    requirements: [
+      {
+        type: "owned-vehicle-any-of",
+        vehicleIds: ["bicycle", "used-motorbike"],
+        label: "자전거 또는 오토바이",
+      },
+    ],
     tags: ["피크타임", "이동", "날씨영향"],
+  },
+  {
+    id: "delivery-motorbike",
+    title: "오토바이 피크 배달",
+    emoji: "🛵",
+    tone: "ember",
+    category: "이동",
+    payMin: 98000,
+    payMax: 142000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.delivery,
+    minigame: JOB_MINIGAME_DEFINITIONS.delivery,
+    description: "오토바이로 피크 시간대 콜을 더 공격적으로 돌리는 상위 배달 루트.",
+    requirements: [
+      {
+        type: "owned-vehicle-any-of",
+        vehicleIds: ["used-motorbike"],
+        label: "중고 오토바이",
+      },
+    ],
+    tags: ["오토바이", "피크타임", "고수익"],
+  },
+  {
+    id: "delivery-courier",
+    title: "장거리 퀵 배송",
+    emoji: "🚗",
+    tone: "steel",
+    category: "이동",
+    payMin: 118000,
+    payMax: 168000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.delivery,
+    minigame: JOB_MINIGAME_DEFINITIONS.delivery,
+    description: "차량으로 도시 외곽까지 물건을 빼는 장거리 퀵 배송 루트.",
+    requirements: [
+      {
+        type: "owned-vehicle-any-of",
+        vehicleIds: ["used-car", "foreign-car"],
+        label: "차량",
+      },
+      {
+        type: "certification",
+        certKey: "driverLicense",
+      },
+    ],
+    tags: ["장거리", "차량", "퀵배송"],
   },
   {
     id: "tutoring",
@@ -182,6 +233,13 @@ const JOBS = [
     payMin: 76000,
     payMax: 94000,
     description: "직원이 빠진 무인매장에서 결제 오류와 재고만 챙기는 알바.",
+    requirements: [
+      {
+        type: "equipped-item",
+        itemId: "phone-used-premium",
+        label: "중고 프리미엄 스마트폰",
+      },
+    ],
     tags: ["무인매장", "안내", "오류응대"],
   },
   {
@@ -193,6 +251,22 @@ const JOBS = [
     payMin: 78000,
     payMax: 98000,
     description: "배달 로봇과 라이더 동선을 모니터링하는 관제 근무.",
+    requirements: [
+      {
+        type: "certification",
+        certKey: "computerCert",
+      },
+      {
+        type: "equipped-item",
+        itemId: "phone-used-premium",
+        label: "중고 프리미엄 스마트폰",
+      },
+      {
+        type: "equipped-item",
+        itemId: "outfit-suit",
+        label: "정장 세트",
+      },
+    ],
     tags: ["관제", "모니터", "배차"],
   },
   {
@@ -204,6 +278,18 @@ const JOBS = [
     payMin: 96000,
     payMax: 138000,
     description: "AI 앱이 못 챙기는 설명과 진도 점검만 맡는 코칭 알바.",
+    requirements: [
+      {
+        type: "stat-min",
+        statKey: "intelligence",
+        min: 20,
+      },
+      {
+        type: "equipped-item",
+        itemId: "outfit-suit",
+        label: "정장 세트",
+      },
+    ],
     tags: ["코칭", "설명", "숙제점검"],
   },
   {
@@ -264,6 +350,18 @@ const CAREER_JOB_POSTINGS = [
     prepKey: "office",
     requiredPrep: 3,
     requiredCerts: ["computerCert"],
+    requirements: [
+      {
+        type: "stat-min",
+        statKey: "intelligence",
+        min: 18,
+      },
+      {
+        type: "equipped-item",
+        itemId: "outfit-suit",
+        label: "정장 세트",
+      },
+    ],
     baseChance: 0.46,
     unlockJobId: "dispatch_monitor",
     description: "문서 정리와 안내 업무를 맡을 지원자를 찾는다. 도서관 준비도와 컴퓨터 자격이 필요하다.",
@@ -276,6 +374,18 @@ const CAREER_JOB_POSTINGS = [
     prepKey: "academic",
     requiredPrep: 3,
     requiredCerts: ["computerCert"],
+    requirements: [
+      {
+        type: "stat-min",
+        statKey: "intelligence",
+        min: 22,
+      },
+      {
+        type: "equipped-item",
+        itemId: "outfit-suit",
+        label: "정장 세트",
+      },
+    ],
     baseChance: 0.44,
     unlockJobId: "study_coach",
     description: "학원 프런트와 수업 지원을 맡는 장기 루트다. 수업 준비 경험과 문서 처리가 중요하다.",
@@ -288,6 +398,18 @@ const CAREER_JOB_POSTINGS = [
     prepKey: "service",
     requiredPrep: 0,
     requiredCerts: ["driverLicense"],
+    requirements: [
+      {
+        type: "owned-vehicle-any-of",
+        vehicleIds: ["used-motorbike", "used-car", "foreign-car"],
+        label: "오토바이 또는 차량",
+      },
+      {
+        type: "stat-min",
+        statKey: "reputation",
+        min: 10,
+      },
+    ],
     baseChance: 0.42,
     unlockJobId: "smart_store",
     description: "여러 현장을 오가며 점검과 전달 업무를 맡는 루트다. 운전면허가 있어야 지원할 수 있다.",

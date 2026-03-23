@@ -99,10 +99,27 @@ function cacheUi() {
   ui.jobMiniGameProgress = document.getElementById("job-minigame-progress");
   ui.moneyEffect = document.getElementById("money-effect");
   ui.startScreen = document.getElementById("start-screen");
+  ui.startKicker = ui.startScreen?.querySelector(".start-kicker") || null;
+  ui.startTitle = ui.startScreen?.querySelector(".start-title") || null;
+  ui.startSub = ui.startScreen?.querySelector(".start-sub") || null;
+  ui.startBody = ui.startScreen?.querySelector(".start-body") || null;
+  ui.startHighlights = ui.startScreen?.querySelector(".start-highlights") || null;
   ui.nameInput = document.getElementById("name-input");
   ui.continueButton = document.getElementById("continue-button");
   ui.startButton = document.getElementById("start-button");
   ui.startOriginPanel = document.getElementById("start-origin-panel");
+  ui.spoonDrawOverlay = document.getElementById("spoon-draw-overlay");
+  ui.spdCapsule = document.getElementById("spd-capsule");
+  ui.spdEmblem = document.getElementById("spd-emblem");
+  ui.spdRing = document.getElementById("spd-ring");
+  ui.spdOdds = document.getElementById("spd-odds");
+  ui.spdResultArea = document.getElementById("spd-result-area");
+  ui.spdResultBracket = document.getElementById("spd-result-bracket");
+  ui.spdResultName = document.getElementById("spd-result-name");
+  ui.spdResultSummary = document.getElementById("spd-result-summary");
+  ui.spdResultChips = document.getElementById("spd-result-chips");
+  ui.spdDrawBtn = document.getElementById("spd-draw-btn");
+  ui.spdStartBtn = document.getElementById("spd-start-btn");
   ui.startOriginMachine = document.getElementById("start-origin-machine");
   ui.startOriginEmblem = document.getElementById("start-origin-emblem");
   ui.startOriginSpoon = document.getElementById("start-origin-spoon");
@@ -236,10 +253,10 @@ function advanceSceneText() {
 function setupStartScreen() {
   ui.startCard = ui.startScreen.querySelector(".start-card");
 
-  const kicker = ui.startCard.querySelector(".start-kicker");
-  const title = ui.startCard.querySelector(".start-title");
-  const sub = ui.startCard.querySelector(".start-sub");
-  const body = ui.startCard.querySelector(".start-body");
+  const kicker = ui.startKicker;
+  const title = ui.startTitle;
+  const sub = ui.startSub;
+  const body = ui.startBody;
   if (kicker) {
     kicker.textContent = `현재 ${MAX_DAYS}턴 프로토타입`;
   }
@@ -250,9 +267,9 @@ function setupStartScreen() {
   }
   ui.nameInput.placeholder = "\ub2c9\ub124\uc784";
   ui.nameInput.autocomplete = "off";
-  ui.startButton.textContent = "\uc2dc\uc791\ud558\uae30";
+  ui.startButton.textContent = "새로하기";
   if (ui.continueButton) {
-    ui.continueButton.textContent = "\uc774\uc5b4\ud558\uae30";
+    ui.continueButton.textContent = "이어하기";
     ui.continueButton.hidden = true;
   }
   if (ui.rankingSubtitle) {
@@ -267,7 +284,7 @@ function setStartScreenSaveState(_hasSave = false) {
   }
 
   if (ui.startButton) {
-    ui.startButton.textContent = _hasSave ? "\uc0c8\ub85c \uc2dc\uc791" : "\uc2dc\uc791\ud558\uae30";
+    ui.startButton.textContent = "새로하기";
   }
 }
 
@@ -275,10 +292,18 @@ function formatStartScreenCash(amount = 0) {
   return `${Math.max(0, Math.round(Number(amount) || 0)).toLocaleString("ko-KR")}원`;
 }
 
+function getStartScreenEnteredName() {
+  return String(ui.nameInput?.value || "").trim();
+}
+
 function renderStartScreenDrawState(hasSave = false) {
   const drawState = typeof getStartScreenDrawState === "function"
     ? getStartScreenDrawState()
-    : { phase: "idle", previewTierId: "", resultTierId: "" };
+    : { screenMode: "intro", phase: "idle", previewTierId: "", resultTierId: "" };
+  const screenMode = drawState.screenMode === "origin" ? "origin" : "intro";
+  const inOriginScreen = screenMode === "origin";
+  const enteredName = getStartScreenEnteredName();
+  const hasEnteredName = enteredName.length > 0;
   const activeTierId = drawState.resultTierId || drawState.previewTierId || "";
   const tier = typeof getSpoonStartTier === "function"
     ? getSpoonStartTier(activeTierId)
@@ -293,6 +318,7 @@ function renderStartScreenDrawState(hasSave = false) {
       };
 
   if (ui.startScreen) {
+    ui.startScreen.dataset.screenMode = screenMode;
     ui.startScreen.dataset.phase = drawState.phase || "idle";
     ui.startScreen.dataset.tier = tier?.id || "";
     ui.startScreen.style.setProperty("--start-origin-accent", theme.accent || "#94a3b8");
@@ -302,6 +328,7 @@ function renderStartScreenDrawState(hasSave = false) {
   }
 
   if (ui.startCard) {
+    ui.startCard.dataset.screenMode = screenMode;
     ui.startCard.dataset.phase = drawState.phase || "idle";
     ui.startCard.dataset.tier = tier?.id || "";
   }
@@ -309,7 +336,15 @@ function renderStartScreenDrawState(hasSave = false) {
   if (ui.startOriginPanel) {
     ui.startOriginPanel.dataset.phase = drawState.phase || "idle";
     ui.startOriginPanel.dataset.tier = tier?.id || "";
+    ui.startOriginPanel.hidden = !inOriginScreen;
   }
+
+  if (ui.startKicker) ui.startKicker.hidden = inOriginScreen;
+  if (ui.startTitle) ui.startTitle.hidden = inOriginScreen;
+  if (ui.startSub) ui.startSub.hidden = inOriginScreen;
+  if (ui.startBody) ui.startBody.hidden = inOriginScreen;
+  if (ui.startHighlights) ui.startHighlights.hidden = inOriginScreen;
+  if (ui.nameInput) ui.nameInput.hidden = inOriginScreen;
 
   if (ui.startOriginMachine) {
     ui.startOriginMachine.dataset.phase = drawState.phase || "idle";
@@ -344,16 +379,18 @@ function renderStartScreenDrawState(hasSave = false) {
     } else if (drawState.phase === "result" && tier) {
       ui.startOriginDesc.textContent = tier.summary || "출생 패키지가 확정됐습니다.";
     } else {
-      ui.startOriginDesc.textContent = "새 게임마다 한 번만 정합니다. 결과에 따라 초기 현금과 첫 방 톤이 달라집니다.";
+      ui.startOriginDesc.textContent = "새 게임마다 한 번만 정합니다. 결과에 따라 손 현금, 계좌, 시작 자산과 첫 방 톤이 달라집니다.";
     }
   }
 
   if (ui.startOriginMeta) {
     if (drawState.phase === "result" && tier) {
+      const packageChips = typeof getSpoonStartPackageChipLabels === "function"
+        ? getSpoonStartPackageChipLabels(tier)
+        : [];
       ui.startOriginMeta.innerHTML = `
-        <span class="start-origin-chip">초기 현금 ${escapeHtml(formatStartScreenCash(tier.initialCash))}</span>
+        ${packageChips.map((label) => `<span class="start-origin-chip">${escapeHtml(label)}</span>`).join("")}
         <span class="start-origin-chip">행복도 ${escapeHtml(String(tier.startHappiness))}</span>
-        <span class="start-origin-chip">첫 톤 ${escapeHtml(tier.toneLabel || tier.name)}</span>
       `;
     } else if (drawState.phase === "drawing" && tier) {
       ui.startOriginMeta.innerHTML = `
@@ -372,14 +409,9 @@ function renderStartScreenDrawState(hasSave = false) {
   }
 
   if (ui.startButton) {
-    ui.startButton.disabled = drawState.phase === "drawing";
-    if (drawState.phase === "drawing") {
-      ui.startButton.textContent = "출생 결정 중...";
-    } else if (drawState.phase === "result") {
-      ui.startButton.textContent = "이 출생으로 시작하기";
-    } else {
-      ui.startButton.textContent = hasSave ? "새로 시작 뽑기" : "출생 패키지 뽑기";
-    }
+    ui.startButton.hidden = false;
+    ui.startButton.disabled = !hasEnteredName;
+    ui.startButton.textContent = "새로하기";
   }
 
   if (ui.continueButton) {
@@ -571,9 +603,12 @@ function updatePhonePanel() {
     const showAppScreen = !onHomeRoute;
     ui.phoneAppScreen.hidden = !showAppScreen;
     ui.phoneAppScreen.classList.toggle("is-fullbleed-route", showAppScreen && panelScreenMode === "fullbleed");
-    ui.phoneAppScreen.innerHTML = showAppScreen ? buildPhoneRouteMarkup(phoneView) : "";
     if (showAppScreen) {
+      ui.phoneAppScreen.innerHTML = buildPhoneRouteMarkup(phoneView) +
+        '<div class="phone-compact-bar" aria-hidden="true">↗ 펼치기에서 전체보기</div>';
       ui.phoneAppScreen.scrollTop = readPhoneScrollPosition("panel", phoneView);
+    } else {
+      ui.phoneAppScreen.innerHTML = "";
     }
   }
 
@@ -702,50 +737,81 @@ function renderMemoryPanel() {
 
 function renderCharacterPanelLegacy() {
   return renderCharacterPanel();
-  if (!ui.characterButton || !ui.characterPanel || !ui.characterStats) {
+}
+
+function appendCharacterStatRow(container, {
+  label = "",
+  cls = "",
+  max = 100,
+  value = 0,
+  meta = "",
+  metaCls = "",
+} = {}) {
+  const safeMax = Math.max(1, Number(max) || 1);
+  const val = Math.max(0, Math.round(Number(value) || 0));
+  const pct = Math.min(100, Math.round((val / safeMax) * 100));
+  const metaMarkup = meta
+    ? `<span class="character-stat-meta ${metaCls || ""}">${escapeHtml(meta)}</span>`
+    : "";
+
+  const row = document.createElement("div");
+  row.className = "character-stat-row";
+  row.innerHTML = `
+    <div class="character-stat-name-wrap">
+      <span class="character-stat-name">${escapeHtml(label)}</span>
+      ${metaMarkup}
+    </div>
+    <div class="character-stat-bar-wrap">
+      <div class="character-stat-bar ${escapeHtml(cls)}" style="width:${pct}%"></div>
+    </div>
+    <span class="character-stat-val ${escapeHtml(cls)}">${val}</span>
+  `;
+  container.appendChild(row);
+}
+
+function appendCharacterSummaryGrid(container, summaries = []) {
+  if (!Array.isArray(summaries) || !summaries.length) {
     return;
   }
 
-  const isOpen = Boolean(state._characterPanelOpen);
+  const grid = document.createElement("div");
+  grid.className = "character-summary-grid";
+  grid.innerHTML = summaries.map((entry) => `
+    <div class="character-summary-card">
+      <div class="character-summary-label">${escapeHtml(entry.label || "")}</div>
+      <div class="character-summary-value">${escapeHtml(entry.value || "")}</div>
+    </div>
+  `).join("");
+  container.appendChild(grid);
+}
 
-  ui.characterButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+function appendCharacterChipRow(container, chips = []) {
+  if (!Array.isArray(chips) || !chips.length) {
+    return;
+  }
 
-  ui.characterPanel.hidden = !isOpen;
-  ui.characterPanel.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  const chipRow = document.createElement("div");
+  chipRow.className = "character-chip-row";
+  chipRow.innerHTML = chips.map((chip) => `
+    <span class="character-chip is-${escapeHtml(chip.tone || "ready")}">${escapeHtml(chip.label || "")}</span>
+  `).join("");
+  container.appendChild(chipRow);
+}
 
-  if (!isOpen) return;
+function appendCharacterSection(container, section = {}) {
+  const sectionEl = document.createElement("section");
+  sectionEl.className = "character-stat-section";
+  sectionEl.innerHTML = `<div class="character-stat-section-title">${escapeHtml(section.label || "")}</div>`;
 
-  const stats = [
-    { key: "지능", label: "지능", cls: "intelligence", max: 100 },
-    { key: "평판", label: "평판", cls: "reputation",   max: 100 },
-    { key: "범죄도", label: "범죄도", cls: "crime",    max: 100 },
-    {
-      key: "hunger",
-      label: "배고픔",
-      cls: "hunger",
-      max: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3,
-      value: hungerState.value,
-      meta: hungerMeta,
-      metaCls: hungerMetaCls,
-    },
-  ];
+  const body = document.createElement("div");
+  body.className = "character-stat-section-body";
 
-  ui.characterStats.innerHTML = "";
-  stats.forEach(({ key, label, cls, max }) => {
-    const val = Number(state[key]) || 0;
-    const pct = Math.min(100, Math.round((val / max) * 100));
+  (section.bars || []).forEach((entry) => appendCharacterStatRow(body, entry));
+  appendCharacterSummaryGrid(body, section.summaries || []);
+  appendCharacterChipRow(body, section.chips || []);
 
-    const row = document.createElement("div");
-    row.className = "character-stat-row";
-    row.innerHTML = `
-      <span class="character-stat-name">${label}</span>
-      <div class="character-stat-bar-wrap">
-        <div class="character-stat-bar ${cls}" style="width:${pct}%"></div>
-      </div>
-      <span class="character-stat-val ${cls}">${val}</span>
-    `;
-    ui.characterStats.appendChild(row);
-  });
+  sectionEl.appendChild(body);
+  container.appendChild(sectionEl);
 }
 
 function renderCharacterPanel() {
@@ -754,36 +820,9 @@ function renderCharacterPanel() {
   }
 
   const isOpen = Boolean(state._characterPanelOpen);
-  const happinessState = typeof syncHappinessState === "function"
-    ? syncHappinessState(state)
-    : createDefaultHappinessState();
-  const happinessMeta = typeof getHappinessStatusLabel === "function"
-    ? getHappinessStatusLabel(happinessState.status)
-    : "";
-  const hungerState = typeof ensureHungerState === "function"
-    ? ensureHungerState(state)
-    : { value: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3 };
-  const hungerMeta = typeof getHungerStatusLabel === "function"
-    ? getHungerStatusLabel(state)
-    : "";
-  const hungerMetaCls = typeof getHungerStatusTone === "function"
-    ? getHungerStatusTone(state)
-    : "";
-  const stats = [
-    { key: "지능", label: "지능", cls: "intelligence", max: 100 },
-    { key: "평판", label: "평판", cls: "reputation", max: 100 },
-    { key: "범죄도", label: "범죄도", cls: "crime", max: 100 },
-    { key: "happiness", label: "행복도", cls: "happiness", max: 100, value: happinessState.value, meta: happinessMeta, metaCls: happinessState.status },
-    {
-      key: "hunger",
-      label: "배고픔",
-      cls: "hunger",
-      max: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3,
-      value: hungerState.value,
-      meta: hungerMeta,
-      metaCls: hungerMetaCls,
-    },
-  ];
+  const sections = typeof createPlayerStatSections === "function"
+    ? createPlayerStatSections(state)
+    : [];
 
   ui.characterButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
   ui.characterPanel.hidden = !isOpen;
@@ -794,28 +833,19 @@ function renderCharacterPanel() {
   }
 
   ui.characterStats.innerHTML = "";
-  stats.forEach(({ key, label, cls, max, value, meta, metaCls }) => {
-    const parsedValue = Number(value);
-    const val = Number.isFinite(parsedValue) ? parsedValue : (Number(state[key]) || 0);
-    const pct = Math.min(100, Math.round((val / max) * 100));
-    const metaMarkup = meta
-      ? `<span class="character-stat-meta ${metaCls || ""}">${meta}</span>`
-      : "";
+  if (!sections.length) {
+    appendCharacterSection(ui.characterStats, {
+      label: "기본",
+      bars: [
+        { label: "지능", cls: "intelligence", max: 100, value: Number(state["지능"]) || 0 },
+        { label: "평판", cls: "reputation", max: 100, value: Number(state["평판"]) || 0 },
+        { label: "범죄도", cls: "crime", max: 100, value: Number(state["범죄도"]) || 0 },
+      ],
+    });
+    return;
+  }
 
-    const row = document.createElement("div");
-    row.className = "character-stat-row";
-    row.innerHTML = `
-      <div class="character-stat-name-wrap">
-        <span class="character-stat-name">${label}</span>
-        ${metaMarkup}
-      </div>
-      <div class="character-stat-bar-wrap">
-        <div class="character-stat-bar ${cls}" style="width:${pct}%"></div>
-      </div>
-      <span class="character-stat-val ${cls}">${val}</span>
-    `;
-    ui.characterStats.appendChild(row);
-  });
+  sections.forEach((section) => appendCharacterSection(ui.characterStats, section));
 }
 
 function renderInventoryPanel() {
@@ -862,6 +892,9 @@ function renderInventoryPanel() {
   const vehicleDefinition = typeof getOwnedVehicleDefinition === "function"
     ? getOwnedVehicleDefinition(ownershipState.vehicle)
     : null;
+  const assetValue = typeof getOwnershipTotalAssetValue === "function"
+    ? getOwnershipTotalAssetValue(state)
+    : 0;
   const isOpen = Boolean(inventoryState.panelOpen);
 
   ui.inventoryButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -893,6 +926,10 @@ function renderInventoryPanel() {
       <div class="inventory-summary-chip">
         <span class="inventory-summary-label">차량</span>
         <span class="inventory-summary-value">${escapeHtml(vehicleDefinition?.label || "-")}</span>
+      </div>
+      <div class="inventory-summary-chip">
+        <span class="inventory-summary-label">자산 가치</span>
+        <span class="inventory-summary-value">${escapeHtml(typeof formatCash === "function" ? formatCash(assetValue) : String(assetValue))}</span>
       </div>
     `;
   }
@@ -1735,9 +1772,13 @@ function renderOfferButtons(offers) {
 
   offers.forEach((offer, index) => {
     const job = JOB_LOOKUP[offer.jobId];
+    const workplace = typeof getOfferWorkplaceSummary === "function"
+      ? getOfferWorkplaceSummary(offer, state)
+      : null;
     createChoiceButton({
       title: `${job.emoji} ${job.title}`,
       earnText: formatMoney(offer.pay),
+      description: [workplace?.workplaceName, workplace?.locationLabel].filter(Boolean).join(" · "),
       onClick: () => selectJobOffer(index),
     });
   });
@@ -1878,6 +1919,12 @@ function renderRoomScene() {
 
   if (shiftStatus) {
     const job = JOB_LOOKUP[shiftStatus.scheduledShift.offer.jobId];
+    const workplace = typeof getOfferWorkplaceSummary === "function"
+      ? getOfferWorkplaceSummary(shiftStatus.scheduledShift.offer, state)
+      : null;
+    const workplaceLine = workplace?.workplaceName
+      ? `${workplace.workplaceName} · ${workplace.locationLabel || workplace.districtLabel || ""}`.replace(/ · $/, "")
+      : "";
     const shiftWindow = typeof formatClockTime === "function"
       ? `${formatClockTime(shiftStatus.startSlot)} - ${formatClockTime(shiftStatus.endSlot)}`
       : "";
@@ -1888,19 +1935,19 @@ function renderRoomScene() {
     if (shiftStatus.waiting) {
       messageTitle = "\uc624\ub298 \uc608\uc57d\ub41c \ucd9c\uadfc\uc774 \uc788\ub2e4";
       messageLines = [
-        `${job.title} \ucd9c\uadfc \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
+        `${job.title} ${workplaceLine ? `${workplaceLine} ` : ""}\ucd9c\uadfc \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
         "\ucd9c\uadfc \uc804\uae4c\uc9c0 \ub2e4\ub978 \ud589\ub3d9\uc744 \ud558\uac70\ub098 \ubc14\ub85c \uc2dc\uac04\uc744 \ubcf4\ub0bc \uc218 \uc788\ub2e4.",
       ];
     } else if (shiftStatus.active) {
       messageTitle = "\uc9c0\uae08 \ucd9c\uadfc\ud560 \uc218 \uc788\ub2e4";
       messageLines = [
-        `${job.title} \uadfc\ubb34 \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
+        `${job.title} ${workplaceLine ? `${workplaceLine} ` : ""}\uadfc\ubb34 \uc2dc\uac04\uc740 ${shiftWindow}\uc774\ub2e4.`,
         "\uc900\ube44\uac00 \ub410\ub2e4\uba74 \ubc14\ub85c \ucd9c\uadfc\ud574\uc11c \uc624\ub298 \uadfc\ubb34\ub97c \uc2dc\uc791\ud55c\ub2e4.",
       ];
     } else {
       messageTitle = "\uc608\uc57d\ub41c \ucd9c\uadfc \uc2dc\uac04\uc774 \uc9c0\ub0ac\ub2e4";
       messageLines = [
-        `${job.title} \uadfc\ubb34 \uc2dc\uac04 ${shiftWindow}\uc744 \ub193\uccd0\ub2e4.`,
+        `${job.title} ${workplaceLine ? `${workplaceLine} ` : ""}\uadfc\ubb34 \uc2dc\uac04 ${shiftWindow}\uc744 \ub193\uccd0\ub2e4.`,
         "\uacb0\uadfc \ucc98\ub9ac\ud558\uace0 \uc624\ub298\uc744 \ub118\uae38 \uc218 \uc788\ub2e4.",
       ];
     }
@@ -1919,15 +1966,21 @@ function renderRoomScene() {
   }
 
   if (shiftStatus) {
+    const shiftWorkplace = shiftStatus.scheduledShift?.offer && typeof getOfferWorkplaceSummary === "function"
+      ? getOfferWorkplaceSummary(shiftStatus.scheduledShift.offer, state)
+      : null;
     if (shiftStatus.waiting) {
       createChoiceButton({
         title: `${typeof formatClockTime === "function" ? formatClockTime(shiftStatus.startSlot) : "\ucd9c\uadfc"}\uae4c\uc9c0 \uc2dc\uac04 \ubcf4\ub0b4\uae30`,
         onClick: waitForScheduledShift,
       });
     } else if (shiftStatus.active) {
+      const roomShiftButtonTitle = shiftWorkplace?.locationLabel
+        ? `${shiftWorkplace.locationLabel}로 이동하기`
+        : `${shiftWorkplace?.workplaceName || "\uc608\uc57d\ub41c \ucd9c\uadfc"} \uac00\uae30`;
       createChoiceButton({
-        title: "\uc608\uc57d\ub41c \ucd9c\uadfc \uac00\uae30",
-        onClick: startScheduledShift,
+        title: roomShiftButtonTitle,
+        onClick: shiftWorkplace?.locationLabel ? goOutside : startScheduledShift,
       });
     }
 
@@ -1990,6 +2043,17 @@ function renderOutsideScene() {
   const choiceOptions = typeof getOutsideSceneActionOptions === "function"
     ? getOutsideSceneActionOptions(outsideScene, state)
     : (outsideScene?.options || []);
+  const scheduledShift = typeof getScheduledShiftStatus === "function"
+    ? getScheduledShiftStatus(state)
+    : null;
+  const shiftWorkplace = scheduledShift?.scheduledShift?.offer && typeof getOfferWorkplaceSummary === "function"
+    ? getOfferWorkplaceSummary(scheduledShift.scheduledShift.offer, state)
+    : null;
+  const isAtShiftWorkplace = Boolean(
+    shiftWorkplace?.locationId
+    && currentLocationId
+    && shiftWorkplace.locationId === currentLocationId
+  );
 
   if (choiceOptions.some((option) => option.uiVariant === "bus-route")) {
     ui.choices.classList.add("is-bus-route");
@@ -2004,6 +2068,20 @@ function renderOutsideScene() {
           openCityMapOverlay(state);
         }
       },
+    });
+  }
+
+  if (scheduledShift?.waiting && isAtShiftWorkplace) {
+    createChoiceButton({
+      title: "근무지에서 출근 시간까지 기다린다",
+      onClick: waitForScheduledShift,
+    });
+  }
+
+  if (scheduledShift?.active && isAtShiftWorkplace) {
+    createChoiceButton({
+      title: `${shiftWorkplace?.workplaceName || "이 근무지"}로 출근한다`,
+      onClick: startScheduledShift,
     });
   }
 
@@ -2191,7 +2269,9 @@ function renderResultScene() {
   setCharacterPosition(50, 1);
   setSceneSpeaker("\uadf8\ub0a0 \uadfc\ubb34 \uc885\ub8cc");
   renderTags([]);
-  const resultTitle = `\uc624\ub298 \uc190\uc5d0 \uc950 \ub3c8 ${formatMoney(state.lastResult.pay)}`;
+  const resultTitle = state.lastResult?.depositDestination === "bank"
+    ? `오늘 계좌에 들어온 돈 ${formatMoney(state.lastResult.pay)}`
+    : `오늘 손에 쥔 돈 ${formatMoney(state.lastResult.pay)}`;
   const showChoices = renderMessage(resultTitle, state.lastResult.lines, {
     progressKey: buildSceneTextProgressKey(`result:${state.day}:${state.lastResult.pay}`, resultTitle, state.lastResult.lines),
   });
@@ -2224,7 +2304,7 @@ function renderEndingScene() {
     endingTags.push(summary.originLabel);
   }
   renderTags(endingTags);
-  const endingTitle = summary?.title || `\ucd5c\uc885 \ud604\uae08 ${formatMoney(summary.totalCash)}`;
+  const endingTitle = summary?.title || `최종 보유 자금 ${formatMoney(summary.totalCash)}`;
   const showChoices = renderMessage(endingTitle, summary.lines, {
     progressKey: buildSceneTextProgressKey(
       isEscapeEnding

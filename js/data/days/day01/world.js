@@ -504,6 +504,92 @@ const DAY01_WORLD_CAMPUS_PARK_NPC_POOL = [
   }),
 ];
 
+const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
+  createWorldWanderNpc({
+    id: "office-plaza-worker",
+    weight: 5,
+    tag: "직장인",
+    src: CHARACTER_ART.alleyOfficeWorker.default,
+    alt: "오피스플라자 직장인",
+    left: 70,
+    bottom: 6,
+    height: 88,
+    sceneTitle: "출근 시간대 직장인들이 오피스플라자 로비 앞을 빠르게 가른다",
+    sceneLines: [
+      "사원증 줄이 재킷 위로 흔들리고, 커피 컵과 노트북 가방이 동시에 부딪힌다.",
+      "여기서는 시간표와 직장 냄새가 같이 움직인다.",
+    ],
+    headlineBadge: "출근 러시",
+    headlineText: "오피스플라자 로비 앞에서 직장인들이 버스에서 쏟아지듯 흩어진다.",
+    approachBadge: "바쁜 눈빛",
+    approachText: "붙잡아 말을 걸기엔 다들 이미 다음 일정으로 몸이 기울어 있다.",
+    memoryBody: "회사구역 로비 앞에서 출근 러시 한가운데를 잠깐 스쳤다.",
+  }),
+  createWorldWanderNpc({
+    id: "office-plaza-recruiter",
+    weight: 2,
+    tag: "채용담당",
+    src: CHARACTER_ART.npcWoman.default,
+    alt: "회사구역 채용담당",
+    left: 82,
+    bottom: 7,
+    height: 88,
+    sceneTitle: "채용 배지를 단 여자가 로비 게시판 앞에서 사람 얼굴을 골라본다",
+    sceneLines: [
+      "계약직 전단과 출입증 안내를 한 손에 쥔 채 누군가를 기다리는 표정이다.",
+      "공고앱에 뜬 이름들이 실제 회사로 이어지는 느낌이 이 구역에선 더 선명하다.",
+    ],
+    headlineBadge: "채용 공기",
+    headlineText: "채용 배지를 단 사람이 로비 게시판 앞에서 사람 흐름을 살핀다.",
+    approachBadge: "짧은 응답",
+    approachText: "오늘도 계약직 문의가 많다며 여자는 다시 안내 데스크 쪽으로 몸을 돌린다.",
+    memoryBody: "오피스플라자 게시판 앞에서 채용담당처럼 보이는 사람을 봤다.",
+  }),
+];
+
+const DAY01_WORLD_LOGISTICS_HUB_NPC_POOL = [
+  createWorldWanderNpc({
+    id: "logistics-checker",
+    weight: 4,
+    tag: "현장직",
+    src: CHARACTER_ART.alleyOfficeWorker.default,
+    alt: "물류허브 현장직",
+    left: 76,
+    bottom: 6,
+    height: 88,
+    sceneTitle: "물류허브 앞에서 형광 조끼를 걸친 직원이 출고 라벨을 다시 확인한다",
+    sceneLines: [
+      "출고 시간표와 상차 순서가 적힌 클립보드를 손가락으로 빠르게 훑는다.",
+      "조금만 늦어도 오늘 물량이 바로 밀릴 것 같은 공기가 진하다.",
+    ],
+    headlineBadge: "물류 동선",
+    headlineText: "물류허브 출입문 앞에서 직원이 오늘 출고 라벨을 다시 확인하고 있다.",
+    approachBadge: "짧은 브리핑",
+    approachText: "직원은 오늘은 물량이 많다며 바닥 표시선 안으로는 들어오지 말라고만 한다.",
+    memoryBody: "회사구역 물류허브 앞에서 출고 준비를 하는 직원을 봤다.",
+  }),
+  createWorldWanderNpc({
+    id: "logistics-driver",
+    weight: 2,
+    tag: "기사",
+    src: CHARACTER_ART.casinoGuide.default,
+    alt: "물류허브 기사",
+    left: 63,
+    bottom: 7,
+    height: 88,
+    sceneTitle: "납품 기사 하나가 물류동 입구에서 시동을 걸지 말지 잠깐 망설인다",
+    sceneLines: [
+      "무전기 잡음과 후진 경고음이 뒤섞이며 새벽 현장 특유의 긴장을 만든다.",
+      "차량이 있으면 이쪽 일감이 왜 더 비싸지는지 몸으로 느껴진다.",
+    ],
+    headlineBadge: "납품 대기",
+    headlineText: "물류동 입구에서 기사 하나가 배차 연락을 다시 확인한다.",
+    approachBadge: "현장 냄새",
+    approachText: "그는 차만 있으면 콜은 계속 돈다고 중얼거린 뒤 다시 무전기로 시선을 돌린다.",
+    memoryBody: "물류허브 앞에서 장거리 납품 기사가 배차 연락을 기다리고 있었다.",
+  }),
+];
+
 const DAY01_WORLD_BUS_ROUTE_STOPS = [
   {
     id: "bus-stop",
@@ -533,6 +619,16 @@ const DAY01_WORLD_BUS_ROUTE_STOPS = [
     type: "normal",
     eta: "8분",
     badge: "환승",
+    travelVia: "bus",
+  },
+  {
+    id: "office-plaza",
+    emoji: "🏢",
+    label: "오피스플라자",
+    note: "회사구역 로비, 관제센터, 물류동 입구",
+    type: "major",
+    eta: "11분",
+    badge: "회사구역",
     travelVia: "bus",
   },
   {
@@ -617,7 +713,7 @@ const DAY01_WORLD_TERMINAL_SCHEDULE = [
 const DAY01_WORLD_BUS_MAP = {
   variant: "bus-terminal",
   routeTitle: "배금 100번",
-  routeSubtitle: "배금시외버스터미널 ↔ 배금역",
+  routeSubtitle: "배금시외버스터미널 ↔ 오피스플라자 ↔ 배금역",
   serviceLabel: "간선버스",
   statusLabel: "노선 개편",
   nextStopLabel: "중심상업구역",
@@ -819,6 +915,38 @@ const DAY01_WORLD_MCDONALDS_BACKGROUND = {
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%)",
+};
+
+const DAY01_WORLD_OFFICE_PLAZA_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/university-building.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(7, 13, 24, 0.1) 0%, rgba(7, 13, 24, 0.24) 100%)",
+};
+
+const DAY01_WORLD_MOBILITY_CONTROL_CENTER_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/station-interior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(7, 13, 24, 0.12) 0%, rgba(7, 13, 24, 0.28) 100%)",
+};
+
+const DAY01_WORLD_LOGISTICS_HUB_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/job-warehouse-shift.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(8, 11, 18, 0.14) 0%, rgba(8, 11, 18, 0.3) 100%)",
+};
+
+const DAY01_WORLD_TOWER_CAFE_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/mcdonalds-exterior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(12, 10, 8, 0.12) 0%, rgba(12, 10, 8, 0.24) 100%)",
 };
 
 const DAY01_WORLD_LOCATIONS = {
@@ -1190,6 +1318,119 @@ const DAY01_WORLD_LOCATIONS = {
       },
     ],
   },
+  "office-plaza": {
+    label: "오피스플라자 로비",
+    speaker: "오피스플라자",
+    title: "출근 배지와 커피 컵이 로비 공기를 먼저 장악한다",
+    background: DAY01_WORLD_OFFICE_PLAZA_BACKGROUND,
+    lines: [
+      "회사구역 버스 정류장에서 내리면 가장 먼저 닿는 로비다.",
+      "관제센터와 물류동, 로비 카페가 이 건물권 안쪽으로 이어지고 출근 시간엔 직장인이 끊이지 않는다.",
+    ],
+    tags: ["회사구역", "오피스", "출근"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    randomNpcPool: DAY01_WORLD_OFFICE_PLAZA_NPC_POOL,
+    exits: ["bus-stop", "city-crossroads", "station-front", "mobility-control-center", "logistics-hub", "tower-cafe"],
+    options: [
+      {
+        title: "로비 게시판 공고를 다시 본다",
+        action: "board",
+      },
+      {
+        title: "관제센터로 들어간다",
+        action: "move",
+        targetLocation: "mobility-control-center",
+      },
+      {
+        title: "물류허브 쪽으로 간다",
+        action: "move",
+        targetLocation: "logistics-hub",
+      },
+      {
+        title: "로비 카페로 들어간다",
+        action: "move",
+        targetLocation: "tower-cafe",
+      },
+      {
+        title: "배금 사거리 쪽으로 돌아간다",
+        action: "move",
+        targetLocation: "city-crossroads",
+      },
+    ],
+  },
+  "mobility-control-center": {
+    label: "배금모빌리티 관제센터",
+    speaker: "배금모빌리티 관제센터",
+    title: "대형 모니터와 라이더 배차판이 벽면을 가득 채운다",
+    background: DAY01_WORLD_MOBILITY_CONTROL_CENTER_BACKGROUND,
+    lines: [
+      "실시간 배차판과 출근 체크 단말이 벽면을 따라 줄지어 있다.",
+      "배달 관제와 현장 순회, 모니터링 계열 공고가 실제로 숨 쉬는 장소다.",
+    ],
+    tags: ["회사구역", "관제", "배달"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    exits: ["office-plaza", "logistics-hub"],
+    options: [
+      {
+        title: "로비 게시판 공고를 다시 본다",
+        action: "board",
+      },
+      {
+        title: "오피스플라자 로비로 돌아간다",
+        action: "move",
+        targetLocation: "office-plaza",
+      },
+    ],
+  },
+  "logistics-hub": {
+    label: "배금퀵 물류허브",
+    speaker: "배금퀵 물류허브",
+    title: "출고 라벨과 상차 소리가 새벽 공기처럼 건조하게 울린다",
+    background: DAY01_WORLD_LOGISTICS_HUB_BACKGROUND,
+    lines: [
+      "출고 동선과 차량 적재선이 바닥 표시선으로 빼곡하게 나뉘어 있다.",
+      "차량이 있으면 더 멀리, 더 비싼 콜로 이어지는 구역이라는 게 한눈에 들어온다.",
+    ],
+    tags: ["회사구역", "물류", "현장"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    randomNpcPool: DAY01_WORLD_LOGISTICS_HUB_NPC_POOL,
+    exits: ["office-plaza", "mobility-control-center"],
+    options: [
+      {
+        title: "로비 게시판 공고를 다시 본다",
+        action: "board",
+      },
+      {
+        title: "오피스플라자 로비로 돌아간다",
+        action: "move",
+        targetLocation: "office-plaza",
+      },
+    ],
+  },
+  "tower-cafe": {
+    label: "모닝브루 오피스플라자점",
+    speaker: "모닝브루 오피스플라자점",
+    title: "에스프레소 향과 출근 대화가 동시에 카운터를 채운다",
+    background: DAY01_WORLD_TOWER_CAFE_BACKGROUND,
+    lines: [
+      "오피스플라자 직장인들이 출근 전 커피를 들고 빠르게 지나간다.",
+      "카페 알바와 서빙봇 관리 같은 서비스 공고가 실제로 붙는 자리다.",
+    ],
+    tags: ["회사구역", "카페", "서비스"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    exits: ["office-plaza"],
+    options: [
+      {
+        title: "로비 게시판 공고를 다시 본다",
+        action: "board",
+      },
+      {
+        title: "오피스플라자 로비로 돌아간다",
+        action: "move",
+        targetLocation: "office-plaza",
+      },
+    ],
+  },
   library: {
     label: "도서관",
     speaker: "도서관",
@@ -1338,9 +1579,9 @@ const DAY01_WORLD_DISTRICTS = {
   },
   industrial: {
     id: "industrial",
-    label: "산업 구역",
-    note: "현장과 물류",
-    entryLocationId: "",
+    label: "회사 구역",
+    note: "오피스와 물류",
+    entryLocationId: "office-plaza",
   },
   underworld: {
     id: "underworld",
@@ -1360,11 +1601,17 @@ const DAY01_WORLD_DISTRICT_MAP = {
   mode: "district",
   title: "도시 구역 노선도",
   subtitle: "먼저 갈 구역을 고른 뒤, 그 안에서 세부 장소를 걸어 들어간다.",
-  nodes: ["residential", "study", "commercial"].map((districtId) => {
+  nodes: ["residential", "study", "commercial", "industrial"].map((districtId) => {
     const district = DAY01_WORLD_DISTRICTS[districtId];
     return {
       id: district.id,
-      emoji: districtId === "residential" ? "🏠" : districtId === "study" ? "📚" : "🌆",
+      emoji: districtId === "residential"
+        ? "🏠"
+        : districtId === "study"
+          ? "📚"
+          : districtId === "industrial"
+            ? "🏢"
+            : "🌆",
       label: district.label,
       note: district.note,
     };
@@ -1382,6 +1629,10 @@ DAY01_WORLD_LOCATIONS.downtown.districtId = "commercial";
 DAY01_WORLD_LOCATIONS["baegeum-hospital"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS["convenience-store"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS.mcdonalds.districtId = "commercial";
+DAY01_WORLD_LOCATIONS["office-plaza"].districtId = "industrial";
+DAY01_WORLD_LOCATIONS["mobility-control-center"].districtId = "industrial";
+DAY01_WORLD_LOCATIONS["logistics-hub"].districtId = "industrial";
+DAY01_WORLD_LOCATIONS["tower-cafe"].districtId = "industrial";
 DAY01_WORLD_LOCATIONS.library.districtId = "study";
 DAY01_WORLD_LOCATIONS["exam-center"].districtId = "study";
 DAY01_WORLD_LOCATIONS["university-district"].districtId = "study";
@@ -1504,7 +1755,7 @@ DAY01_WORLD_LOCATIONS["exam-center"].options = [
 
 DAY01_WORLD.districts = DAY01_WORLD_DISTRICTS;
 DAY01_WORLD.defaultDistrictId = "residential";
-DAY01_WORLD.initialUnlockedDistricts = ["residential", "study", "commercial"];
+DAY01_WORLD.initialUnlockedDistricts = ["residential", "study", "commercial", "industrial"];
 DAY01_WORLD.initialUnlockedLocations = [
   "apt-alley",
   "bus-stop",
@@ -1522,6 +1773,10 @@ DAY01_WORLD.initialUnlockedLocations = [
   "baegeum-hospital",
   "convenience-store",
   "mcdonalds",
+  "office-plaza",
+  "mobility-control-center",
+  "logistics-hub",
+  "tower-cafe",
 ];
 
 const DAY01_CITY_MAP_NODE_META = {
@@ -1651,6 +1906,42 @@ const DAY01_CITY_MAP_NODE_META = {
     zoneTone: "commercial",
     order: 140,
   },
+  "office-plaza": {
+    x: 82,
+    y: 48,
+    icon: "🏢",
+    shortLabel: "오피스플라자",
+    note: "회사구역 로비. 직장인, 관제센터, 물류동 입구가 모인다.",
+    zoneTone: "industrial",
+    order: 145,
+  },
+  "mobility-control-center": {
+    x: 85,
+    y: 33,
+    icon: "🖥️",
+    shortLabel: "관제센터",
+    note: "배달 관제와 배차 모니터링이 돌아가는 사무동.",
+    zoneTone: "industrial",
+    order: 150,
+  },
+  "tower-cafe": {
+    x: 77,
+    y: 63,
+    icon: "☕",
+    shortLabel: "로비카페",
+    note: "출근 직장인이 몰리는 오피스플라자 카페 지점.",
+    zoneTone: "industrial",
+    order: 155,
+  },
+  "logistics-hub": {
+    x: 90,
+    y: 73,
+    icon: "📦",
+    shortLabel: "물류허브",
+    note: "상하차와 장거리 퀵 배송이 이어지는 물류동.",
+    zoneTone: "industrial",
+    order: 160,
+  },
 };
 
 Object.entries(DAY01_CITY_MAP_NODE_META).forEach(([locationId, mapNode]) => {
@@ -1680,7 +1971,8 @@ DAY01_WORLD.cityMap = {
   subtitle: "이동은 지도에서 고르고, 도착한 장소에서 할 수 있는 행동만 버튼으로 남긴다.",
   zones: [
     { id: "study", label: "학습 구역", tone: "study", x: 6, y: 4, width: 60, height: 30 },
-    { id: "commercial", label: "상업 구역", tone: "commercial", x: 27, y: 25, width: 63, height: 57 },
+    { id: "commercial", label: "상업 구역", tone: "commercial", x: 27, y: 25, width: 45, height: 57 },
+    { id: "industrial", label: "회사 구역", tone: "industrial", x: 73, y: 28, width: 23, height: 56 },
     { id: "residential", label: "주거 구역", tone: "residential", x: 4, y: 58, width: 34, height: 30 },
   ],
   links: [
@@ -1690,6 +1982,7 @@ DAY01_WORLD.cityMap = {
     { from: "bus-stop", to: "study-hub", minutes: 22, mode: "bus" },
     { from: "bus-stop", to: "downtown", minutes: 10, mode: "bus" },
     { from: "bus-stop", to: "station-front", minutes: 12, mode: "bus" },
+    { from: "bus-stop", to: "office-plaza", minutes: 11, mode: "bus" },
     { from: "bus-stop", to: "baegeum-hospital", minutes: 12, mode: "bus" },
     { from: "study-hub", to: "library", minutes: 6, mode: "walk" },
     { from: "study-hub", to: "exam-center", minutes: 6, mode: "walk" },
@@ -1701,6 +1994,13 @@ DAY01_WORLD.cityMap = {
     { from: "city-crossroads", to: "baegeum-hospital", minutes: 9, mode: "walk" },
     { from: "city-crossroads", to: "convenience-store", minutes: 4, mode: "walk" },
     { from: "city-crossroads", to: "mcdonalds", minutes: 5, mode: "walk" },
+    { from: "city-crossroads", to: "office-plaza", minutes: 9, mode: "walk" },
     { from: "station-front", to: "station-interior", minutes: 4, mode: "walk" },
+    { from: "station-front", to: "office-plaza", minutes: 8, mode: "walk" },
+    { from: "downtown", to: "office-plaza", minutes: 8, mode: "walk" },
+    { from: "office-plaza", to: "mobility-control-center", minutes: 4, mode: "walk" },
+    { from: "office-plaza", to: "tower-cafe", minutes: 4, mode: "walk" },
+    { from: "office-plaza", to: "logistics-hub", minutes: 7, mode: "walk" },
+    { from: "mobility-control-center", to: "logistics-hub", minutes: 6, mode: "walk" },
   ],
 };

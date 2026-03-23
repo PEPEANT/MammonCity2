@@ -86,8 +86,8 @@ function buildMarketHomeHeaderMarkup(onWriteRoute = "market/write") {
   return `
     <header class="market-app-header">
       <div class="market-app-header-main">
-        <h1 class="market-app-logo">당큰마켓</h1>
-        <nav class="market-app-header-nav" aria-label="당큰마켓 상단 메뉴">
+        <h1 class="market-app-logo">호박마켓</h1>
+        <nav class="market-app-header-nav" aria-label="호박마켓 상단 메뉴">
           ${MARKET_APP_TOP_NAV.map((entry) => buildPhoneRouteButtonMarkup({
             route: entry.route,
             label: entry.label,
@@ -98,7 +98,7 @@ function buildMarketHomeHeaderMarkup(onWriteRoute = "market/write") {
       <div class="market-app-header-side">
         <div class="market-app-header-search">
           <span class="market-app-header-search-icon">⌕</span>
-          <input type="text" value="" placeholder="차량이나 매물을 검색해보세요" readonly />
+          <input type="text" value="" placeholder="중고폰, 정장, 원룸을 검색해보세요" readonly />
         </div>
         <button class="market-app-header-icon-btn" type="button" aria-label="검색">⌕</button>
         <button class="market-app-header-icon-btn" type="button" aria-label="메뉴">☰</button>
@@ -141,7 +141,7 @@ function buildMarketProductListMarkup(listings = []) {
 
 function buildMarketBottomNavMarkup(activeTab = "home") {
   return `
-    <nav class="market-bottom-nav" aria-label="당큰마켓 하단 메뉴">
+    <nav class="market-bottom-nav" aria-label="호박마켓 하단 메뉴">
       ${MARKET_APP_BOTTOM_TABS.map((tab) => buildPhoneRouteButtonMarkup({
         route: tab.route,
         label: `${tab.icon}\n${tab.label}`,
@@ -176,6 +176,9 @@ function buildMarketHomeViewMarkup(routeState, { targetState = state } = {}) {
   const listingsMarkup = listings.length
     ? buildMarketProductListMarkup(listings)
     : '<div class="market-empty-state"><div class="market-empty-state-title">표시할 매물이 없습니다.</div><div class="market-empty-state-body">다른 탭이나 검색어로 다시 확인해 보세요.</div></div>';
+  const statusMarkup = typeof buildPhoneAppStatusMarkup === "function"
+    ? buildPhoneAppStatusMarkup("market")
+    : "";
 
   return `
     <section class="market-app-shell">
@@ -191,6 +194,7 @@ function buildMarketHomeViewMarkup(routeState, { targetState = state } = {}) {
           </div>
           <div class="market-app-home-body">
             <h2 class="market-app-home-title">${escapePhoneAppHtml(title)}</h2>
+            ${statusMarkup}
             ${premiumGateMarkup}
             <div class="market-product-list">
               ${listingsMarkup}
@@ -321,6 +325,7 @@ function buildMarketChatViewMarkup() {
       ${buildMarketHomeHeaderMarkup()}
       <div class="market-chat-body">
         <div class="market-chat-section-title">거래 채팅</div>
+        ${typeof buildPhoneAppStatusMarkup === "function" ? buildPhoneAppStatusMarkup("market") : ""}
         ${threads.map((thread) => `
           <article class="market-chat-item">
             <div class="market-chat-avatar">💬</div>
@@ -338,32 +343,54 @@ function buildMarketChatViewMarkup() {
 }
 
 function buildMarketMyViewMarkup(targetState = state) {
-  const ownership = typeof syncOwnershipState === "function"
-    ? syncOwnershipState(targetState)
-    : { vehicle: null, home: null };
-  const ownedVehicle = typeof getOwnedVehicleDefinition === "function"
-    ? getOwnedVehicleDefinition(ownership.vehicle)
-    : null;
-  const ownedHome = typeof getOwnedHomeDefinition === "function"
-    ? getOwnedHomeDefinition(ownership.home)
-    : null;
-  const ownedCards = [
-    ownedVehicle
-      ? `<article class="market-owned-card"><div class="market-owned-card-label">차량</div><div class="market-owned-card-title">${escapePhoneAppHtml(`${ownedVehicle.icon || "🚗"} ${ownedVehicle.label}`)}</div><div class="market-owned-card-body">${escapePhoneAppHtml(ownedVehicle.description || "")}</div></article>`
-      : "",
-    ownedHome
-      ? `<article class="market-owned-card"><div class="market-owned-card-label">주거</div><div class="market-owned-card-title">${escapePhoneAppHtml(`${ownedHome.icon || "🏠"} ${ownedHome.label}`)}</div><div class="market-owned-card-body">${escapePhoneAppHtml(ownedHome.description || "")}</div></article>`
-      : "",
-  ].filter(Boolean);
+  const ownedEntries = typeof getMarketOwnedEntries === "function"
+    ? getMarketOwnedEntries(targetState)
+    : [];
+  const ownedCards = ownedEntries.map((entry) => `
+    <article class="market-owned-card">
+      <div class="market-owned-card-label">${escapePhoneAppHtml(
+        entry.kind === "vehicle"
+          ? "차량"
+          : entry.kind === "home"
+            ? "주거"
+            : "생활 자산"
+      )}</div>
+      <div class="market-owned-card-title">${escapePhoneAppHtml(`${entry.icon || "📦"} ${entry.cardTitle || entry.title}`)}</div>
+      <div class="market-owned-card-body">${escapePhoneAppHtml(entry.description || "")}</div>
+      <div class="market-owned-card-meta">
+        ${entry.acquiredSourceLabel ? `<span>취득 ${escapePhoneAppHtml(entry.acquiredSourceLabel)} · ${escapePhoneAppHtml(String(entry.acquiredDay || 1))}턴</span>` : ""}
+        <span>매입가 ${escapePhoneAppHtml(getMarketPriceText(entry.purchasePrice))}</span>
+        <span>${escapePhoneAppHtml(entry.kind === "vehicle" || entry.kind === "home" ? "현재 평가" : "즉시 되팔기")} ${escapePhoneAppHtml(getMarketPriceText(entry.resalePrice))}</span>
+        ${entry.quantity > 1 ? `<span>수량 ${escapePhoneAppHtml(String(entry.quantity))}</span>` : ""}
+        ${Array.isArray(entry.unlockJobLabels) && entry.unlockJobLabels.length
+          ? `<span>해금 ${escapePhoneAppHtml(entry.unlockJobLabels.join(", "))}</span>`
+          : ""}
+      </div>
+      ${!entry.canSell && entry.saleLockedReason
+        ? `<div class="market-owned-card-body is-warning">${escapePhoneAppHtml(entry.saleLockedReason)}</div>`
+        : ""}
+      <div class="market-owned-card-actions">
+        ${entry.canSell
+          ? buildPhoneAppActionButtonMarkup({
+              action: "market-sell-owned-entry",
+              label: "되팔기",
+              data: { "entry-id": entry.entryId },
+              className: "market-owned-card-btn",
+            })
+          : '<button class="market-owned-card-btn is-muted" type="button" disabled>상담 예정</button>'}
+      </div>
+    </article>
+  `);
 
   return `
     <section class="market-my-view">
       ${buildMarketHomeHeaderMarkup()}
       <div class="market-my-body">
         <div class="market-chat-section-title">내 거래</div>
+        ${typeof buildPhoneAppStatusMarkup === "function" ? buildPhoneAppStatusMarkup("market") : ""}
         ${ownedCards.length
           ? ownedCards.join("")
-          : '<div class="market-empty-state"><div class="market-empty-state-title">아직 거래한 자산이 없습니다.</div><div class="market-empty-state-body">자전거나 오토바이 같은 매물을 먼저 확인해 보세요.</div></div>'}
+          : '<div class="market-empty-state"><div class="market-empty-state-title">아직 거래한 자산이 없습니다.</div><div class="market-empty-state-body">호박마켓에서 이동수단, 중고폰, 정장, 원룸 매물을 먼저 확인해 보세요.</div></div>'}
       </div>
       ${buildMarketBottomNavMarkup("my")}
     </section>
@@ -398,9 +425,9 @@ function buildMarketAppScreenMarkup({ screenId = "home", targetState = state } =
 function getMarketAppManifest(targetState = state) {
   return {
     id: "market",
-    label: "당큰마켓",
-    homeLabel: "당큰",
-    icon: "🥕",
+    label: "호박마켓",
+    homeLabel: "호박",
+    icon: "🎃",
     openRoute: "market/home",
     screenMode: "fullbleed",
     installable: true,
