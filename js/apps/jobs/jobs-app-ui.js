@@ -87,11 +87,11 @@ function buildShortTermJobsContent(viewModel) {
       <section class="phone-job-status-card is-booked">
         <div class="phone-job-status-label">
           <span>${dueToday ? "TODAY SHIFT" : "BOOKED SHIFT"}</span>
-          <span>DAY ${String(viewModel.bookedShift.day).padStart(2, "0")}</span>
+          <span>${typeof formatTurnBadge === "function" ? formatTurnBadge(viewModel.bookedShift.day) : `TURN ${String(viewModel.bookedShift.day).padStart(2, "0")}`}</span>
         </div>
         <div class="phone-job-status-title">${escapeJobsAppHtml(job.emoji)} ${escapeJobsAppHtml(job.title)}</div>
         <div class="phone-job-status-body">
-          ${dueToday ? "오늘은 이 알바로 출근할 수 있다." : `${viewModel.bookedShift.day}일차 출근이 예약돼 있다.`}
+          ${dueToday ? "오늘은 이 알바로 출근할 수 있다." : `${typeof formatTurnLabel === "function" ? formatTurnLabel(viewModel.bookedShift.day) : `${viewModel.bookedShift.day}턴`} 출근이 예약돼 있다.`}
         </div>
         ${dueToday ? '<button class="phone-job-apply" type="button" data-phone-action="go-shift">출근하기</button>' : ""}
       </section>
@@ -165,10 +165,10 @@ function buildCareerStatusCards(viewModel) {
       <section class="phone-job-status-card is-booked">
         <div class="phone-job-status-label">
           <span>CAREER REVIEW</span>
-          <span>DAY ${String(career.resultDay).padStart(2, "0")}</span>
+          <span>${typeof formatTurnBadge === "function" ? formatTurnBadge(career.resultDay) : `TURN ${String(career.resultDay).padStart(2, "0")}`}</span>
         </div>
         <div class="phone-job-status-title">${escapeJobsAppHtml(currentPosting?.emoji || "💼")} ${escapeJobsAppHtml(currentPosting?.title || "직장지원")}</div>
-        <div class="phone-job-status-body">지원서는 접수됐다. 결과는 다음 날 확인할 수 있다.</div>
+        <div class="phone-job-status-body">지원서는 접수됐다. 결과는 다음 턴 확인할 수 있다.</div>
       </section>
     `);
   } else if (career.status === "employed") {
@@ -203,7 +203,7 @@ function buildCareerJobsContent(viewModel) {
       : viewModel.career.status === "applied"
         ? "심사중"
         : viewModel.careerApplicationDoneToday
-          ? "내일 지원"
+          ? "다음 턴 지원"
           : offer.eligible
             ? "지원"
             : "조건 부족";

@@ -38,16 +38,89 @@ function formatSignedEconomyPercent(value, fractionDigits = 1) {
   return `${sign}${safeValue.toFixed(safeDigits)}%`;
 }
 
+function getMarketFearGreedStatus(value = 50) {
+  const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+
+  if (safeValue >= 75) {
+    return { label: "극단적 탐욕", toneClass: "is-greed-high" };
+  }
+
+  if (safeValue >= 60) {
+    return { label: "탐욕", toneClass: "is-greed" };
+  }
+
+  if (safeValue >= 45) {
+    return { label: "중립", toneClass: "is-neutral" };
+  }
+
+  if (safeValue >= 30) {
+    return { label: "공포", toneClass: "is-fear" };
+  }
+
+  return { label: "극단적 공포", toneClass: "is-fear-high" };
+}
+
+function getMarketDirectionProfile(value = 0) {
+  const safeValue = Number(value) || 0;
+
+  if (safeValue >= 0.22) {
+    return { label: "강세", arrow: "▲", toneClass: "is-up" };
+  }
+
+  if (safeValue >= 0.06) {
+    return { label: "상승", arrow: "↗", toneClass: "is-up" };
+  }
+
+  if (safeValue <= -0.22) {
+    return { label: "강한 하락", arrow: "▼", toneClass: "is-down" };
+  }
+
+  if (safeValue <= -0.06) {
+    return { label: "하락", arrow: "↘", toneClass: "is-down" };
+  }
+
+  return { label: "중립", arrow: "•", toneClass: "is-neutral" };
+}
+
 function getEconomySnapshot(day = 1) {
   const resolvedDay = getEconomyCalendarDay(day);
   const entry = ECONOMY_CALENDAR?.[resolvedDay] || {};
+  const newsPack = entry.newsPack && typeof entry.newsPack === "object"
+    ? { ...entry.newsPack }
+    : {};
+  const monthLabel = String(entry.monthLabel || `${resolvedDay}월`);
+  const phaseLabel = String(entry.phaseLabel || `국면 ${resolvedDay}`);
+  const phaseShortLabel = String(entry.phaseShortLabel || phaseLabel);
+  const phaseTone = String(entry.phaseTone || "neutral");
   const priceIndex = Number(entry.priceIndex) || 1;
   const stockBias = clampEconomyValue(entry.stockBias, -0.4, 0.4);
+  const cryptoBias = clampEconomyValue(
+    entry.cryptoBias ?? (stockBias * 1.25),
+    -0.6,
+    0.6,
+  );
+  const safeAssetBias = clampEconomyValue(
+    entry.safeAssetBias ?? (-stockBias * 0.75),
+    -0.4,
+    0.4,
+  );
   const stockVolatility = clampEconomyValue(entry.stockVolatility || 1, 0.8, 1.4);
   const wageMultiplier = clampEconomyValue(entry.wageMultiplier || 1, 0.85, 1.2);
   const exchangeIndex = Math.max(80, Math.round(Number(entry.exchangeIndex) || 100));
-  const headlines = Array.isArray(entry.headlines) ? [...entry.headlines] : [];
+  const fearGreed = Math.max(0, Math.min(100, Math.round(Number(entry.fearGreed) || 50)));
+  const newsPackId = String(entry.newsPackId || `turn-${String(resolvedDay).padStart(2, "0")}`);
+  const headlines = Array.isArray(entry.headlines) && entry.headlines.length
+    ? [...entry.headlines]
+    : [
+        newsPack.macro?.title,
+        newsPack.stocks?.title,
+        newsPack.crypto?.title,
+        newsPack.safe?.title,
+        newsPack.local?.title,
+      ].filter(Boolean);
   const marketChangePercent = Math.round(((stockBias * 8) + ((stockVolatility - 1) * 2)) * 10) / 10;
+  const cryptoChangePercent = Math.round((((cryptoBias * 14) + ((stockVolatility - 1) * 4)) * 10)) / 10;
+  const safeAssetChangePercent = Math.round((((safeAssetBias * 10) + ((1 - stockVolatility) * 2)) * 10)) / 10;
   const priceChangePercent = Math.round((priceIndex - 1) * 1000) / 10;
   const wageChangePercent = Math.round((wageMultiplier - 1) * 1000) / 10;
   const exchangeChange = exchangeIndex - 100;
@@ -70,23 +143,73 @@ function getEconomySnapshot(day = 1) {
 
   return {
     day: resolvedDay,
+    monthLabel,
+    phaseLabel,
+    phaseShortLabel,
+    phaseTone,
+    fearGreed,
+    fearGreedStatus: getMarketFearGreedStatus(fearGreed),
     priceIndex,
     priceChangePercent,
     stockBias,
+    cryptoBias,
+    safeAssetBias,
     stockVolatility,
     wageMultiplier,
     wageChangePercent,
     exchangeIndex,
     exchangeChange,
     marketChangePercent,
+    cryptoChangePercent,
+    safeAssetChangePercent,
     marketTrend,
     volatilityLabel,
+    stockDirection: getMarketDirectionProfile(stockBias),
+    cryptoDirection: getMarketDirectionProfile(cryptoBias),
+    safeAssetDirection: getMarketDirectionProfile(safeAssetBias),
+    newsPackId,
+    newsPack,
     headlines,
   };
 }
 
 function getTodayEconomy(targetState = state) {
   return getEconomySnapshot(targetState?.day || 1);
+}
+
+function getMarketCycleSnapshot(targetState = state) {
+  const totalTurns = typeof MAX_DAYS === "number" ? MAX_DAYS : 12;
+  const current = getTodayEconomy(targetState);
+  const nextTurn = Math.min(totalTurns, current.day + 1);
+  const next = current.day < totalTurns
+    ? getEconomySnapshot(nextTurn)
+    : null;
+  const timeline = Array.from({ length: totalTurns }, (_, index) => {
+    const turn = index + 1;
+    const entry = getEconomySnapshot(turn);
+    return {
+      turn,
+      monthLabel: entry.monthLabel,
+      phaseShortLabel: entry.phaseShortLabel,
+      phaseTone: entry.phaseTone,
+      fearGreed: entry.fearGreed,
+      isCurrent: turn === current.day,
+      isPast: turn < current.day,
+      isFuture: turn > current.day,
+    };
+  });
+
+  return {
+    currentTurn: current.day,
+    totalTurns,
+    current,
+    next,
+    fearGreedStatus: current.fearGreedStatus,
+    stockDirection: current.stockDirection,
+    cryptoDirection: current.cryptoDirection,
+    safeDirection: current.safeAssetDirection,
+    timeline,
+  };
 }
 
 function getIndexedPrice(basePrice, targetState = state) {
@@ -101,7 +224,7 @@ function getAdjustedWage(basePay, targetState = state) {
 
 function getEconomyHeadline(targetState = state) {
   const economy = getTodayEconomy(targetState);
-  return economy.headlines[0] || "오늘 경제 지표는 비교적 잠잠하다.";
+  return economy.newsPack?.macro?.title || economy.headlines[0] || "오늘 경제 지표는 비교적 잠잠하다.";
 }
 
 function getStockMarketSnapshot(targetState = state) {
@@ -128,6 +251,7 @@ function getStockMarketSnapshot(targetState = state) {
     stockDailyReturnRate,
     movementText: formatSignedEconomyPercent(economy.marketChangePercent),
     successChanceText: `${Math.round(successChance * 100)}%`,
+    cycleLabel: `${economy.monthLabel} · ${economy.phaseLabel}`,
   };
 }
 
@@ -302,20 +426,41 @@ function getCoinEventRule(coinType, targetState = state) {
   const rules = COIN_EVENT_RULES[coinType] || COIN_EVENT_RULES.MAMC;
   const coin = getCoinTypeInfo(coinType);
   const economy = getTodayEconomy(targetState);
-  const seed = Array.from(`${coin.symbol}:${economy.day}:${economy.exchangeIndex}`)
+  let eligibleRules = rules;
+
+  if (economy.cryptoBias >= 0.08) {
+    const positiveRules = rules.filter((rule) => (rule.adjustment || 0) >= 0);
+    if (positiveRules.length) {
+      eligibleRules = positiveRules;
+    }
+  } else if (economy.cryptoBias <= -0.08) {
+    const negativeRules = rules.filter((rule) => (rule.adjustment || 0) <= 0);
+    if (negativeRules.length) {
+      eligibleRules = negativeRules;
+    }
+  } else {
+    const mildRules = rules.filter((rule) => Math.abs(rule.adjustment || 0) <= 0.10);
+    if (mildRules.length) {
+      eligibleRules = mildRules;
+    }
+  }
+
+  const seed = Array.from(`${coin.symbol}:${economy.day}:${economy.fearGreed}:${economy.phaseLabel}`)
     .reduce((sum, char, index) => sum + (char.charCodeAt(0) * (index + 3)), 0);
-  return rules[seed % rules.length] || rules[0];
+  return eligibleRules[seed % eligibleRules.length] || rules[0];
 }
 
 function getCoinMarketSnapshot(coinType, targetState = state) {
   const stockSnapshot = getStockMarketSnapshot(targetState);
+  const economy = getTodayEconomy(targetState);
   const coin = getCoinTypeInfo(coinType);
   const event = getCoinEventRule(coinType, targetState);
-  const eventBoost = coin.isMeme
-    ? 1 + (Math.max(0, stockSnapshot.stockVolatility - 1) * 0.8)
-    : 1;
-  const rawReturnRate = (stockSnapshot.stockDailyReturnRate * coin.volatility)
-    + ((event.adjustment || 0) * eventBoost);
+  const phaseBoost = 1 + (Math.max(0, stockSnapshot.stockVolatility - 1) * (coin.isMeme ? 1.15 : 0.65));
+  const eventBoost = coin.isMeme ? 0.82 : 0.56;
+  const sentimentBoost = ((economy.fearGreed - 50) / 100) * (coin.isMeme ? 0.10 : 0.06);
+  const cycleDrift = economy.cryptoBias * (coin.isMeme ? 0.55 : 0.35) * phaseBoost;
+  const marketCarry = stockSnapshot.stockDailyReturnRate * (coin.isMeme ? 0.55 : 0.42);
+  const rawReturnRate = cycleDrift + marketCarry + ((event.adjustment || 0) * eventBoost) + sentimentBoost;
   const returnRate = clampEconomyValue(
     rawReturnRate,
     coin.isMeme ? -0.95 : -0.80,
@@ -332,6 +477,9 @@ function getCoinMarketSnapshot(coinType, targetState = state) {
     eventKicker: coin.isMeme
       ? (event.severity === "extreme" ? "초고변동 이벤트" : "밈코인 속보")
       : "코인 이슈",
+    monthLabel: economy.monthLabel,
+    phaseLabel: economy.phaseLabel,
+    fearGreed: economy.fearGreed,
     topics: [...new Set([
       coin.label,
       coin.symbol,

@@ -75,7 +75,7 @@ function getMemoryTimestamp(targetState = state) {
   const timeText = typeof formatClockTime === "function"
     ? formatClockTime(targetState?.timeSlot, targetState?.timeMinuteOffset || 0)
     : "08:00";
-  return `DAY ${String(day).padStart(2, "0")} · ${timeText}`;
+  return `${typeof formatTurnBadge === "function" ? formatTurnBadge(day) : `TURN ${String(day).padStart(2, "0")}`} · ${timeText}`;
 }
 
 function recordMemoryEntry(entry = {}, targetState = state) {

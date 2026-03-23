@@ -464,7 +464,7 @@ function buildCasinoBlackjackControls(targetState = state) {
     if (casinoState.usedToday) {
       return `
         <div class="casino-note is-lock">
-          오늘 블랙잭은 이미 끝났습니다. 내일 다시 테이블이 열립니다.
+          오늘 블랙잭은 이미 끝났습니다. 다음 턴 다시 테이블이 열립니다.
         </div>
       `;
     }
@@ -577,7 +577,7 @@ function buildCasinoBlackjackScreenMarkup({ stageMode = false, targetState = sta
   const tableBody = blackjackState.phase === "result"
     ? blackjackState.messageBody
     : casinoState.usedToday
-      ? "환전소에서 칩을 정리하고 내일 다시 도전할 수 있습니다."
+      ? "환전소에서 칩을 정리하고 다음 턴 다시 도전할 수 있습니다."
       : "A는 손패 상황에 맞게 1 또는 11로 조정할 수 있습니다.";
 
   return `

@@ -97,7 +97,9 @@ function patchBankDomainState(targetState = state, patch = {}) {
 }
 
 function createBankTransactionDateLabel(targetState = state) {
-  const dayText = `${targetState?.day || 1}일차`;
+  const dayText = typeof formatTurnLabel === "function"
+    ? formatTurnLabel(targetState?.day || 1)
+    : `${targetState?.day || 1}턴`;
   const timeText = typeof formatClockTime === "function"
     ? formatClockTime(targetState?.timeSlot || DAY_START_TIME_SLOT, targetState?.timeMinuteOffset || 0)
     : "08:00";

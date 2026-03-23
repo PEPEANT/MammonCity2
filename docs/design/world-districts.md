@@ -57,7 +57,10 @@
 - 해금도 장소 단위만이 아니라 구역 단위로 같이 관리한다.
 - day별 데이터는 장기적으로 `base city districts + day overrides`로 가는 것이 좋다.
 
+실제 바깥 이동 UX는 [city-map-navigation.md](./city-map-navigation.md)처럼 `지도`, `행동 버튼`을 분리하는 방향이 맞다.
+
 ## 다음 문서
 
+- [city-map-navigation.md](./city-map-navigation.md)
 - [job-tracks.md](./job-tracks.md)
 - [../early-progression.md](../early-progression.md)

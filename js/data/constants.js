@@ -1,7 +1,8 @@
 const BASE_STAMINA = 100;
 const BASE_ENERGY = 100;
-// 업데이트마다 조금씩 늘릴 것 (현재: 7일 / 목표: 30일)
-const MAX_DAYS = 7;
+// 업데이트마다 조금씩 늘릴 것 (현재: 12턴 / 목표: 30턴)
+const MAX_TURNS = 12;
+const MAX_DAYS = MAX_TURNS;
 const TIME_SLOT_MINUTES = 30;
 const DAY_START_TIME_SLOT = 16;
 const DAY_END_TIME_SLOT = 48;
@@ -23,3 +24,19 @@ const RANK_TABLE = [
   { min: 1300000, label: "C", title: "버티는 중", comment: "비틀거리긴 했지만 끝까지 살아남긴 했다." },
   { min: 0, label: "D", title: "다시 뛰어야 함", comment: "이번 달은 몸만 굴렀고 손에 남은 건 적었다." },
 ];
+
+function normalizeTurnNumber(turn = 1) {
+  return Math.max(1, Math.floor(Number(turn) || 1));
+}
+
+function formatTurnLabel(turn = 1) {
+  return `${normalizeTurnNumber(turn)}턴`;
+}
+
+function formatTurnProgress(currentTurn = 1, totalTurns = MAX_DAYS) {
+  return `${normalizeTurnNumber(currentTurn)}/${normalizeTurnNumber(totalTurns)}`;
+}
+
+function formatTurnBadge(turn = 1) {
+  return `TURN ${String(normalizeTurnNumber(turn)).padStart(2, "0")}`;
+}

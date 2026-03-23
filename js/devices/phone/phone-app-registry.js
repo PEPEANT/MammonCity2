@@ -1,6 +1,7 @@
 function getPhoneAppRegistry(targetState = state) {
   const manifestGetters = [
     typeof getDisAppManifest === "function" ? getDisAppManifest : null,
+    typeof getMarketAppManifest === "function" ? getMarketAppManifest : null,
     typeof getNewsAppManifest === "function" ? getNewsAppManifest : null,
     typeof getPlayStoreAppManifest === "function" ? getPlayStoreAppManifest : null,
     typeof getBusAppManifest === "function" ? getBusAppManifest : null,

@@ -120,6 +120,14 @@ const OWNED_VEHICLE_CATALOG = Object.freeze({
     keyLabel: "자전거 열쇠",
     keyDescription: "자전거 잠금 해제에 필요한 열쇠다.",
   }),
+  "used-motorbike": Object.freeze({
+    id: "used-motorbike",
+    label: "중고 오토바이",
+    icon: "🛵",
+    description: "배달과 장거리 이동에 바로 쓸 수 있는 실속형 오토바이다.",
+    keyLabel: "오토바이 키",
+    keyDescription: "중고 오토바이 시동과 잠금 해제에 필요한 키다.",
+  }),
   "used-car": Object.freeze({
     id: "used-car",
     label: "중고차",

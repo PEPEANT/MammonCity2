@@ -6,17 +6,19 @@
   <title>배금도시</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/phone.css">
-  <link rel="stylesheet" href="css/ranking.css">
+  <link rel="stylesheet" href="css/layout.css?v=20260323-markethost1">
+  <link rel="stylesheet" href="css/components.css?v=20260323-origin1">
+  <link rel="stylesheet" href="css/city-map.css?v=20260323-map4">
+  <link rel="stylesheet" href="css/phone.css?v=20260323-newscompact1">
+  <link rel="stylesheet" href="css/market.css?v=20260323-market1">
+  <link rel="stylesheet" href="css/ranking.css?v=20260323-ranking1">
 </head>
 <body>
   <div id="dev-panel" style="display:none">
     <div class="dev-title">DEV PANEL</div>
 
     <div class="dev-section days">
-      <div class="dev-section-label">일차 이동</div>
+      <div class="dev-section-label">턴 이동</div>
     </div>
 
     <div class="dev-section stats">
@@ -54,9 +56,9 @@
         <div id="job-minigame-items"></div>
       </div>
 
-      <!-- 좌상단 HUD: 일차 · 시간 -->
+      <!-- 좌상단 HUD: 턴 · 시간 -->
       <div id="hud-left">
-        <span id="day-display">1일차</span>
+        <span id="day-display">1/12</span>
         <span class="hud-sep">·</span>
         <span id="time-display">06:30</span>
       </div>
@@ -150,10 +152,10 @@
           <div class="phone-screen">
             <div class="phone-status-row">
               <span id="phone-time-display" class="phone-status-time">08:00</span>
-              <span id="phone-status-signal" class="phone-status-signal">DAY 01</span>
+              <span id="phone-status-signal" class="phone-status-signal">TURN 01</span>
             </div>
 
-            <div id="phone-day-chip" class="phone-day-chip" hidden>DAY 01</div>
+            <div id="phone-day-chip" class="phone-day-chip" hidden>TURN 01</div>
 
             <div id="phone-apps" class="phone-apps"></div>
 
@@ -189,13 +191,30 @@
 
     <div id="start-screen">
       <div class="start-card">
-        <div class="start-kicker">현재 7일 프로토타입</div>
+        <div class="start-kicker">현재 12턴 프로토타입</div>
         <div class="start-title">배금도시</div>
         <div class="start-sub">
-          폰 공고를 뒤지고, 다음날 출근을 예약하고, 버틴 하루를 현금으로 바꾸는 도시 생존 시뮬레이션.
+          폰 공고를 뒤지고, 다음 턴 출근을 예약하고, 버틴 하루를 현금으로 바꾸는 도시 생존 시뮬레이션.
         </div>
         <div class="start-body">
-          1일차 프롤로그와 방청소, 스마트폰 공고 지원, 예약 출근, 바깥 이동, 기억 로그, 마지막 정산 랭킹까지 이어집니다.
+          1턴 프롤로그와 방청소, 스마트폰 공고 지원, 예약 출근, 바깥 이동, 기억 로그, 마지막 정산 랭킹까지 이어집니다.
+        </div>
+        <div id="start-origin-panel" class="start-origin-panel" data-phase="idle" data-tier="">
+          <div id="start-origin-machine" class="start-origin-machine" aria-hidden="true">
+            <div class="start-origin-machine-glow"></div>
+            <div class="start-origin-machine-ring"></div>
+            <div class="start-origin-capsule">
+              <div id="start-origin-emblem" class="start-origin-emblem">?</div>
+              <div id="start-origin-spoon" class="start-origin-spoon">🥄</div>
+            </div>
+            <div class="start-origin-machine-base"></div>
+          </div>
+          <div class="start-origin-copy">
+            <div id="start-origin-kicker" class="start-origin-kicker">출생 패키지</div>
+            <div id="start-origin-name" class="start-origin-name">아직 정해지지 않음</div>
+            <div id="start-origin-desc" class="start-origin-desc">새 게임을 시작하면 수저 등급이 한 번 정해지고, 그 결과로 초기 현금과 첫 분위기가 달라집니다.</div>
+            <div id="start-origin-meta" class="start-origin-meta"></div>
+          </div>
         </div>
         <div class="start-highlights" aria-hidden="true">
           <span class="start-highlight">스마트폰 공고</span>
@@ -217,7 +236,7 @@
     <div class="ranking-inner">
       <div class="ranking-header">
         <div class="ranking-title">배금도시</div>
-        <div class="ranking-subtitle">프로토타입 정산 · 전국 랭킹</div>
+        <div class="ranking-subtitle">12턴 결산 · 전국 랭킹</div>
       </div>
       <div class="ranking-my-card" id="ranking-my-card"></div>
       <div class="ranking-list-wrap">
@@ -227,7 +246,7 @@
               <th>순위</th>
               <th>이름</th>
               <th>현금</th>
-              <th>직업</th>
+              <th>직업 · 출신</th>
               <th>랭크</th>
             </tr>
           </thead>
@@ -272,7 +291,7 @@
   <script src="js/data/npcs/npc-dialogue-data.js"></script>
   <script src="js/data/days/day01/story.js"></script>
   <script src="js/data/days/day01/events.js"></script>
-  <script src="js/data/days/day01/world.js"></script>
+  <script src="js/data/days/day01/world.js?v=20260323-map2"></script>
   <script src="js/data/days/day01/index.js"></script>
   <script src="js/data/days/day02/index.js"></script>
   <script src="js/data/days/day03/index.js"></script>
@@ -282,26 +301,35 @@
   <script src="js/data/days/day07/index.js"></script>
   <script src="js/data/days/index.js"></script>
   <script src="js/systems/world/world-service.js"></script>
+  <script src="js/systems/world/world-runtime-service.js?v=20260323-logic-split1"></script>
+  <script src="js/systems/world/city-map-service.js?v=20260323-map3"></script>
   <script src="js/systems/progression/meta-state-service.js"></script>
   <script src="js/systems/progression/happiness-service.js"></script>
+  <script src="js/systems/progression/spoon-start-service.js?v=20260323-origin2"></script>
+  <script src="js/systems/progression/hunger-service.js?v=20260323-logic-split1"></script>
   <script src="js/systems/presentation/presentation-service.js"></script>
-  <script src="js/data/economy/economy-calendar.js"></script>
+  <script src="js/data/search/search-route-registry.js?v=20260323-market3"></script>
+  <script src="js/data/market/market-listings.js?v=20260323-market3"></script>
+  <script src="js/data/economy/economy-calendar.js?v=20260323-markethost1"></script>
   <script src="js/systems/economy/wallet-service.js"></script>
-  <script src="js/systems/economy/economy-service.js"></script>
-  <script src="js/systems/economy/inventory-service.js"></script>
+  <script src="js/systems/economy/economy-service.js?v=20260323-markethost1"></script>
+  <script src="js/systems/economy/inventory-service.js?v=20260323-market1"></script>
+  <script src="js/systems/actions/action-runner.js?v=20260323-market3"></script>
+  <script src="js/systems/market/market-service.js?v=20260323-market3"></script>
   <script src="js/systems/memory/memory-service.js"></script>
   <script src="js/systems/npc/dialogue-service.js"></script>
-  <script src="js/systems/ranking-service.js"></script>
-  <script src="js/devices/phone/phone-session.js"></script>
+  <script src="js/systems/ranking-service.js?v=20260323-ranking1"></script>
+  <script src="js/devices/phone/phone-session.js?v=20260323-market1"></script>
   <script src="js/apps/app-ui-helpers.js"></script>
   <script src="js/apps/trading-terminal.js"></script>
   <script src="js/apps/jobs/jobs-app-state.js"></script>
   <script src="js/apps/jobs/jobs-app-ui.js"></script>
   <script src="js/apps/jobs/jobs-manifest.js"></script>
-  <script src="js/apps/dis/dis-manifest.js"></script>
-  <script src="js/apps/news/news-manifest.js"></script>
+  <script src="js/apps/dis/dis-manifest.js?v=20260323-market3"></script>
+  <script src="js/apps/market/market-manifest.js?v=20260323-market3"></script>
+  <script src="js/apps/news/news-manifest.js?v=20260323-markethost1"></script>
   <script src="js/apps/playstore/playstore-manifest.js"></script>
-  <script src="js/apps/bus/bus-manifest.js"></script>
+  <script src="js/apps/bus/bus-manifest.js?v=20260323-bus4"></script>
   <script src="js/apps/call/call-manifest.js"></script>
   <script src="js/apps/gallery/gallery-manifest.js"></script>
   <script src="js/apps/bank/bank-app-state.js"></script>
@@ -315,11 +343,12 @@
   <script src="js/apps/coin/coin-manifest.js"></script>
   <script src="js/apps/delivery/delivery-manifest.js"></script>
   <script src="js/apps/video/video-manifest.js"></script>
-  <script src="js/devices/phone/phone-app-registry.js"></script>
+  <script src="js/devices/phone/phone-app-registry.js?v=20260323-market1"></script>
   <script src="js/devices/phone/phone-shell-ui.js"></script>
   <script src="js/devices/phone/phone-router.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/logic.js"></script>
-  <script src="js/dev.js"></script>
+  <script src="js/ui.js?v=20260323-origin3"></script>
+  <script src="js/ui/city-map/city-map-ui.js?v=20260323-map4"></script>
+  <script src="js/logic.js?v=20260323-market1"></script>
+  <script src="js/dev.js?v=20260323-markethost2"></script>
 </body>
 </html>

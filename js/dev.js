@@ -37,6 +37,7 @@
     replayDay: 0,
     replayPresetId: "",
     replayOptionSignature: "",
+    marketSignature: "",
   };
 
   document.addEventListener("DOMContentLoaded", initDevPanel);
@@ -53,13 +54,13 @@
     buildStatControls(editor.sections.stats.body);
     buildEventReplayEditor(panel);
     buildLocationNavEditor(panel);
+    buildMarketOverviewEditor(panel);
     buildPositionEditor(panel);
     buildNarrationEditor(panel);
     buildStateDisplay(editor.sections.state.body);
-    detachDevWindows();
-    hookRenderGame();
-    bindEditorGlobals();
+
     refreshEventReplayEditor();
+    refreshMarketOverviewEditor();
     refreshPositionEditor();
     refreshNarrationEditor();
 
@@ -69,12 +70,17 @@
         refreshPositionEditor();
       }
       refreshEventReplayEditor();
+      refreshMarketOverviewEditor();
       refreshNarrationEditor();
     }, 100);
+
+    detachDevWindows();
+    hookRenderGame();
+    bindEditorGlobals();
   }
 
   function setupDevSections(panel) {
-    registerExistingSection(panel.querySelector(".dev-section.days"), "days", "일차 이동");
+    registerExistingSection(panel.querySelector(".dev-section.days"), "days", "턴 이동");
     registerExistingSection(panel.querySelector(".dev-section.stats"), "stats", "행동 / 스탯");
     registerExistingSection(panel.querySelector(".dev-section.state-dump"), "state", "현재 상태", true);
   }
@@ -196,6 +202,7 @@
       days: { left: 18, top: 56 },
       stats: { left: 264, top: 56 },
       events: { left: 510, top: 56 },
+      market: { left: 602, top: 246 },
       position: { left: 18, top: 246 },
       narration: { left: 314, top: 246 },
       state: { left: 806, top: 56 },
@@ -291,13 +298,18 @@
   }
 
   function buildDayButtons(section) {
-    for (let d = 1; d <= 30; d++) {
+    const totalDays = typeof MAX_DAYS === "number" ? MAX_DAYS : 12;
+    for (let d = 1; d <= totalDays; d++) {
       const btn = document.createElement("button");
       btn.className = "dev-day-btn";
       btn.textContent = d;
       btn.dataset.day = d;
-      btn.title = `${d}일차로 이동`;
-      btn.addEventListener("click", () => jumpToDay(d));
+      btn.title = `${d}턴으로 이동`;
+      btn.addEventListener("click", () => {
+        jumpToDay(d);
+        refreshEventReplayEditor();
+        refreshMarketOverviewEditor();
+      });
       section.appendChild(btn);
     }
   }
@@ -376,11 +388,11 @@
     sceneLine.className = "dev-editor-line";
     sceneLine.id = "dev-replay-scene";
 
-    const dayField = buildSelectEditorField("일차", "dev-replay-day");
-    [1, 7].forEach((day) => {
+    const dayField = buildSelectEditorField("턴", "dev-replay-day");
+    [1, MAX_DAYS].forEach((day) => {
       const option = document.createElement("option");
       option.value = String(day);
-      option.textContent = `${day}일차`;
+      option.textContent = `${day}턴`;
       dayField.input.appendChild(option);
     });
 
@@ -470,6 +482,7 @@
           }
           state.world.currentLocation = locationId;
           if (typeof renderGame === "function") renderGame();
+          refreshMarketOverviewEditor();
         });
         grid.appendChild(btn);
       });
@@ -480,6 +493,176 @@
     renderLocationButtons();
     editor.elements.locationNavSection = sectionEntry.section;
     editor.elements.renderLocationButtons = renderLocationButtons;
+  }
+
+  function buildMarketOverviewEditor(panel) {
+    const sectionEntry = createEditorSection(panel, "market-overview", "market", "경제 / 뉴스");
+    const section = sectionEntry.body;
+
+    const sceneLine = document.createElement("div");
+    sceneLine.className = "dev-editor-line";
+    sceneLine.id = "dev-market-scene";
+
+    const note = document.createElement("div");
+    note.className = "dev-editor-note";
+    note.textContent = "공통 경제 / 뉴스 묶음. 주식, 코인, 뉴스, DIS가 같은 턴 데이터를 참조합니다.";
+
+    const summaryGrid = document.createElement("div");
+    summaryGrid.className = "dev-market-grid";
+
+    const directionRow = document.createElement("div");
+    directionRow.className = "dev-market-chip-row";
+
+    const timeline = document.createElement("div");
+    timeline.className = "dev-market-timeline";
+
+    const previewCard = document.createElement("div");
+    previewCard.className = "dev-market-preview";
+
+    const newsList = document.createElement("div");
+    newsList.className = "dev-market-news-list";
+
+    section.append(sceneLine, note, summaryGrid, directionRow, timeline, previewCard, newsList);
+
+    editor.elements.marketSection = sectionEntry.section;
+    editor.elements.marketSceneLine = sceneLine;
+    editor.elements.marketSummaryGrid = summaryGrid;
+    editor.elements.marketDirectionRow = directionRow;
+    editor.elements.marketTimeline = timeline;
+    editor.elements.marketPreviewCard = previewCard;
+    editor.elements.marketNewsList = newsList;
+    editor.elements.renderMarketOverview = function renderMarketOverview() {
+      if (typeof getMarketCycleSnapshot !== "function" || typeof getTodayEconomy !== "function") {
+        sceneLine.textContent = "공통 경제 데이터를 아직 읽을 수 없습니다.";
+        return;
+      }
+
+      const cycle = getMarketCycleSnapshot(state);
+      const economy = cycle?.current || getTodayEconomy(state);
+
+      if (!cycle || !economy) {
+        sceneLine.textContent = "시장 사이클 데이터가 비어 있습니다.";
+        return;
+      }
+
+      const turnLabel = typeof formatTurnLabel === "function"
+        ? formatTurnLabel(cycle.currentTurn)
+        : `${cycle.currentTurn}턴`;
+      sceneLine.textContent = `${turnLabel} / ${economy.monthLabel} / ${economy.phaseLabel} / scene ${state.scene}`;
+
+      const signature = JSON.stringify({
+        turn: cycle.currentTurn,
+        newsPackId: economy.newsPackId,
+        priceIndex: economy.priceIndex,
+        wageMultiplier: economy.wageMultiplier,
+        exchangeIndex: economy.exchangeIndex,
+        fearGreed: economy.fearGreed,
+        stockBias: economy.stockBias,
+        cryptoBias: economy.cryptoBias,
+        safeAssetBias: economy.safeAssetBias,
+      });
+
+      if (editor.marketSignature === signature) {
+        return;
+      }
+      editor.marketSignature = signature;
+
+      const summaryCards = [
+        {
+          label: "현재 월",
+          value: `${escapeDevHtml(economy.monthLabel)} · ${escapeDevHtml(economy.phaseShortLabel || economy.phaseLabel)}`,
+          meta: `${cycle.currentTurn}/${cycle.totalTurns}턴`,
+        },
+        {
+          label: "공포탐욕",
+          value: `${economy.fearGreed}`,
+          meta: escapeDevHtml(cycle.fearGreedStatus?.label || economy.fearGreedStatus?.label || "중립"),
+        },
+        {
+          label: "물가",
+          value: formatDevSignedNumber(economy.priceChangePercent),
+          meta: `지수 ${Number(economy.priceIndex || 1).toFixed(2)}`,
+        },
+        {
+          label: "임금",
+          value: formatDevSignedNumber(economy.wageChangePercent),
+          meta: `배율 ${Number(economy.wageMultiplier || 1).toFixed(2)}`,
+        },
+        {
+          label: "환율 체감",
+          value: `${economy.exchangeIndex}`,
+          meta: `${economy.exchangeChange > 0 ? "+" : ""}${economy.exchangeChange}p`,
+        },
+        {
+          label: "변동성",
+          value: escapeDevHtml(economy.volatilityLabel || "보통"),
+          meta: formatDevSignedNumber(economy.marketChangePercent),
+        },
+      ];
+
+      summaryGrid.innerHTML = summaryCards.map((card) => `
+        <div class="dev-market-card">
+          <div class="dev-market-card-label">${card.label}</div>
+          <div class="dev-market-card-value">${card.value}</div>
+          <div class="dev-market-card-meta">${card.meta}</div>
+        </div>
+      `).join("");
+
+      const directions = [
+        { label: "주식", direction: cycle.stockDirection },
+        { label: "코인", direction: cycle.cryptoDirection },
+        { label: "금/환율", direction: cycle.safeDirection },
+      ];
+
+      directionRow.innerHTML = directions.map(({ label, direction }) => `
+        <div class="dev-market-chip ${escapeDevHtml(direction?.toneClass || "is-neutral")}">
+          <span class="dev-market-chip-label">${label}</span>
+          <strong class="dev-market-chip-value">${escapeDevHtml(direction?.label || "중립")}</strong>
+        </div>
+      `).join("");
+
+      timeline.innerHTML = cycle.timeline.map((entry) => `
+        <div class="dev-market-turn ${entry.isCurrent ? "is-current" : ""} ${entry.isPast ? "is-past" : ""} ${entry.isFuture ? "is-future" : ""} is-${escapeDevHtml(entry.phaseTone || "neutral")}">
+          <div class="dev-market-turn-index">${entry.turn}</div>
+          <div class="dev-market-turn-month">${escapeDevHtml(entry.monthLabel)}</div>
+          <div class="dev-market-turn-phase">${escapeDevHtml(entry.phaseShortLabel)}</div>
+        </div>
+      `).join("");
+
+      const previewTitle = cycle.next
+        ? `${cycle.next.monthLabel} · ${cycle.next.phaseLabel}`
+        : "다음 턴 프리뷰 없음";
+      const previewBody = economy.newsPack?.preview?.body
+        || economy.newsPack?.preview?.title
+        || (cycle.next ? `${cycle.next.monthLabel}에는 ${cycle.next.phaseLabel} 흐름이 이어질 전망입니다.` : "마지막 턴입니다.");
+      previewCard.innerHTML = `
+        <div class="dev-market-preview-kicker">다음 프리뷰</div>
+        <div class="dev-market-preview-title">${escapeDevHtml(previewTitle)}</div>
+        <div class="dev-market-preview-body">${escapeDevHtml(previewBody)}</div>
+      `;
+
+      const newsItems = [
+        { kicker: "MACRO", entry: economy.newsPack?.macro },
+        { kicker: "STOCKS", entry: economy.newsPack?.stocks },
+        { kicker: "CRYPTO", entry: economy.newsPack?.crypto },
+        { kicker: "SAFE", entry: economy.newsPack?.safe },
+        { kicker: "LOCAL", entry: economy.newsPack?.local },
+      ].filter(({ entry }) => entry?.title || entry?.body);
+
+      newsList.innerHTML = newsItems.map(({ kicker, entry }) => `
+        <article class="dev-market-news-item">
+          <div class="dev-market-news-head">
+            <span class="dev-market-news-kicker">${kicker}</span>
+          </div>
+          <div class="dev-market-news-title">${escapeDevHtml(entry?.title || "")}</div>
+          <div class="dev-market-news-body">${escapeDevHtml(entry?.body || "")}</div>
+        </article>
+      `).join("");
+    };
+
+    setTimeout(() => {
+      editor.elements.renderMarketOverview?.();
+    }, 0);
   }
 
   function buildPositionEditorLegacy(panel) {
@@ -623,7 +806,7 @@
 
     section.append(actions, note, status);
 
-    editor.elements = {
+    Object.assign(editor.elements, {
       section: sectionEntry.section,
       toggleButton,
       saveButton,
@@ -643,7 +826,7 @@
       cropLeftInput: cropLeftField.input,
       applyButton,
       status,
-    };
+    });
   }
 
   function buildPositionEditor(panel) {
@@ -805,7 +988,7 @@
       status,
     );
 
-    editor.elements = {
+    Object.assign(editor.elements, {
       section: sectionEntry.section,
       toggleButton,
       saveButton,
@@ -826,7 +1009,7 @@
       codePreview,
       applyButton,
       status,
-    };
+    });
   }
 
   function buildNarrationEditor(panel) {
@@ -966,6 +1149,170 @@
     section.appendChild(pre);
   }
 
+  function formatDevSignedNumber(value, digits = 1, suffix = "%") {
+    const safeDigits = Math.max(0, Math.min(2, Math.floor(Number(digits) || 0)));
+    const safeValue = Number(value) || 0;
+    const sign = safeValue > 0 ? "+" : "";
+    return `${sign}${safeValue.toFixed(safeDigits)}${suffix}`;
+  }
+
+  function escapeDevHtml(text) {
+    return String(text ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function refreshMarketOverviewEditor() {
+    if (typeof editor.elements.renderMarketOverview === "function") {
+      editor.elements.renderMarketOverview();
+      return;
+    }
+
+    const sceneLine = editor.elements.marketSceneLine;
+    const summaryGrid = editor.elements.marketSummaryGrid;
+    const directionRow = editor.elements.marketDirectionRow;
+    const timeline = editor.elements.marketTimeline;
+    const previewCard = editor.elements.marketPreviewCard;
+    const newsList = editor.elements.marketNewsList;
+
+    if (!sceneLine || !summaryGrid || !directionRow || !timeline || !previewCard || !newsList) {
+      return;
+    }
+
+    if (typeof getMarketCycleSnapshot !== "function" || typeof getTodayEconomy !== "function") {
+      sceneLine.textContent = "공통 경제 데이터를 아직 읽을 수 없습니다.";
+      return;
+    }
+
+    const cycle = getMarketCycleSnapshot(state);
+    const economy = cycle?.current || getTodayEconomy(state);
+
+    if (!cycle || !economy) {
+      sceneLine.textContent = "시장 사이클 데이터가 비어 있습니다.";
+      return;
+    }
+
+    const turnLabel = typeof formatTurnLabel === "function"
+      ? formatTurnLabel(cycle.currentTurn)
+      : `${cycle.currentTurn}턴`;
+    const summaryLine = `${turnLabel} / ${economy.monthLabel} / ${economy.phaseLabel} / scene ${state.scene}`;
+    if (sceneLine.textContent !== summaryLine) {
+      sceneLine.textContent = summaryLine;
+    }
+
+    const signature = JSON.stringify({
+      turn: cycle.currentTurn,
+      newsPackId: economy.newsPackId,
+      priceIndex: economy.priceIndex,
+      wageMultiplier: economy.wageMultiplier,
+      exchangeIndex: economy.exchangeIndex,
+      fearGreed: economy.fearGreed,
+      stockBias: economy.stockBias,
+      cryptoBias: economy.cryptoBias,
+      safeAssetBias: economy.safeAssetBias,
+    });
+
+    if (editor.marketSignature === signature) {
+      return;
+    }
+    editor.marketSignature = signature;
+
+    const summaryCards = [
+      {
+        label: "현재 월",
+        value: `${escapeDevHtml(economy.monthLabel)} · ${escapeDevHtml(economy.phaseShortLabel || economy.phaseLabel)}`,
+        meta: `${cycle.currentTurn}/${cycle.totalTurns}턴`,
+      },
+      {
+        label: "공포탐욕",
+        value: `${economy.fearGreed}`,
+        meta: escapeDevHtml(cycle.fearGreedStatus?.label || economy.fearGreedStatus?.label || "중립"),
+      },
+      {
+        label: "물가",
+        value: formatDevSignedNumber(economy.priceChangePercent),
+        meta: `지수 ${Number(economy.priceIndex || 1).toFixed(2)}`,
+      },
+      {
+        label: "임금",
+        value: formatDevSignedNumber(economy.wageChangePercent),
+        meta: `배율 ${Number(economy.wageMultiplier || 1).toFixed(2)}`,
+      },
+      {
+        label: "환율 체감",
+        value: `${economy.exchangeIndex}`,
+        meta: `${economy.exchangeChange > 0 ? "+" : ""}${economy.exchangeChange}p`,
+      },
+      {
+        label: "변동성",
+        value: escapeDevHtml(economy.volatilityLabel || "보통"),
+        meta: formatDevSignedNumber(economy.marketChangePercent),
+      },
+    ];
+
+    summaryGrid.innerHTML = summaryCards.map((card) => `
+      <div class="dev-market-card">
+        <div class="dev-market-card-label">${card.label}</div>
+        <div class="dev-market-card-value">${card.value}</div>
+        <div class="dev-market-card-meta">${card.meta}</div>
+      </div>
+    `).join("");
+
+    const directions = [
+      { label: "주식", direction: cycle.stockDirection },
+      { label: "코인", direction: cycle.cryptoDirection },
+      { label: "금/환율", direction: cycle.safeDirection },
+    ];
+
+    directionRow.innerHTML = directions.map(({ label, direction }) => `
+      <div class="dev-market-chip ${escapeDevHtml(direction?.toneClass || "is-neutral")}">
+        <span class="dev-market-chip-label">${label}</span>
+        <strong class="dev-market-chip-value">${escapeDevHtml(direction?.label || "중립")}</strong>
+      </div>
+    `).join("");
+
+    timeline.innerHTML = cycle.timeline.map((entry) => `
+      <div class="dev-market-turn ${entry.isCurrent ? "is-current" : ""} ${entry.isPast ? "is-past" : ""} ${entry.isFuture ? "is-future" : ""} is-${escapeDevHtml(entry.phaseTone || "neutral")}">
+        <div class="dev-market-turn-index">${entry.turn}</div>
+        <div class="dev-market-turn-month">${escapeDevHtml(entry.monthLabel)}</div>
+        <div class="dev-market-turn-phase">${escapeDevHtml(entry.phaseShortLabel)}</div>
+      </div>
+    `).join("");
+
+    const previewTitle = cycle.next
+      ? `${cycle.next.monthLabel} · ${cycle.next.phaseLabel}`
+      : "다음 턴 프리뷰 없음";
+    const previewBody = economy.newsPack?.preview?.body
+      || economy.newsPack?.preview?.title
+      || (cycle.next ? `${cycle.next.monthLabel}에는 ${cycle.next.phaseLabel} 흐름이 이어질 전망입니다.` : "마지막 턴입니다.");
+    previewCard.innerHTML = `
+      <div class="dev-market-preview-kicker">다음 프리뷰</div>
+      <div class="dev-market-preview-title">${escapeDevHtml(previewTitle)}</div>
+      <div class="dev-market-preview-body">${escapeDevHtml(previewBody)}</div>
+    `;
+
+    const newsItems = [
+      { kicker: "MACRO", entry: economy.newsPack?.macro },
+      { kicker: "STOCKS", entry: economy.newsPack?.stocks },
+      { kicker: "CRYPTO", entry: economy.newsPack?.crypto },
+      { kicker: "SAFE", entry: economy.newsPack?.safe },
+      { kicker: "LOCAL", entry: economy.newsPack?.local },
+    ].filter(({ entry }) => entry?.title || entry?.body);
+
+    newsList.innerHTML = newsItems.map(({ kicker, entry }) => `
+      <article class="dev-market-news-item">
+        <div class="dev-market-news-head">
+          <span class="dev-market-news-kicker">${kicker}</span>
+        </div>
+        <div class="dev-market-news-title">${escapeDevHtml(entry?.title || "")}</div>
+        <div class="dev-market-news-body">${escapeDevHtml(entry?.body || "")}</div>
+      </article>
+    `).join("");
+  }
+
   function cloneLiveStateSnapshot(sourceState = state) {
     if (typeof hydrateState === "function" && typeof serializeState === "function") {
       return hydrateState(serializeState(sourceState).state);
@@ -1065,7 +1412,7 @@
       renderGame();
     }
 
-    setReplayStatus(`${day}일차 "${preset.label || preset.id}" 재생 중`);
+    setReplayStatus(`${day}턴 "${preset.label || preset.id}" 재생 중`);
     refreshEventReplayEditor();
   }
 
@@ -1103,6 +1450,9 @@
   function refreshStateDisplay(panel) {
     const pre = panel.querySelector("#dev-state-dump");
     if (!pre || typeof state === "undefined") return;
+    const economy = typeof getTodayEconomy === "function"
+      ? getTodayEconomy(state)
+      : null;
 
     panel.querySelectorAll(".dev-day-btn").forEach((btn) => {
       btn.classList.toggle("active", parseInt(btn.dataset.day, 10) === state.day);
@@ -1117,6 +1467,8 @@
       `stamina: ${state.stamina}`,
       `energy: ${state.energy}`,
       `happiness: ${typeof syncHappinessState === "function" ? syncHappinessState(state).value : "-"}`,
+      `market: ${economy ? `${economy.monthLabel} / ${economy.phaseLabel}` : "-"}`,
+      `macro: ${economy?.newsPack?.macro?.title || "-"}`,
       `hasPhone: ${state.hasPhone}`,
       `day1Done: ${state.day1CleanupDone}`,
       `devPreview: ${Boolean(state.devPreviewMode)}`,
@@ -1225,7 +1577,7 @@
       return {
         kind: "trash",
         key: `day${padDay(state.day)}:cleanup:${state.cleaningGame.eventId || "default"}`,
-        label: `${state.day}일차 cleanup`,
+        label: `${state.day}턴 cleanup`,
         itemIds: visibleItems.map((item) => item.id),
         sourceItems: visibleItems.map((item) => ({ id: item.id, image: item.image })),
       };
@@ -2753,6 +3105,7 @@
       if (!editor.drag) {
         refreshPositionEditor();
       }
+      refreshMarketOverviewEditor();
       refreshEventReplayEditor();
       refreshNarrationEditor();
       if (typeof editor.elements.renderLocationButtons === "function") {

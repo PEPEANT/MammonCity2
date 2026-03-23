@@ -60,6 +60,15 @@
 
 ## 설계 아이디어 문서
 
+- [design/city-map-navigation.md](./design/city-map-navigation.md)  
+  바깥 이동을 `지도 버튼 -> 전체 지도 -> 소요시간 확인 카드` 흐름으로 바꾸는 개편 계획 문서.
+
+- [design/consumption.md](./design/consumption.md)  
+  부동산, 자동차, 옷, 휴대폰, 외모, 운동 소비를 `스탯 상승 / 인벤토리 / 소유 자산`과 연결하는 상세 설계 문서.
+
+- [design/city-facilities.md](./design/city-facilities.md)  
+  자동차매장, 부동산 공인중개사, 백화점, 증권거래소 같은 신규 도시 시설과 회사 인수/매각 확장 설계 문서.
+
 - [design/economy.md](./design/economy.md)  
   장기 경제 루프와 수입/지출 구조 설계.
 
@@ -75,8 +84,23 @@
 - [design/job-tracks.md](./design/job-tracks.md)  
   공고 앱을 `단기알바 / 직장지원` 2트랙으로 나누는 최소 설계 문서.
 
+- [design/logic-split-plan.md](./design/logic-split-plan.md)  
+  `logic.js`를 오케스트레이션 파일로 제한하고 월드/배고픔 등 도메인 로직을 시스템 파일로 옮기는 분리 기준 문서.
+
+- [design/action-registry-architecture.md](./design/action-registry-architecture.md)  
+  도메인 경계, typed action schema, 시설/회사/직업 레지스트리, action runner 관계를 먼저 고정하는 구조 문서.
+
+- [design/market-cycle.md](./design/market-cycle.md)  
+  1턴=1개월 기준의 12턴 시장 사이클, 자산 선후행, 뉴스 팩 설계 문서.
+
 - [design/memory-system.md](./design/memory-system.md)  
   장기 기억 확장 아이디어 문서.
+
+- [design/mobility-and-stats-audit.md](./design/mobility-and-stats-audit.md)  
+  이동 시간 차감, 차량 보유 효과, 오토바이/면허 게이트, 상세 스탯 노출 상태를 점검한 문서.
+
+- [design/npc-social-system.md](./design/npc-social-system.md)  
+  NPC 역할, 스폰 안정화, 외모/옷/성형 반응, 연애/행복도, 돌발 이벤트 연결 설계 문서.
 
 - [design/ownership.md](./design/ownership.md)  
   집/차 같은 큰 자산의 소유 구조 문서.
@@ -84,8 +108,14 @@
 - [design/progression.md](./design/progression.md)  
   14일 이상 중기 진행 확장 설계 문서.
 
+- [design/spoon-start.md](./design/spoon-start.md)  
+  새 게임 시작 시 1회만 실행하는 수저 등급 추첨과 초기 자산 차이 설계 문서.
+
 - [design/special-events.md](./design/special-events.md)  
   특수 이벤트와 미니게임 확장 설계 문서.
+
+- [design/system-audit.md](./design/system-audit.md)  
+  현재 구조에서 현실성과 연결감을 깎는 빈칸, 추가 우선순위, 피해야 할 방향을 정리한 점검 문서.
 
 - [design/timeline.md](./design/timeline.md)  
   시간 소비와 하루 스케줄 확장 설계 문서.

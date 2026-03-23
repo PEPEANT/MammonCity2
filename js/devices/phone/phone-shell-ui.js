@@ -141,7 +141,9 @@ function applyPhoneShellUiLegacyStatus(uiRefs, screenState) {
   }
 
   if (uiRefs.phoneDayChip) {
-    uiRefs.phoneDayChip.textContent = `DAY ${String(day).padStart(2, "0")}`;
+    uiRefs.phoneDayChip.textContent = typeof formatTurnBadge === "function"
+      ? formatTurnBadge(day)
+      : `TURN ${String(day).padStart(2, "0")}`;
   }
 
   uiRefs.phonePanel.querySelectorAll(".phone-app-btn[data-phone-app]").forEach((button) => {
@@ -228,7 +230,9 @@ function applyPhoneShellUi(uiRefs, screenState) {
   }
 
   if (uiRefs.phoneStatusSignal) {
-    uiRefs.phoneStatusSignal.textContent = `DAY ${String(day).padStart(2, "0")}`;
+    uiRefs.phoneStatusSignal.textContent = typeof formatTurnBadge === "function"
+      ? formatTurnBadge(day)
+      : `TURN ${String(day).padStart(2, "0")}`;
   }
 
   if (uiRefs.phoneDayChip) {

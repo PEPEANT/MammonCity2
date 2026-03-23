@@ -27,9 +27,13 @@ function getDisInternetLocationLabel(targetState = state) {
 
 function getDisInternetFeedEntries(targetState = state) {
   const locationLabel = getDisInternetLocationLabel(targetState);
+  const marketCycle = typeof getMarketCycleSnapshot === "function"
+    ? getMarketCycleSnapshot(targetState)
+    : null;
   const economy = typeof getTodayEconomy === "function"
     ? getTodayEconomy(targetState)
     : null;
+  const newsPack = economy?.newsPack || {};
   const stockMarket = typeof getStockMarketSnapshot === "function"
     ? getStockMarketSnapshot(targetState)
     : null;
@@ -46,20 +50,20 @@ function getDisInternetFeedEntries(targetState = state) {
   const entries = [
     {
       id: "economy",
-      kicker: "ECONOMY",
-      title: economyHeadline,
-      body: `${locationLabel} 기준 한 끼는 약 ${formatCash(mealPrice)}, 생활물가 지수는 ${economy ? economy.priceIndex.toFixed(2) : "1.00"}입니다.`,
+      kicker: economy?.monthLabel ? `${economy.monthLabel} MACRO` : "ECONOMY",
+      title: newsPack.macro?.title || economyHeadline,
+      body: `${newsPack.macro?.body || ""} ${locationLabel} 기준 한 끼는 약 ${formatCash(mealPrice)}, 생활물가 지수는 ${economy ? economy.priceIndex.toFixed(2) : "1.00"}입니다.`.trim(),
       tone: economy && economy.priceChangePercent > 0 ? "accent" : "success",
-      tags: [locationLabel, "경제", "물가", "생활비", "식비"],
+      tags: [locationLabel, "경제", "물가", "생활비", "식비", economy?.phaseLabel || "시장"],
     },
     stockMarket
       ? {
           id: "market",
           kicker: "MARKET",
-          title: `오늘 증시 ${stockMarket.marketTrend}`,
-          body: `시장 변동은 ${stockMarket.movementText}, 예상 수익권은 ${stockMarket.successChanceText} 수준입니다.`,
+          title: newsPack.stocks?.title || `오늘 증시 ${stockMarket.marketTrend}`,
+          body: `${newsPack.stocks?.body || ""} 시장 변동은 ${stockMarket.movementText}, 예상 수익권은 ${stockMarket.successChanceText} 수준입니다.`.trim(),
           tone: stockMarket.marketChangePercent >= 0 ? "success" : "fail",
-          tags: ["증시", "주식", stockMarket.marketTrend, stockMarket.movementText],
+          tags: ["증시", "주식", stockMarket.marketTrend, stockMarket.movementText, economy?.phaseLabel || "시장"],
         }
       : {
           id: "market",
@@ -73,10 +77,10 @@ function getDisInternetFeedEntries(targetState = state) {
       ? {
           id: "exchange",
           kicker: "FX",
-          title: "환율 체감 지표",
-          body: `환율 체감지수 ${economy.exchangeIndex}, 기준 변동 ${economy.exchangeChange > 0 ? "+" : ""}${economy.exchangeChange}p입니다.`,
+          title: newsPack.safe?.title || "환율 체감 지표",
+          body: `${newsPack.safe?.body || ""} 환율 체감지수 ${economy.exchangeIndex}, 기준 변동 ${economy.exchangeChange > 0 ? "+" : ""}${economy.exchangeChange}p입니다.`.trim(),
           tone: "accent",
-          tags: ["환율", "외환", "체감지표", String(economy.exchangeIndex)],
+          tags: ["환율", "외환", "체감지표", String(economy.exchangeIndex), economy?.safeAssetDirection?.label || "방어"],
         }
       : {
           id: "exchange",
@@ -89,10 +93,10 @@ function getDisInternetFeedEntries(targetState = state) {
     {
       id: "local",
       kicker: "LOCAL",
-      title: `${locationLabel} 실시간`,
-      body: `DAY ${targetState.day} 현재 위치 기준으로 생활 정보와 모집 공고가 빠르게 묶여 올라오고 있습니다.`,
+      title: newsPack.local?.title || `${locationLabel} 실시간`,
+      body: `${newsPack.local?.body || ""} ${marketCycle?.next ? `다음 달 ${marketCycle.next.monthLabel}은 ${marketCycle.next.phaseLabel} 쪽으로 기울 전망입니다.` : `${typeof formatTurnLabel === "function" ? formatTurnLabel(targetState.day) : `${targetState.day}턴`} 현재 위치 기준으로 생활 정보와 모집 공고가 빠르게 묶여 올라오고 있습니다.`}`.trim(),
       tone: "accent",
-      tags: [locationLabel, "실시간", "동네", "공고"],
+      tags: [locationLabel, "실시간", "동네", "공고", economy?.monthLabel || "현재"],
     },
   ];
 
@@ -100,13 +104,14 @@ function getDisInternetFeedEntries(targetState = state) {
     entries.unshift({
       id: "meme",
       kicker: featuredMemeCoin.eventKicker || "MEME",
-      title: featuredMemeCoin.event.headline,
-      body: `${featuredMemeCoin.label} ${featuredMemeCoin.movementText} · ${featuredMemeCoin.event.body}`,
+      title: newsPack.crypto?.title || featuredMemeCoin.event.headline,
+      body: `${newsPack.crypto?.body || featuredMemeCoin.event.body} ${featuredMemeCoin.label} 기준 예상 흐름은 ${featuredMemeCoin.movementText}입니다.`,
       tone: featuredMemeCoin.direction === "up" ? "success" : "fail",
       tags: [
         featuredMemeCoin.label,
         "밈코인",
         featuredMemeCoin.eventKicker || "MEME",
+        economy?.phaseLabel || "시장",
         ...(featuredMemeCoin.topics || []),
       ],
     });
@@ -178,6 +183,13 @@ function getDisInternetSearchResults(query = "", targetState = state) {
       ].join(" ").toLowerCase();
       return tokens.every((token) => haystack.includes(token));
     });
+
+  const marketplaceEntry = typeof buildDiggleRouteSearchEntry === "function"
+    ? buildDiggleRouteSearchEntry(normalizedQuery, targetState)
+    : null;
+  if (marketplaceEntry) {
+    results.unshift(marketplaceEntry);
+  }
 
   if (isDisGamblingQuery(normalizedQuery)) {
     results.unshift(createDisIllegalLinkEntry(normalizedQuery));
@@ -357,6 +369,43 @@ function buildDiggleStatusMarkup(query = "", targetState = state) {
   `;
 }
 
+function getDiggleSearchHistoryEntries() {
+  return typeof getDiggleHistoryRouteEntries === "function"
+    ? getDiggleHistoryRouteEntries()
+    : [
+        {
+          label: "도박",
+          route: DIS_GAMBLING_ROUTES.gamble,
+        },
+        {
+          label: "뉴스",
+          route: "news/home",
+        },
+      ];
+}
+
+function buildDiggleSearchHistoryMarkup() {
+  const historyEntries = getDiggleSearchHistoryEntries();
+  if (!historyEntries.length) {
+    return "";
+  }
+
+  return `
+    <section class="diggle-history-box" aria-label="검색 기록">
+      <div class="diggle-history-header">
+        <span class="diggle-history-title">검색 기록</span>
+      </div>
+      <div class="diggle-history-list">
+        ${historyEntries.map((entry) => buildPhoneRouteButtonMarkup({
+          route: entry.route,
+          label: entry.label,
+          className: "diggle-history-chip",
+        })).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function buildDisSearchScreenMarkup({ stageMode = false, targetState = state } = {}) {
   const currentQuery = normalizeDisSearchQuery(targetState.disSearchQuery || "");
 
@@ -398,14 +447,10 @@ function buildDisSearchScreenMarkup({ stageMode = false, targetState = state } =
             label: "Diggle 검색",
             className: "diggle-action-btn",
           })}
-          ${buildPhoneAppActionButtonMarkup({
-            action: "refresh-dis-feed",
-            label: "운이 좋은 날",
-            className: "diggle-action-btn is-secondary",
-          })}
         </div>
 
         ${buildDiggleStatusMarkup(currentQuery, targetState)}
+        ${buildDiggleSearchHistoryMarkup()}
       </div>
 
       <div class="diggle-footer">

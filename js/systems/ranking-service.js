@@ -15,7 +15,7 @@ function isFirebaseReady() {
 }
 
 // 랭킹 제출
-async function submitRanking({ name, money, rank, job }) {
+async function submitRanking({ name, money, rank, job, spoon, spoonId }) {
   if (!isFirebaseReady()) {
     console.warn("[ranking] Firebase 미설정 — 제출 건너뜀");
     return null;
@@ -28,6 +28,8 @@ async function submitRanking({ name, money, rank, job }) {
       money: money || 0,
       rank: rank || "D",
       job: job || "무직",
+      spoon: spoon || "수저 미정",
+      spoonId: spoonId || "",
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
     return docRef.id;

@@ -823,8 +823,8 @@ const DAY01_WORLD_MCDONALDS_BACKGROUND = {
 
 const DAY01_WORLD_LOCATIONS = {
   "apt-alley": {
-    label: "부모님 아파트 집앞 골목",
-    speaker: "부모님 아파트 집앞 골목",
+    label: "집앞골목",
+    speaker: "집앞골목",
     title: "골목 바람이 아직 잠에서 덜 깬다",
     lines: [
       "익숙한 담배 냄새와 편의점 불빛이 뒤섞인 동네 입구다.",
@@ -1523,3 +1523,184 @@ DAY01_WORLD.initialUnlockedLocations = [
   "convenience-store",
   "mcdonalds",
 ];
+
+const DAY01_CITY_MAP_NODE_META = {
+  "apt-alley": {
+    x: 14,
+    y: 76,
+    icon: "🏠",
+    shortLabel: "집앞골목",
+    note: "하루 시작과 귀가가 이어지는 주거 구역.",
+    zoneTone: "residential",
+    order: 10,
+  },
+  "bus-stop": {
+    x: 26,
+    y: 67,
+    icon: "🚌",
+    shortLabel: "버스정류장",
+    note: "주거 구역에서 다른 곳으로 빠져나가는 교통 거점.",
+    zoneTone: "residential",
+    order: 20,
+  },
+  "study-hub": {
+    x: 31,
+    y: 25,
+    icon: "📍",
+    shortLabel: "학습구역입구",
+    note: "도서관, 시험장, 대학가로 이어지는 학습 구역 허브.",
+    zoneTone: "study",
+    order: 30,
+  },
+  library: {
+    x: 17,
+    y: 18,
+    icon: "📚",
+    shortLabel: "도서관",
+    note: "사무 준비와 공부 루트의 기본 거점.",
+    zoneTone: "study",
+    order: 40,
+  },
+  "exam-center": {
+    x: 31,
+    y: 10,
+    icon: "📝",
+    shortLabel: "시험장",
+    note: "자격증 시험을 바로 접수하고 치를 수 있다.",
+    zoneTone: "study",
+    order: 50,
+  },
+  "university-district": {
+    x: 48,
+    y: 16,
+    icon: "🎓",
+    shortLabel: "대학가",
+    note: "취업지원센터와 학생 네트워크가 엮이는 구역.",
+    zoneTone: "study",
+    order: 60,
+  },
+  "campus-park": {
+    x: 60,
+    y: 9,
+    icon: "🌿",
+    shortLabel: "캠퍼스공원",
+    note: "학생과 선배, 버스커를 만날 수 있는 쉼터.",
+    zoneTone: "study",
+    order: 70,
+  },
+  "city-crossroads": {
+    x: 47,
+    y: 53,
+    icon: "✦",
+    shortLabel: "배금사거리",
+    note: "상업 구역의 중심 허브. 여러 장소가 여기서 갈라진다.",
+    zoneTone: "commercial",
+    order: 80,
+  },
+  "station-front": {
+    x: 69,
+    y: 30,
+    icon: "🚉",
+    shortLabel: "배금역앞",
+    note: "알바 공고와 사람 흐름이 몰리는 역전 광장.",
+    zoneTone: "commercial",
+    order: 90,
+  },
+  "station-interior": {
+    x: 81,
+    y: 24,
+    icon: "🚈",
+    shortLabel: "배금역내부",
+    note: "철도 플랫폼으로 들어가기 직전의 내부 공간.",
+    zoneTone: "commercial",
+    order: 100,
+  },
+  downtown: {
+    x: 69,
+    y: 52,
+    icon: "🌃",
+    shortLabel: "다운타운",
+    note: "배금시 중심 상업 구역.",
+    zoneTone: "commercial",
+    order: 110,
+  },
+  "baegeum-hospital": {
+    x: 58,
+    y: 74,
+    icon: "🏥",
+    shortLabel: "배금병원",
+    note: "성형 상담과 병원 이벤트가 이어지는 장소.",
+    zoneTone: "commercial",
+    order: 120,
+  },
+  "convenience-store": {
+    x: 36,
+    y: 39,
+    icon: "🏪",
+    shortLabel: "편의점",
+    note: "간단한 소비와 회복 아이템을 살 수 있다.",
+    zoneTone: "commercial",
+    order: 130,
+  },
+  mcdonalds: {
+    x: 56,
+    y: 38,
+    icon: "🍔",
+    shortLabel: "맥도날드",
+    note: "세트 메뉴와 커피를 바로 주문할 수 있는 식사 거점.",
+    zoneTone: "commercial",
+    order: 140,
+  },
+};
+
+Object.entries(DAY01_CITY_MAP_NODE_META).forEach(([locationId, mapNode]) => {
+  if (DAY01_WORLD_LOCATIONS[locationId]) {
+    DAY01_WORLD_LOCATIONS[locationId].mapNode = { ...mapNode };
+  }
+});
+
+[
+  "bus-stop-map",
+  "bus-ride",
+  "walk-travel",
+  "station-seoul-route",
+].forEach((locationId) => {
+  if (DAY01_WORLD_LOCATIONS[locationId]) {
+    DAY01_WORLD_LOCATIONS[locationId].cityMapHidden = true;
+  }
+});
+
+DAY01_WORLD_LOCATIONS["bus-stop-map"].cityMapAnchorId = "bus-stop";
+DAY01_WORLD_LOCATIONS["bus-ride"].cityMapHidden = true;
+DAY01_WORLD_LOCATIONS["walk-travel"].cityMapHidden = true;
+DAY01_WORLD_LOCATIONS["station-seoul-route"].cityMapAnchorId = "station-interior";
+
+DAY01_WORLD.cityMap = {
+  title: "배금시 이동 지도",
+  subtitle: "이동은 지도에서 고르고, 도착한 장소에서 할 수 있는 행동만 버튼으로 남긴다.",
+  zones: [
+    { id: "study", label: "학습 구역", tone: "study", x: 6, y: 4, width: 60, height: 30 },
+    { id: "commercial", label: "상업 구역", tone: "commercial", x: 27, y: 25, width: 63, height: 57 },
+    { id: "residential", label: "주거 구역", tone: "residential", x: 4, y: 58, width: 34, height: 30 },
+  ],
+  links: [
+    { from: "apt-alley", to: "bus-stop", minutes: 8, mode: "walk" },
+    { from: "apt-alley", to: "city-crossroads", minutes: 18, mode: "walk" },
+    { from: "bus-stop", to: "city-crossroads", minutes: 14, mode: "walk" },
+    { from: "bus-stop", to: "study-hub", minutes: 22, mode: "bus" },
+    { from: "bus-stop", to: "downtown", minutes: 10, mode: "bus" },
+    { from: "bus-stop", to: "station-front", minutes: 12, mode: "bus" },
+    { from: "bus-stop", to: "baegeum-hospital", minutes: 12, mode: "bus" },
+    { from: "study-hub", to: "library", minutes: 6, mode: "walk" },
+    { from: "study-hub", to: "exam-center", minutes: 6, mode: "walk" },
+    { from: "study-hub", to: "university-district", minutes: 9, mode: "walk" },
+    { from: "study-hub", to: "campus-park", minutes: 11, mode: "walk" },
+    { from: "university-district", to: "campus-park", minutes: 6, mode: "walk" },
+    { from: "city-crossroads", to: "station-front", minutes: 10, mode: "walk" },
+    { from: "city-crossroads", to: "downtown", minutes: 9, mode: "walk" },
+    { from: "city-crossroads", to: "baegeum-hospital", minutes: 9, mode: "walk" },
+    { from: "city-crossroads", to: "convenience-store", minutes: 4, mode: "walk" },
+    { from: "city-crossroads", to: "mcdonalds", minutes: 5, mode: "walk" },
+    { from: "station-front", to: "station-interior", minutes: 4, mode: "walk" },
+  ],
+};

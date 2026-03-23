@@ -102,6 +102,14 @@ function cacheUi() {
   ui.nameInput = document.getElementById("name-input");
   ui.continueButton = document.getElementById("continue-button");
   ui.startButton = document.getElementById("start-button");
+  ui.startOriginPanel = document.getElementById("start-origin-panel");
+  ui.startOriginMachine = document.getElementById("start-origin-machine");
+  ui.startOriginEmblem = document.getElementById("start-origin-emblem");
+  ui.startOriginSpoon = document.getElementById("start-origin-spoon");
+  ui.startOriginKicker = document.getElementById("start-origin-kicker");
+  ui.startOriginName = document.getElementById("start-origin-name");
+  ui.startOriginDesc = document.getElementById("start-origin-desc");
+  ui.startOriginMeta = document.getElementById("start-origin-meta");
   ui.rankingSubtitle = document.querySelector(".ranking-subtitle");
   ui.phonePanel = document.getElementById("phone-panel");
   ui.phoneStage = document.getElementById("phone-stage");
@@ -233,12 +241,12 @@ function setupStartScreen() {
   const sub = ui.startCard.querySelector(".start-sub");
   const body = ui.startCard.querySelector(".start-body");
   if (kicker) {
-    kicker.textContent = `현재 ${MAX_DAYS}일 프로토타입`;
+    kicker.textContent = `현재 ${MAX_DAYS}턴 프로토타입`;
   }
   title.textContent = "\ubc30\uae08\ub3c4\uc2dc";
-  sub.textContent = "\ud3f0 \uacf5\uace0\ub97c \ub4a4\uc9c0\uace0, \ub2e4\uc74c\ub0a0 \ucd9c\uadfc\uc744 \uc608\uc57d\ud558\uace0, \ubc84\ud2f4 \ud558\ub8e8\ub97c \ud604\uae08\uc73c\ub85c \ubc14\uafb8\ub294 \ub3c4\uc2dc \uc0dd\uc874 \uc2dc\ubbac\ub808\uc774\uc158.";
+  sub.textContent = "\ud3f0 \uacf5\uace0\ub97c \ub4a4\uc9c0\uace0, \ub2e4\uc74c \ud134 \ucd9c\uadfc\uc744 \uc608\uc57d\ud558\uace0, \ubc84\ud2f4 \ud558\ub8e8\ub97c \ud604\uae08\uc73c\ub85c \ubc14\uafb8\ub294 \ub3c4\uc2dc \uc0dd\uc874 \uc2dc\ubbac\ub808\uc774\uc158.";
   if (body) {
-    body.textContent = `1\uc77c\ucc28 \ud504\ub864\ub85c\uadf8\uc640 \ubc29\uccad\uc18c, \uc2a4\ub9c8\ud2b8\ud3f0 \uacf5\uace0 \uc9c0\uc6d0, \uc608\uc57d \ucd9c\uadfc, \ubc14\uae65 \uc774\ub3d9, \uae30\uc5b5 \ub85c\uadf8, ${MAX_DAYS}\uc77c \uacb0\uc0b0 \ub7ad\ud0b9\uae4c\uc9c0 \uc774\uc5b4\uc9d1\ub2c8\ub2e4.`;
+    body.textContent = `1\ud134 \ud504\ub864\ub85c\uadf8\uc640 \ubc29\uccad\uc18c, \uc2a4\ub9c8\ud2b8\ud3f0 \uacf5\uace0 \uc9c0\uc6d0, \uc608\uc57d \ucd9c\uadfc, \ubc14\uae65 \uc774\ub3d9, \uae30\uc5b5 \ub85c\uadf8, ${MAX_DAYS}\ud134 \uacb0\uc0b0 \ub7ad\ud0b9\uae4c\uc9c0 \uc774\uc5b4\uc9d1\ub2c8\ub2e4.`;
   }
   ui.nameInput.placeholder = "\ub2c9\ub124\uc784";
   ui.nameInput.autocomplete = "off";
@@ -248,7 +256,7 @@ function setupStartScreen() {
     ui.continueButton.hidden = true;
   }
   if (ui.rankingSubtitle) {
-    ui.rankingSubtitle.textContent = `${MAX_DAYS}\uc77c \uacb0\uc0b0 \u00b7 \uc804\uad6d \ub7ad\ud0b9`;
+    ui.rankingSubtitle.textContent = `${MAX_DAYS}\ud134 \uacb0\uc0b0 \u00b7 \uc804\uad6d \ub7ad\ud0b9`;
   }
 }
 
@@ -260,6 +268,123 @@ function setStartScreenSaveState(_hasSave = false) {
 
   if (ui.startButton) {
     ui.startButton.textContent = _hasSave ? "\uc0c8\ub85c \uc2dc\uc791" : "\uc2dc\uc791\ud558\uae30";
+  }
+}
+
+function formatStartScreenCash(amount = 0) {
+  return `${Math.max(0, Math.round(Number(amount) || 0)).toLocaleString("ko-KR")}원`;
+}
+
+function renderStartScreenDrawState(hasSave = false) {
+  const drawState = typeof getStartScreenDrawState === "function"
+    ? getStartScreenDrawState()
+    : { phase: "idle", previewTierId: "", resultTierId: "" };
+  const activeTierId = drawState.resultTierId || drawState.previewTierId || "";
+  const tier = typeof getSpoonStartTier === "function"
+    ? getSpoonStartTier(activeTierId)
+    : null;
+  const theme = typeof getSpoonStartVisualTheme === "function"
+    ? getSpoonStartVisualTheme(activeTierId)
+    : {
+        accent: "#94a3b8",
+        accentSoft: "rgba(148, 163, 184, 0.14)",
+        glow: "rgba(148, 163, 184, 0.22)",
+        screenOverlay: "linear-gradient(180deg, rgba(22, 25, 35, 0.22) 0%, rgba(8, 10, 18, 0.62) 100%)",
+      };
+
+  if (ui.startScreen) {
+    ui.startScreen.dataset.phase = drawState.phase || "idle";
+    ui.startScreen.dataset.tier = tier?.id || "";
+    ui.startScreen.style.setProperty("--start-origin-accent", theme.accent || "#94a3b8");
+    ui.startScreen.style.setProperty("--start-origin-accent-soft", theme.accentSoft || "rgba(148, 163, 184, 0.14)");
+    ui.startScreen.style.setProperty("--start-origin-glow", theme.glow || "rgba(148, 163, 184, 0.22)");
+    ui.startScreen.style.setProperty("--start-origin-screen-overlay", theme.screenOverlay || "linear-gradient(180deg, rgba(22, 25, 35, 0.22) 0%, rgba(8, 10, 18, 0.62) 100%)");
+  }
+
+  if (ui.startCard) {
+    ui.startCard.dataset.phase = drawState.phase || "idle";
+    ui.startCard.dataset.tier = tier?.id || "";
+  }
+
+  if (ui.startOriginPanel) {
+    ui.startOriginPanel.dataset.phase = drawState.phase || "idle";
+    ui.startOriginPanel.dataset.tier = tier?.id || "";
+  }
+
+  if (ui.startOriginMachine) {
+    ui.startOriginMachine.dataset.phase = drawState.phase || "idle";
+    ui.startOriginMachine.dataset.tier = tier?.id || "";
+  }
+
+  if (ui.startOriginEmblem) {
+    ui.startOriginEmblem.textContent = drawState.phase === "idle"
+      ? "?"
+      : (tier?.emblem || "?");
+  }
+
+  if (ui.startOriginSpoon) {
+    ui.startOriginSpoon.textContent = drawState.phase === "idle" ? "🥄" : "🥄";
+  }
+
+  if (ui.startOriginKicker) {
+    ui.startOriginKicker.textContent = drawState.phase === "result"
+      ? (tier?.bracket || "출생 패키지")
+      : (drawState.phase === "drawing" ? "출생 결정 중" : "출생 패키지");
+  }
+
+  if (ui.startOriginName) {
+    ui.startOriginName.textContent = drawState.phase === "idle"
+      ? "수저를 뽑아 시작을 정한다"
+      : (tier?.name || "결정 중");
+  }
+
+  if (ui.startOriginDesc) {
+    if (drawState.phase === "drawing") {
+      ui.startOriginDesc.textContent = "수저를 섞는 중입니다. 이번 출발은 한 번만 정해집니다.";
+    } else if (drawState.phase === "result" && tier) {
+      ui.startOriginDesc.textContent = tier.summary || "출생 패키지가 확정됐습니다.";
+    } else {
+      ui.startOriginDesc.textContent = "새 게임마다 한 번만 정합니다. 결과에 따라 초기 현금과 첫 방 톤이 달라집니다.";
+    }
+  }
+
+  if (ui.startOriginMeta) {
+    if (drawState.phase === "result" && tier) {
+      ui.startOriginMeta.innerHTML = `
+        <span class="start-origin-chip">초기 현금 ${escapeHtml(formatStartScreenCash(tier.initialCash))}</span>
+        <span class="start-origin-chip">행복도 ${escapeHtml(String(tier.startHappiness))}</span>
+        <span class="start-origin-chip">첫 톤 ${escapeHtml(tier.toneLabel || tier.name)}</span>
+      `;
+    } else if (drawState.phase === "drawing" && tier) {
+      ui.startOriginMeta.innerHTML = `
+        <span class="start-origin-chip">확률 셔플 중</span>
+        <span class="start-origin-chip">${escapeHtml(tier.name)}</span>
+      `;
+    } else {
+      ui.startOriginMeta.innerHTML = `
+        <span class="start-origin-chip">금 1%</span>
+        <span class="start-origin-chip">은 4%</span>
+        <span class="start-origin-chip">동 15%</span>
+        <span class="start-origin-chip">쇠 30%</span>
+        <span class="start-origin-chip">흙 50%</span>
+      `;
+    }
+  }
+
+  if (ui.startButton) {
+    ui.startButton.disabled = drawState.phase === "drawing";
+    if (drawState.phase === "drawing") {
+      ui.startButton.textContent = "출생 결정 중...";
+    } else if (drawState.phase === "result") {
+      ui.startButton.textContent = "이 출생으로 시작하기";
+    } else {
+      ui.startButton.textContent = hasSave ? "새로 시작 뽑기" : "출생 패키지 뽑기";
+    }
+  }
+
+  if (ui.continueButton) {
+    ui.continueButton.textContent = "이어하기";
+    ui.continueButton.hidden = !hasSave;
   }
 }
 
@@ -404,7 +529,7 @@ function renderPhoneStage(screenState = getPhonePanelState()) {
   ui.phoneStage.innerHTML = `
     <div class="phone-stage-shell ${onHomeRoute ? "is-home-view" : "is-app-view"}">
       <div class="phone-stage-top">
-        <div class="phone-stage-day">DAY ${String(state.day).padStart(2, "0")}</div>
+        <div class="phone-stage-day">${typeof formatTurnBadge === "function" ? formatTurnBadge(state.day) : `TURN ${String(state.day).padStart(2, "0")}`}</div>
         <div class="phone-stage-meta">
           <span class="phone-stage-time">${screenState.phoneTime}</span>
           <span class="phone-stage-signal">${screenState.signalText}</span>
@@ -477,6 +602,7 @@ function formatMoney(amount) {
 
 function showStartScreen(hasSave = false) {
   setStartScreenSaveState(hasSave);
+  renderStartScreenDrawState(hasSave);
   ui.startScreen.classList.remove("is-hidden");
   requestAnimationFrame(() => {
     if (hasSave && ui.continueButton && !ui.continueButton.hidden) {
@@ -818,9 +944,10 @@ function applySceneBackgroundConfig(backgroundConfig = null) {
   const position = backgroundConfig.position || "center";
   const size = backgroundConfig.size || "cover";
   const repeat = backgroundConfig.repeat || "no-repeat";
+  const color = backgroundConfig.color || "";
 
   ui.bg.className = backgroundConfig.className || "custom-location-bg";
-  ui.bg.style.background = `${overlay}, url('${backgroundConfig.image}') ${position} / ${size} ${repeat}`;
+  ui.bg.style.background = `${overlay}, url('${backgroundConfig.image}') ${position} / ${size} ${repeat}${color ? ` ${color}` : ""}`;
   ui.bg.style.transition = "none";
   return true;
 }
@@ -1078,6 +1205,7 @@ function setCharacterPosition(percent, facing = 1) {
 
 function setWorldMode(mode) {
   ui.game.classList.toggle("outside-mode", mode === "outside");
+  ui.game.classList.toggle("interactive-start-mode", mode === "interactive-start");
 }
 
 function setProgressByScene(scene) {
@@ -1110,6 +1238,16 @@ function clearMessage() {
   ui.message.innerHTML = "";
   setTextboxAdvanceState(false);
   syncTextboxContentState();
+}
+
+function setSceneInteractionPrompt(text = "", visible = false) {
+  if (!ui.outsideGoal) {
+    return;
+  }
+
+  const shouldShow = Boolean(visible && text);
+  ui.outsideGoal.textContent = shouldShow ? text : "";
+  ui.outsideGoal.style.display = shouldShow ? "block" : "none";
 }
 
 function hideTrashGame() {
@@ -1539,6 +1677,7 @@ function createChoiceButton({
   earnText,
   onClick,
   uiVariant = "",
+  buttonClassName = "",
   description = "",
   routeIcon = "",
   routeEta = "",
@@ -1548,6 +1687,11 @@ function createChoiceButton({
   const button = document.createElement("button");
   button.type = "button";
   button.className = "choice-btn";
+  if (buttonClassName) {
+    buttonClassName.split(/\s+/).filter(Boolean).forEach((className) => {
+      button.classList.add(className);
+    });
+  }
 
   if (uiVariant === "bus-route") {
     createBusRouteChoiceContent(button, {
@@ -1615,7 +1759,7 @@ function renderNextDayButton() {
   clearChoices();
 
   createChoiceButton({
-    title: state.day >= MAX_DAYS ? "\ucd5c\uc885 \uc815\uc0b0 \ubcf4\uae30" : "\ub2e4\uc74c \ub0a0 \uacf5\uace0 \ubcf4\uae30",
+    title: state.day >= MAX_DAYS ? "\ucd5c\uc885 \uc815\uc0b0 \ubcf4\uae30" : "\ub2e4\uc74c \ud134 \uacf5\uace0 \ubcf4\uae30",
     onClick: goToNextDay,
   });
 }
@@ -1643,14 +1787,53 @@ function showMoneyEffect(amount) {
 function renderPrologueScene() {
   const steps = getActiveStorySteps();
   const step = steps[state.storyStep] || steps[0];
+  const interactiveStart = ["walk-to-exit", "press-exit"].includes(step?.startMode);
 
   setBackgroundByTone("prologue");
-  setWorldMode("prologue");
+  if (step?.background) {
+    const startBackground = typeof getSpoonStartSceneBackground === "function"
+      ? getSpoonStartSceneBackground(step.background, state)
+      : step.background;
+    applySceneBackgroundConfig(startBackground);
+  }
+  setWorldMode(interactiveStart ? "interactive-start" : "prologue");
   setCharacter(step.character);
+
+  if (interactiveStart) {
+    const introState = typeof syncPrologueIntroState === "function"
+      ? syncPrologueIntroState(state)
+      : { playerLeft: Number(step?.player?.startLeft) || 24, facing: 1 };
+    const playerActor = step?.player
+      ? {
+          ...step.player,
+          left: introState.playerLeft,
+          facing: introState.facing,
+        }
+      : null;
+
+    renderActors(playerActor ? [playerActor] : []);
+    setCharacterPosition(introState.playerLeft, introState.facing);
+    setSceneSpeaker(step.speaker || "");
+    renderTags(step.tags || []);
+    clearMessage();
+    clearChoices();
+    setSceneInteractionPrompt("", false);
+    createChoiceButton({
+      title: "밖으로 나가기",
+      onClick: () => {
+        if (typeof enterInteractivePrologueExit === "function") {
+          enterInteractivePrologueExit(state);
+        }
+      },
+    });
+    return;
+  }
+
   renderActors(step.actors || []);
   setCharacterPosition(50, 1);
   setSceneSpeaker(step.speaker);
   renderTags([]);
+  setSceneInteractionPrompt("", false);
   const showChoices = renderMessage(step.title, step.lines, {
     progressKey: buildSceneTextProgressKey(`prologue:${state.storyKey}:${state.storyStep}`, step.title, step.lines),
   });
@@ -1660,7 +1843,7 @@ function renderPrologueScene() {
     return;
   }
 
-  step.options.forEach((option) => {
+  (step.options || []).filter((option) => !option.hidden).forEach((option) => {
     createChoiceButton({
       title: option.title,
       onClick: () => handlePrologueOption(option.action),
@@ -1671,6 +1854,17 @@ function renderPrologueScene() {
 
 function renderRoomScene() {
   setBackgroundByTone("room");
+  if (state.day === 1) {
+    const introStep = typeof getDayStoryData === "function"
+      ? getDayStoryData(state.day)?.introSteps?.[0]
+      : null;
+    if (introStep?.background) {
+      const startBackground = typeof getSpoonStartSceneBackground === "function"
+        ? getSpoonStartSceneBackground(introStep.background, state)
+        : introStep.background;
+      applySceneBackgroundConfig(startBackground);
+    }
+  }
   setWorldMode("room");
   setCharacter("");
   renderActors([]);
@@ -1787,16 +1981,30 @@ function renderOutsideScene() {
   clearChoices();
 
   if (!showChoices) {
+    if (typeof hideCityMapOverlay === "function") {
+      hideCityMapOverlay({ preserveSelection: true });
+    }
     return;
   }
 
-  const activeTerminalTab = typeof getWorldTerminalTab === "function" ? getWorldTerminalTab(state) : "route";
-  const choiceOptions = outsideScene?.map?.variant === "bus-terminal" && activeTerminalTab === "timetable"
-    ? (outsideScene?.timetableOptions || [])
+  const choiceOptions = typeof getOutsideSceneActionOptions === "function"
+    ? getOutsideSceneActionOptions(outsideScene, state)
     : (outsideScene?.options || []);
 
   if (choiceOptions.some((option) => option.uiVariant === "bus-route")) {
     ui.choices.classList.add("is-bus-route");
+  }
+
+  if (typeof canShowCityMapForState === "function" && canShowCityMapForState(state)) {
+    createChoiceButton({
+      title: "지도 보기",
+      buttonClassName: "choice-btn-city-map",
+      onClick: () => {
+        if (typeof openCityMapOverlay === "function") {
+          openCityMapOverlay(state);
+        }
+      },
+    });
   }
 
   choiceOptions.forEach((option) => {
@@ -1811,6 +2019,10 @@ function renderOutsideScene() {
       onClick: () => handleOutsideOption(option),
     });
   });
+
+  if (typeof renderCityMapOverlay === "function") {
+    renderCityMapOverlay(state);
+  }
 }
 
 
@@ -2005,9 +2217,13 @@ function renderEndingScene() {
   setCharacter(summary?.character ?? (isEscapeEnding ? "" : "\u{1F4B0}"));
   setCharacterPosition(50, 1);
   setSceneSpeaker(summary?.speaker || "\uc815\uc0b0\ud45c");
-  renderTags(isEscapeEnding
-    ? (summary?.tags || ["\ub3c4\uc2dc \uc774\ud0c8"])
-    : [`\ub7ad\ud0b9 ${summary.rank.label}`, summary.rank.title]);
+  const endingTags = isEscapeEnding
+    ? [...(summary?.tags || ["\ub3c4\uc2dc \uc774\ud0c8"])]
+    : [`\ub7ad\ud0b9 ${summary.rank.label}`, summary.rank.title];
+  if (summary?.originLabel && !endingTags.includes(summary.originLabel)) {
+    endingTags.push(summary.originLabel);
+  }
+  renderTags(endingTags);
   const endingTitle = summary?.title || `\ucd5c\uc885 \ud604\uae08 ${formatMoney(summary.totalCash)}`;
   const showChoices = renderMessage(endingTitle, summary.lines, {
     progressKey: buildSceneTextProgressKey(
@@ -2046,7 +2262,9 @@ function renderGame() {
   if (state.scene !== "job-minigame") {
     hideJobMiniGame();
   }
-  ui.dayDisplay.textContent = `${state.day}\uc77c\ucc28 / ${totalDays}`;
+  ui.dayDisplay.textContent = typeof formatTurnProgress === "function"
+    ? formatTurnProgress(state.day, totalDays)
+    : `${state.day}/${totalDays}`;
   ui.moneyDisplay.textContent = formatMoney(state.money);
   ui.staminaDisplay.textContent = `${state.stamina}`;
   ui.energyDisplay.textContent = `${state.energy}`;
@@ -2063,8 +2281,13 @@ function renderGame() {
   renderMemoryPanel();
   renderInventoryPanel();
   renderCharacterPanel();
+  setSceneInteractionPrompt("", false);
   if (typeof persistState === "function") {
     persistState();
+  }
+
+  if (state.scene !== "outside" && typeof hideCityMapOverlay === "function") {
+    hideCityMapOverlay({ preserveSelection: false });
   }
 
   if (state.scene === "prologue") {
@@ -2122,6 +2345,8 @@ function renderGame() {
 
 function showRankingScreen(myEntry, allEntries) {
   if (!ui.rankingScreen) return;
+  const mySpoon = escapeHtml(String(myEntry.spoon || "수저 미정"));
+  const mySpoonClass = getRankingSpoonClass(myEntry.spoonId || myEntry.spoon);
 
   // 내 카드 렌더링
   if (ui.rankingMyCard) {
@@ -2131,6 +2356,7 @@ function showRankingScreen(myEntry, allEntries) {
       <div class="ranking-my-stats">
         <span class="ranking-my-money">${formatMoney(myEntry.money)}</span>
         <span class="ranking-my-job">${escapeHtml(myEntry.job)}</span>
+        <span class="ranking-spoon-badge ${mySpoonClass}">${mySpoon}</span>
         <span class="ranking-my-rank ranking-rank--${myEntry.rank.toLowerCase()}">${myEntry.rank}</span>
       </div>
     `;
@@ -2146,11 +2372,18 @@ function showRankingScreen(myEntry, allEntries) {
     ui.rankingList.innerHTML = sorted
       .map((entry, idx) => {
         const me = isMe(entry);
+        const spoonLabel = escapeHtml(String(entry.spoon || "수저 미정"));
+        const spoonClass = getRankingSpoonClass(entry.spoonId || entry.spoon);
         return `<tr class="ranking-row${me ? " ranking-row--me" : ""}">
           <td class="ranking-pos">${idx + 1}</td>
           <td class="ranking-name">${escapeHtml(entry.name || "무명")}${me ? " <span class=\"ranking-me-badge\">나</span>" : ""}</td>
           <td class="ranking-money">${formatMoney(entry.money || 0)}</td>
-          <td class="ranking-job">${escapeHtml(entry.job || "무직")}</td>
+          <td class="ranking-job">
+            <div class="ranking-job-stack">
+              <span class="ranking-job-main">${escapeHtml(entry.job || "무직")}</span>
+              <span class="ranking-spoon-badge ${spoonClass}">${spoonLabel}</span>
+            </div>
+          </td>
           <td class="ranking-rank ranking-rank--${(entry.rank || "d").toLowerCase()}">${entry.rank || "D"}</td>
         </tr>`;
       })
@@ -2216,12 +2449,33 @@ function setupStartScreen() {
 
   ui.nameInput.placeholder = "\ub2c9\ub124\uc784";
   ui.nameInput.autocomplete = "off";
-  ui.startButton.textContent = "\uc2dc\uc791\ud558\uae30";
+  ui.startButton.textContent = "\ucd9c\uc0dd \ud328\ud0a4\uc9c0 \ubf51\uae30";
   if (ui.continueButton) {
     ui.continueButton.textContent = "\uc774\uc5b4\ud558\uae30";
     ui.continueButton.hidden = true;
   }
   if (ui.rankingSubtitle) {
-    ui.rankingSubtitle.textContent = `${MAX_DAYS}\uc77c \uacb0\uc0b0 \u00b7 \uc804\uad6d \ub7ad\ud0b9`;
+    ui.rankingSubtitle.textContent = `${MAX_DAYS}\ud134 \uacb0\uc0b0 \u00b7 \uc804\uad6d \ub7ad\ud0b9`;
   }
+  renderStartScreenDrawState(false);
+}
+
+function getRankingSpoonClass(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "gold" || normalized.includes("금수저")) {
+    return "ranking-spoon-badge--gold";
+  }
+  if (normalized === "silver" || normalized.includes("은수저")) {
+    return "ranking-spoon-badge--silver";
+  }
+  if (normalized === "bronze" || normalized.includes("동수저")) {
+    return "ranking-spoon-badge--bronze";
+  }
+  if (normalized === "steel" || normalized.includes("쇠수저")) {
+    return "ranking-spoon-badge--steel";
+  }
+  if (normalized === "dirt" || normalized.includes("흙수저")) {
+    return "ranking-spoon-badge--dirt";
+  }
+  return "ranking-spoon-badge--unknown";
 }

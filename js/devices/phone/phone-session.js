@@ -6,7 +6,7 @@ const PHONE_APP_ID_ALIASES = {
   store: "playstore",
 };
 
-const PHONE_DEFAULT_INSTALLED_APPS = ["dis", "news", "playstore", "call", "gallery"];
+const PHONE_DEFAULT_INSTALLED_APPS = ["dis", "market", "news", "playstore", "call", "gallery"];
 const PHONE_REMOVED_APP_IDS = new Set(["casino"]);
 
 function normalizePhoneAppId(appId = "") {

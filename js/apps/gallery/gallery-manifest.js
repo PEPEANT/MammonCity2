@@ -3,7 +3,7 @@ function buildGalleryItemsMarkup(targetState = state) {
     ? getCurrentLocationLabel(targetState)
     : "배금시";
   const items = [
-    { title: "DAY 01" },
+    { title: typeof formatTurnBadge === "function" ? formatTurnBadge(1) : "TURN 01" },
     { title: currentLocation },
     { title: "부모님집" },
     { title: "야간 하늘" },

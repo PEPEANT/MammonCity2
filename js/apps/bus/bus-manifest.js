@@ -1,107 +1,211 @@
-function buildBusAppTabMarkup(activeScreen = "home") {
+function getBusCurrentBoardableLocationId(targetState = state) {
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+
+  if (["bus-stop", "bus-stop-map"].includes(currentLocationId)) {
+    return "bus-stop";
+  }
+
+  return currentLocationId;
+}
+
+function canBoardFromBusApp(targetState = state) {
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+  return currentLocationId === "bus-stop" || currentLocationId === "bus-stop-map";
+}
+
+function getBusAppStatusBannerMarkup() {
+  const status = typeof getPhoneAppStatus === "function"
+    ? getPhoneAppStatus("bus")
+    : null;
+
+  if (!status?.title && !status?.body) {
+    return "";
+  }
+
+  const tone = status.tone ? ` is-${escapePhoneAppHtml(status.tone)}` : "";
+  return `
+    <section class="bus-phone-status-banner${tone}">
+      ${status.kicker ? `<div class="bus-phone-status-kicker">${escapePhoneAppHtml(status.kicker)}</div>` : ""}
+      ${status.title ? `<div class="bus-phone-status-title">${escapePhoneAppHtml(status.title)}</div>` : ""}
+      ${status.body ? `<div class="bus-phone-status-body">${escapePhoneAppHtml(status.body)}</div>` : ""}
+    </section>
+  `;
+}
+
+function getBusHeroStatusTone(label = "") {
+  const normalizedLabel = String(label || "").trim();
+
+  if (!normalizedLabel) {
+    return "running";
+  }
+
+  if (normalizedLabel.includes("혼잡")) {
+    return "alert";
+  }
+
+  if (normalizedLabel.includes("가능")) {
+    return "ready";
+  }
+
+  if (normalizedLabel.includes("개편")) {
+    return "notice";
+  }
+
+  return "running";
+}
+
+function getBusStopSummary(stop = {}) {
+  const noteParts = String(stop.note || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (noteParts.length) {
+    return noteParts.join(" · ");
+  }
+
+  return String(stop.badge || "").trim();
+}
+
+function getBusAppHeroValues(targetState = state) {
+  const map = DAY01_WORLD_BUS_MAP || {};
+  const routeStops = Array.isArray(DAY01_WORLD_BUS_ROUTE_STOPS) ? DAY01_WORLD_BUS_ROUTE_STOPS : [];
+  const currentStopId = getBusCurrentBoardableLocationId(targetState);
+  const currentStopIndex = routeStops.findIndex((stop) => stop.id === currentStopId);
+  const nextStop = currentStopIndex >= 0 && currentStopIndex < routeStops.length - 1
+    ? routeStops[currentStopIndex + 1]
+    : (routeStops[1] || routeStops[0] || null);
+  const activeStatus = typeof getCurrentLocationId === "function" && ["bus-stop", "bus-stop-map"].includes(getCurrentLocationId(targetState))
+    ? "탑승 가능"
+    : (map.statusLabel || "운행중");
+
+  return {
+    routeTitle: map.routeTitle || "배금 100번",
+    routeSubtitle: map.routeSubtitle || "배금시외버스터미널 ↔ 배금역",
+    serviceLabel: map.serviceLabel || "간선버스",
+    statusLabel: activeStatus,
+    statusTone: getBusHeroStatusTone(activeStatus),
+    nextStopLabel: nextStop?.label || map.nextStopLabel || "다음 정류장",
+    intervalLabel: map.intervalLabel || "10~15분",
+  };
+}
+
+function buildBusBottomTabsMarkup(activeScreen = "home") {
   const activeTab = activeScreen === "timetable" ? "timetable" : "home";
   return `
-    <div class="phone-app-tab-row bus-phone-tab-row" role="tablist" aria-label="배금버스 탭">
+    <div class="bus-phone-bottom-nav" role="tablist" aria-label="배금버스 탭">
       ${buildPhoneRouteButtonMarkup({
         route: "bus/home",
         label: "노선도",
-        className: `phone-app-tab${activeTab === "home" ? " is-active" : ""}`,
+        className: `bus-phone-bottom-tab${activeTab === "home" ? " is-active" : ""}`,
       })}
       ${buildPhoneRouteButtonMarkup({
         route: "bus/timetable",
-        label: "터미널 시간표",
-        className: `phone-app-tab${activeTab === "timetable" ? " is-active" : ""}`,
+        label: "시간표",
+        className: `bus-phone-bottom-tab${activeTab === "timetable" ? " is-active" : ""}`,
       })}
     </div>
   `;
 }
 
-function buildBusRouteCardsMarkup(targetState = state) {
-  const currentLocationId = typeof getCurrentLocationId === "function"
-    ? getCurrentLocationId(targetState)
-    : "";
-  const currentLocationLabel = typeof getCurrentLocationLabel === "function"
-    ? getCurrentLocationLabel(targetState)
-    : "배금시";
-  const canBoard = currentLocationId === "bus-stop" || currentLocationId === "bus-stop-map";
-  const routeStops = Array.isArray(DAY01_WORLD_BUS_ROUTE_STOPS)
-    ? DAY01_WORLD_BUS_ROUTE_STOPS
-    : [];
+function buildBusRouteScreenMarkup({ stageMode = false } = {}, targetState = state) {
+  const hero = getBusAppHeroValues(targetState);
+  const routeStops = Array.isArray(DAY01_WORLD_BUS_ROUTE_STOPS) ? DAY01_WORLD_BUS_ROUTE_STOPS : [];
+  const currentStopId = getBusCurrentBoardableLocationId(targetState);
+  const canBoard = canBoardFromBusApp(targetState);
+  const currentStopIndex = routeStops.findIndex((stop) => stop.id === currentStopId);
 
-  const summaryCard = buildPhoneAppCardMarkup({
-    title: canBoard ? "바로 탑승 가능" : "조회만 가능",
-    body: canBoard
-      ? "목적지 선택"
-      : "터미널에서 탑승",
-    tone: canBoard ? "accent" : "",
-  });
-
-  const routeCards = routeStops.map((stop) => {
-    const isCurrentStop = stop.id === "bus-stop";
-    const actionLabel = isCurrentStop
-      ? "현재 정차"
-      : canBoard
-        ? "탑승"
-        : "터미널에서 탑승";
+  const stopMarkup = routeStops.map((stop, index) => {
+    const isCurrent = stop.id === currentStopId;
+    const isMajor = stop.type === "major";
+    const isPassed = currentStopIndex >= 0 && index < currentStopIndex;
+    const isNext = currentStopIndex >= 0 && index === currentStopIndex + 1;
+    const canRideHere = canBoard && !isCurrent;
+    const actionMarkup = canRideHere
+      ? buildPhoneAppActionButtonMarkup({
+          action: "bus-ride-to-stop",
+          label: "탑승",
+          data: { "location-id": stop.id },
+          className: "bus-phone-stop-action",
+        })
+      : (isCurrent
+        ? '<span class="bus-phone-stop-pill is-current">현재</span>'
+        : `<span class="bus-phone-stop-pill">${escapePhoneAppHtml(canBoard ? "도착 예정" : "조회")}</span>`);
 
     return `
-      <section class="phone-app-card bus-phone-route-card${stop.type === "major" ? " is-major" : ""}">
-        <div class="bus-phone-stop-row">
-          <div class="bus-phone-stop-copy">
-            <div class="bus-phone-stop-title-row">
-              <span class="bus-phone-stop-icon">${escapePhoneAppHtml(stop.emoji || "🚌")}</span>
-              <span class="bus-phone-stop-title">${escapePhoneAppHtml(stop.label || stop.id || "")}</span>
-              ${stop.badge ? `<span class="bus-phone-stop-badge">${escapePhoneAppHtml(stop.badge)}</span>` : ""}
+      <article class="bus-phone-stop-item${isMajor ? " is-major" : ""}${isCurrent ? " is-current" : ""}${isPassed ? " is-passed" : ""}${isNext ? " is-next" : ""}">
+        <div class="bus-phone-stop-rail" aria-hidden="true">
+          <span class="bus-phone-stop-dot"></span>
+        </div>
+        <div class="bus-phone-stop-main">
+          <div class="bus-phone-stop-head">
+            <div class="bus-phone-stop-copy">
+              <div class="bus-phone-stop-title-line">
+                <span class="bus-phone-stop-name">${escapePhoneAppHtml(stop.label || stop.id || "")}</span>
+                ${stop.emoji ? `<span class="bus-phone-stop-emoji" aria-hidden="true">${escapePhoneAppHtml(stop.emoji)}</span>` : ""}
+              </div>
+              <div class="bus-phone-stop-desc">${escapePhoneAppHtml(getBusStopSummary(stop))}</div>
             </div>
-            <div class="bus-phone-stop-note">${escapePhoneAppHtml(stop.note || "")}</div>
+            <div class="bus-phone-stop-side">
+              <span class="bus-phone-stop-eta">${escapePhoneAppHtml(stop.eta || "")}</span>
+              ${actionMarkup}
+            </div>
           </div>
-          <span class="bus-phone-stop-eta">${escapePhoneAppHtml(stop.eta || "")}</span>
         </div>
-        <div class="phone-app-card-footer">
-          <div class="phone-app-card-footer-copy">배금 100번 · ${escapePhoneAppHtml(stop.type === "major" ? "주요 정차" : "일반 정차")}</div>
-          ${buildPhoneAppActionButtonMarkup({
-            action: "bus-ride-to-stop",
-            label: actionLabel,
-            disabled: isCurrentStop || !canBoard,
-            data: { "location-id": stop.id },
-            className: "phone-job-apply bus-phone-cta",
-          })}
-        </div>
-      </section>
+      </article>
     `;
   }).join("");
 
-  return `${summaryCard}${routeCards}`;
-}
-
-function buildBusTimetableCardsMarkup(targetState = state) {
-  const currentLocationId = typeof getCurrentLocationId === "function"
-    ? getCurrentLocationId(targetState)
-    : "";
-  const currentLocationLabel = typeof getCurrentLocationLabel === "function"
-    ? getCurrentLocationLabel(targetState)
-    : "배금시";
-  const canBoard = currentLocationId === "bus-stop" || currentLocationId === "bus-stop-map";
-  const timetableEntries = Array.isArray(DAY01_WORLD_TERMINAL_SCHEDULE)
-    ? DAY01_WORLD_TERMINAL_SCHEDULE
-    : [];
-
-  const introCard = buildPhoneAppCardMarkup({
-    title: canBoard ? "고속버스 탑승 가능" : "시간표 조회",
-    body: canBoard
-      ? "탑승 시 도시 이탈"
-      : "터미널에서 탑승",
-    tone: canBoard ? "accent" : "",
-  });
-  const previewCard = `
-    <section class="phone-app-card bus-phone-preview-card">
-      <div class="bus-phone-preview-kicker">EXPRESS EXIT</div>
-      <div class="bus-phone-preview-title">메트로폴리스행</div>
-      <div class="bus-phone-preview-body">탑승 시 엔딩</div>
+  return `
+    <section class="bus-phone-shell is-route">
+      <div class="bus-phone-top bus-phone-top-route">
+        <div class="bus-phone-hero">
+          <div class="bus-phone-hero-head">
+            <div>
+              <div class="bus-phone-hero-badges">
+                <span class="bus-phone-hero-badge">${escapePhoneAppHtml(hero.serviceLabel)}</span>
+                <span class="bus-phone-hero-badge is-status is-${escapePhoneAppHtml(hero.statusTone)}">${escapePhoneAppHtml(hero.statusLabel)}</span>
+              </div>
+              <h1 class="bus-phone-hero-title">${escapePhoneAppHtml(hero.routeTitle)}</h1>
+              <p class="bus-phone-hero-subtitle">${escapePhoneAppHtml(hero.routeSubtitle)}</p>
+            </div>
+            ${!stageMode ? '<button class="bus-phone-refresh-btn" type="button" data-phone-action="close-phone-view" aria-label="홈">홈</button>' : ""}
+          </div>
+          <div class="bus-phone-hero-stats">
+            <div class="bus-phone-hero-stat">
+              <span class="bus-phone-hero-stat-label">다음 정류장</span>
+              <strong>${escapePhoneAppHtml(hero.nextStopLabel)}</strong>
+            </div>
+            <div class="bus-phone-hero-stat">
+              <span class="bus-phone-hero-stat-label">배차 간격</span>
+              <strong>${escapePhoneAppHtml(hero.intervalLabel)}</strong>
+            </div>
+          </div>
+        </div>
+        ${getBusAppStatusBannerMarkup()}
+      </div>
+      <div class="bus-phone-body">
+        <div class="bus-phone-route-list">
+          ${stopMarkup}
+        </div>
+      </div>
+      ${buildBusBottomTabsMarkup("home")}
     </section>
   `;
+}
 
-  const scheduleCards = timetableEntries.map((entry) => {
+function buildBusTimetableScreenMarkup({ stageMode = false } = {}, targetState = state) {
+  const terminalName = DAY01_WORLD_BUS_MAP?.terminalName || "배금시외버스터미널";
+  const terminalSubtitle = DAY01_WORLD_BUS_MAP?.terminalSubtitle || "출발 시간표";
+  const timetableEntries = Array.isArray(DAY01_WORLD_TERMINAL_SCHEDULE) ? DAY01_WORLD_TERMINAL_SCHEDULE : [];
+  const canBoard = canBoardFromBusApp(targetState);
+
+  const scheduleMarkup = timetableEntries.map((entry) => {
     const times = Array.isArray(entry?.times) ? entry.times : [];
     const timesMarkup = times.map((item) => `
       <div class="bus-phone-time-chip${item?.highlight ? " is-highlight" : ""}">
@@ -109,37 +213,55 @@ function buildBusTimetableCardsMarkup(targetState = state) {
         <span>${escapePhoneAppHtml(item?.label || "")}</span>
       </div>
     `).join("");
+    const statusClass = entry?.status === "여유"
+      ? "is-easy"
+      : (entry?.status === "혼잡" ? "is-busy" : "is-normal");
     const actionMarkup = entry?.escapeEnding
       ? buildPhoneAppActionButtonMarkup({
           action: "bus-take-express",
-          label: canBoard ? "고속버스 탑승" : "터미널에서 승차",
+          label: canBoard ? "탑승" : "터미널 필요",
           disabled: !canBoard,
           data: { "entry-id": entry.id || "" },
-          className: "phone-job-apply bus-phone-cta is-danger",
+          className: "bus-phone-terminal-action",
         })
       : "";
 
     return `
-      <section class="phone-app-card bus-phone-terminal-card${entry?.escapeEnding ? " is-express" : ""}">
-        <div class="bus-phone-terminal-header">
+      <article class="bus-phone-terminal-item${entry?.escapeEnding ? " is-express" : ""}">
+        <div class="bus-phone-terminal-head">
           <div class="bus-phone-terminal-copy">
-            <div class="bus-phone-terminal-title">배금 → ${escapePhoneAppHtml(entry?.destination || "")}</div>
+            <div class="bus-phone-terminal-name">배금 → ${escapePhoneAppHtml(entry?.destination || "")}</div>
             <div class="bus-phone-terminal-meta">${escapePhoneAppHtml(entry?.routeType || "")} · ${escapePhoneAppHtml(entry?.platform || "")}</div>
           </div>
-          <span class="bus-phone-terminal-status">${escapePhoneAppHtml(entry?.status || "보통")}</span>
+          <span class="bus-phone-terminal-status ${statusClass}">${escapePhoneAppHtml(entry?.status || "보통")}</span>
         </div>
         <div class="bus-phone-times">${timesMarkup}</div>
-        ${actionMarkup ? `
-          <div class="phone-app-card-footer">
-            <div class="phone-app-card-footer-copy">랭킹에 반영되지 않고 도시를 떠나는 특수 루트</div>
-            ${actionMarkup}
-          </div>
-        ` : ""}
-      </section>
+        ${actionMarkup ? `<div class="bus-phone-terminal-actions">${actionMarkup}</div>` : ""}
+      </article>
     `;
   }).join("");
 
-  return `${previewCard}${introCard}${scheduleCards}`;
+  return `
+    <section class="bus-phone-shell is-timetable">
+      <div class="bus-phone-top bus-phone-top-timetable">
+        <div class="bus-phone-terminal-hero">
+          <div>
+            <div class="bus-phone-terminal-kicker">TERMINAL</div>
+            <h1 class="bus-phone-terminal-hero-title">${escapePhoneAppHtml(terminalName)}</h1>
+            <p class="bus-phone-terminal-hero-subtitle">${escapePhoneAppHtml(terminalSubtitle)}</p>
+          </div>
+          ${!stageMode ? '<button class="bus-phone-refresh-btn" type="button" data-phone-action="close-phone-view" aria-label="홈">홈</button>' : ""}
+        </div>
+        ${getBusAppStatusBannerMarkup()}
+      </div>
+      <div class="bus-phone-body is-timetable">
+        <div class="bus-phone-terminal-list">
+          ${scheduleMarkup}
+        </div>
+      </div>
+      ${buildBusBottomTabsMarkup("timetable")}
+    </section>
+  `;
 }
 
 function getBusAppManifest(targetState = state) {
@@ -148,6 +270,7 @@ function getBusAppManifest(targetState = state) {
     label: "배금버스",
     icon: "🚌",
     openRoute: "bus/home",
+    screenMode: "fullbleed",
     installable: true,
     storeCategory: "교통",
     storeDescription: "버스/터미널 앱",
@@ -156,21 +279,10 @@ function getBusAppManifest(targetState = state) {
         ? canUsePhoneApps(targetState)
         : true
     ),
-    buildScreenMarkup: ({ stageMode = false, screenId = "home" } = {}) => {
-      const activeScreen = screenId === "timetable" ? "timetable" : "home";
-      const bodyMarkup = activeScreen === "timetable"
-        ? buildBusTimetableCardsMarkup(targetState)
-        : buildBusRouteCardsMarkup(targetState);
-
-      return `
-        ${buildPhoneAppScreenHeaderMarkup({
-          title: "배금버스",
-          showHomeButton: !stageMode,
-        })}
-        ${buildPhoneAppStatusMarkup("bus")}
-        ${buildBusAppTabMarkup(activeScreen)}
-        ${bodyMarkup}
-      `;
-    },
+    buildScreenMarkup: ({ stageMode = false, screenId = "home" } = {}) => (
+      screenId === "timetable"
+        ? buildBusTimetableScreenMarkup({ stageMode }, targetState)
+        : buildBusRouteScreenMarkup({ stageMode }, targetState)
+    ),
   };
 }

@@ -1,646 +1,5 @@
-function getCurrentDayNumber() {
-  return typeof state === "undefined" ? 1 : state.day;
-}
-
-function getDayData(day = getCurrentDayNumber()) {
-  return DAY_DATA[day] || DAY01_DATA;
-}
-
-function getDayStoryData(day = getCurrentDayNumber()) {
-  return getDayData(day).story || DAY01_DATA.story;
-}
-
-function getDayEventData(day = getCurrentDayNumber()) {
-  return getDayData(day).events || DAY01_DATA.events;
-}
-
-function getDayEventRegistry(day = getCurrentDayNumber()) {
-  return getDayEventData(day).registry || [];
-}
-
-function getDayWorldData(day = getCurrentDayNumber()) {
-  return getDayData(day).world || DAY01_DATA.world;
-}
-
-function getDayWorldLocationMap(day = getCurrentDayNumber()) {
-  return getDayWorldData(day).locations || null;
-}
-
-function getDayHomeLocationId(day = getCurrentDayNumber()) {
-  const worldData = getDayWorldData(day);
-  const locations = worldData.locations || null;
-  if (!locations) {
-    return null;
-  }
-  if (worldData.homeLocationId && locations[worldData.homeLocationId]) {
-    return worldData.homeLocationId;
-  }
-  if (worldData.defaultLocationId && locations[worldData.defaultLocationId]) {
-    return worldData.defaultLocationId;
-  }
-  return Object.keys(locations)[0] || null;
-}
-
-function createDefaultWorldState(day = getCurrentDayNumber()) {
-  const currentLocation = getDayHomeLocationId(day);
-  const currentDistrict = typeof getWorldLocationDistrictId === "function"
-    ? getWorldLocationDistrictId(currentLocation, day)
-    : "";
-
-  return {
-    currentDistrict,
-    currentLocation,
-    unlockedDistricts: typeof getWorldInitialUnlockedDistrictIds === "function"
-      ? getWorldInitialUnlockedDistrictIds(day)
-      : (currentDistrict ? [currentDistrict] : []),
-    unlockedLocations: typeof getWorldInitialUnlockedLocationIds === "function"
-      ? getWorldInitialUnlockedLocationIds(day)
-      : (currentLocation ? [currentLocation] : []),
-    alleyNpcVisible: false,
-    alleyNpcId: "",
-    activeNpcLocationId: "",
-    wanderedLocations: [],
-    wanderResult: {
-      locationId: "",
-      title: "",
-      lines: [],
-    },
-    pendingTravelTarget: "",
-    pendingTravelDistrict: "",
-    pendingTravelSource: "",
-    pendingTravelMinutes: 0,
-    terminalTab: "route",
-  };
-}
-
-function syncWorldState(targetState = state) {
-  if (!targetState) {
-    return createDefaultWorldState();
-  }
-
-  const day = targetState.day || getCurrentDayNumber();
-  const defaults = createDefaultWorldState(day);
-  const worldState = targetState.world && typeof targetState.world === "object"
-    ? targetState.world
-    : {};
-  const locations = getDayWorldLocationMap(day);
-  const districts = typeof getDayWorldDistrictMap === "function"
-    ? getDayWorldDistrictMap(day) || {}
-    : {};
-  let currentLocation = typeof worldState.currentLocation === "string"
-    ? worldState.currentLocation
-    : defaults.currentLocation;
-
-  if (locations && currentLocation && !locations[currentLocation]) {
-    currentLocation = defaults.currentLocation;
-  }
-
-  let currentDistrict = typeof worldState.currentDistrict === "string"
-    ? worldState.currentDistrict
-    : defaults.currentDistrict;
-
-  if (!currentDistrict || (districts && !districts[currentDistrict])) {
-    currentDistrict = typeof getWorldLocationDistrictId === "function"
-      ? getWorldLocationDistrictId(currentLocation, day)
-      : defaults.currentDistrict;
-  }
-
-  const unlockedDistricts = typeof normalizeWorldIdList === "function"
-    ? normalizeWorldIdList(worldState.unlockedDistricts, Object.keys(districts), defaults.unlockedDistricts)
-    : [...(defaults.unlockedDistricts || [])];
-  const unlockedLocations = typeof normalizeWorldIdList === "function"
-    ? normalizeWorldIdList(worldState.unlockedLocations, Object.keys(locations || {}), defaults.unlockedLocations)
-    : [...(defaults.unlockedLocations || [])];
-  const wanderedLocations = typeof normalizeWorldIdList === "function"
-    ? normalizeWorldIdList(worldState.wanderedLocations, Object.keys(locations || {}), defaults.wanderedLocations)
-    : [];
-  const wanderResult = worldState.wanderResult && typeof worldState.wanderResult === "object"
-    ? worldState.wanderResult
-    : {};
-
-  if (currentDistrict && !unlockedDistricts.includes(currentDistrict)) {
-    unlockedDistricts.push(currentDistrict);
-  }
-  if (currentLocation && !unlockedLocations.includes(currentLocation)) {
-    unlockedLocations.push(currentLocation);
-  }
-
-  targetState.world = {
-    ...worldState,
-    currentDistrict,
-    currentLocation,
-    unlockedDistricts,
-    unlockedLocations,
-    alleyNpcVisible: typeof worldState.alleyNpcVisible === "boolean"
-      ? worldState.alleyNpcVisible
-      : defaults.alleyNpcVisible,
-    alleyNpcId: typeof worldState.alleyNpcId === "string"
-      ? worldState.alleyNpcId
-      : defaults.alleyNpcId,
-    activeNpcLocationId: typeof worldState.activeNpcLocationId === "string"
-      ? worldState.activeNpcLocationId
-      : defaults.activeNpcLocationId,
-    wanderedLocations,
-    wanderResult: {
-      locationId: typeof wanderResult.locationId === "string"
-        ? wanderResult.locationId
-        : defaults.wanderResult.locationId,
-      title: typeof wanderResult.title === "string"
-        ? wanderResult.title
-        : defaults.wanderResult.title,
-      lines: Array.isArray(wanderResult.lines)
-        ? wanderResult.lines.filter((line) => typeof line === "string")
-        : [...defaults.wanderResult.lines],
-    },
-    pendingTravelTarget: typeof worldState.pendingTravelTarget === "string"
-      ? worldState.pendingTravelTarget
-      : defaults.pendingTravelTarget,
-    pendingTravelDistrict: typeof worldState.pendingTravelDistrict === "string"
-      && (!worldState.pendingTravelDistrict || districts[worldState.pendingTravelDistrict])
-      ? worldState.pendingTravelDistrict
-      : defaults.pendingTravelDistrict,
-    pendingTravelSource: typeof worldState.pendingTravelSource === "string"
-      ? worldState.pendingTravelSource
-      : defaults.pendingTravelSource,
-    pendingTravelMinutes: Number.isFinite(worldState.pendingTravelMinutes)
-      ? Math.max(0, Math.round(worldState.pendingTravelMinutes))
-      : defaults.pendingTravelMinutes,
-    terminalTab: worldState.terminalTab === "timetable" ? "timetable" : "route",
-  };
-
-  return targetState.world;
-}
-
-function getCurrentDistrictId(targetState = state) {
-  return syncWorldState(targetState).currentDistrict;
-}
-
-function getCurrentLocationId(targetState = state) {
-  return syncWorldState(targetState).currentLocation;
-}
-
-function getWorldTerminalTab(targetState = state) {
-  return syncWorldState(targetState).terminalTab === "timetable" ? "timetable" : "route";
-}
-
-function setWorldTerminalTab(tab = "route", targetState = state) {
-  const worldState = syncWorldState(targetState);
-  worldState.terminalTab = tab === "timetable" ? "timetable" : "route";
-  return worldState.terminalTab;
-}
-
-function getCurrentLocationLabel(targetState = state) {
-  const day = targetState?.day || getCurrentDayNumber();
-  const locationId = getCurrentLocationId(targetState);
-  const locationMap = getDayWorldLocationMap(day);
-  return locationMap?.[locationId]?.label || "배금시";
-}
-
-function getPendingTravelTargetLabel(targetState = state) {
-  const day = targetState?.day || getCurrentDayNumber();
-  const locationMap = getDayWorldLocationMap(day);
-  const pendingTarget = syncWorldState(targetState).pendingTravelTarget;
-  return locationMap?.[pendingTarget]?.label || "다음 정류장";
-}
-
-function getPendingTravelSourceLabel(targetState = state) {
-  const sourceLabel = syncWorldState(targetState).pendingTravelSource;
-  return sourceLabel || "이전 장소";
-}
-
-function formatTravelDurationLabel(totalMinutes = TIME_SLOT_MINUTES) {
-  const minutes = Math.max(TIME_SLOT_MINUTES, Math.round(Number(totalMinutes || TIME_SLOT_MINUTES)));
-  const hours = Math.floor(minutes / 60);
-  const remainMinutes = minutes % 60;
-
-  if (hours <= 0) {
-    return `${minutes}분`;
-  }
-  if (remainMinutes <= 0) {
-    return `${hours}시간`;
-  }
-  return `${hours}시간 ${remainMinutes}분`;
-}
-
-function getPendingTravelDurationLabel(targetState = state) {
-  const pendingMinutes = syncWorldState(targetState).pendingTravelMinutes;
-  return formatTravelDurationLabel(pendingMinutes || TIME_SLOT_MINUTES);
-}
-
-function getWalkTravelBackgroundForMinutes(totalMinutes = TIME_SLOT_MINUTES) {
-  const normalizedMinutes = Math.max(TIME_SLOT_MINUTES, Math.round(Number(totalMinutes || TIME_SLOT_MINUTES)));
-
-  if (normalizedMinutes > TIME_SLOT_MINUTES * 2) {
-    return typeof DAY01_WORLD_WALKING_BACKGROUND_3 !== "undefined"
-      ? DAY01_WORLD_WALKING_BACKGROUND_3
-      : (typeof DAY01_WORLD_WALKING_BACKGROUND !== "undefined" ? DAY01_WORLD_WALKING_BACKGROUND : null);
-  }
-
-  if (normalizedMinutes > TIME_SLOT_MINUTES) {
-    return typeof DAY01_WORLD_WALKING_BACKGROUND_2 !== "undefined"
-      ? DAY01_WORLD_WALKING_BACKGROUND_2
-      : (typeof DAY01_WORLD_WALKING_BACKGROUND !== "undefined" ? DAY01_WORLD_WALKING_BACKGROUND : null);
-  }
-
-  return typeof DAY01_WORLD_WALKING_BACKGROUND !== "undefined"
-    ? DAY01_WORLD_WALKING_BACKGROUND
-    : null;
-}
-
-function estimateWalkTravelMinutes(fromLocationId = "", toLocationId = "", targetState = state) {
-  const day = targetState?.day || getCurrentDayNumber();
-  const fromDistrict = typeof getWorldLocationDistrictId === "function"
-    ? getWorldLocationDistrictId(fromLocationId, day)
-    : "";
-  const toDistrict = typeof getWorldLocationDistrictId === "function"
-    ? getWorldLocationDistrictId(toLocationId, day)
-    : "";
-
-  if (fromDistrict && toDistrict && fromDistrict !== toDistrict) {
-    return TIME_SLOT_MINUTES * 3;
-  }
-
-  const nearbyResidentialStops = new Set(["apt-alley", "bus-stop", "bus-stop-map"]);
-  if (nearbyResidentialStops.has(fromLocationId) && nearbyResidentialStops.has(toLocationId)) {
-    return TIME_SLOT_MINUTES;
-  }
-
-  return TIME_SLOT_MINUTES * 2;
-}
-
-function getAlleyNpcPool(targetState = state, locationId = getCurrentLocationId(targetState)) {
-  const day = targetState?.day || getCurrentDayNumber();
-  const locations = getDayWorldLocationMap(day);
-  const pool = locations?.[locationId || ""]?.randomNpcPool;
-  return Array.isArray(pool) ? pool : [];
-}
-
-function getActiveAlleyNpcConfig(targetState = state) {
-  const worldState = syncWorldState(targetState);
-  const currentLocationId = getCurrentLocationId(targetState);
-  if (!worldState.alleyNpcVisible || !worldState.alleyNpcId || worldState.activeNpcLocationId !== currentLocationId) {
-    return null;
-  }
-
-  return getAlleyNpcPool(targetState, currentLocationId).find((entry) => entry.id === worldState.alleyNpcId) || null;
-}
-
-function hasUsedLocationWander(locationId = getCurrentLocationId(state), targetState = state) {
-  if (!locationId) {
-    return false;
-  }
-
-  return syncWorldState(targetState).wanderedLocations.includes(locationId);
-}
-
-function markLocationWanderUsed(locationId = getCurrentLocationId(state), targetState = state) {
-  if (!locationId) {
-    return [];
-  }
-
-  const worldState = syncWorldState(targetState);
-  if (!worldState.wanderedLocations.includes(locationId)) {
-    worldState.wanderedLocations.push(locationId);
-  }
-
-  return worldState.wanderedLocations;
-}
-
-function setLocationWanderResult(locationId = "", title = "", lines = [], targetState = state) {
-  const worldState = syncWorldState(targetState);
-  worldState.wanderResult = {
-    locationId: typeof locationId === "string" ? locationId : "",
-    title: typeof title === "string" ? title : "",
-    lines: Array.isArray(lines) ? lines.filter((line) => typeof line === "string") : [],
-  };
-
-  return worldState.wanderResult;
-}
-
-function clearWanderResultState(targetState = state) {
-  return setLocationWanderResult("", "", [], targetState);
-}
-
-function resetLocationWanderState(targetState = state) {
-  const worldState = syncWorldState(targetState);
-  worldState.wanderedLocations = [];
-  clearWanderResultState(targetState);
-  return worldState.wanderedLocations;
-}
-
-function canUseLocationWander(locationId = getCurrentLocationId(state), targetState = state) {
-  if (!locationId) {
-    return false;
-  }
-
-  const npcPool = getAlleyNpcPool(targetState, locationId);
-  return npcPool.length > 0 && !hasUsedLocationWander(locationId, targetState);
-}
-
-function pickWeightedEntry(entries = []) {
-  const weightedEntries = entries.filter((entry) => Number(entry?.weight) > 0);
-  const totalWeight = weightedEntries.reduce((sum, entry) => sum + Number(entry.weight || 0), 0);
-
-  if (!totalWeight) {
-    return null;
-  }
-
-  let roll = Math.random() * totalWeight;
-  for (const entry of weightedEntries) {
-    roll -= Number(entry.weight || 0);
-    if (roll < 0) {
-      return entry;
-    }
-  }
-
-  return weightedEntries[weightedEntries.length - 1] || null;
-}
-
-function clearAlleyNpcState(targetState = state) {
-  const worldState = syncWorldState(targetState);
-  worldState.alleyNpcVisible = false;
-  worldState.alleyNpcId = "";
-  worldState.activeNpcLocationId = "";
-}
-
-function clearPendingTravelState(targetState = state) {
-  const worldState = syncWorldState(targetState);
-  worldState.pendingTravelTarget = "";
-  worldState.pendingTravelDistrict = "";
-  worldState.pendingTravelSource = "";
-  worldState.pendingTravelMinutes = 0;
-}
-
-function clampHungerValue(value) {
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
-  return Math.max(0, Math.min(hungerMax, Math.round(Number(value) || 0)));
-}
-
-function createDefaultHungerState() {
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
-  return {
-    value: hungerMax,
-    decayProgressMinutes: 0,
-    version: typeof HUNGER_SYSTEM_VERSION === "number" ? HUNGER_SYSTEM_VERSION : 1,
-  };
-}
-
-function ensureHungerState(targetState = state) {
-  const defaults = createDefaultHungerState();
-  if (!targetState || typeof targetState !== "object") {
-    return defaults;
-  }
-
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : defaults.value;
-  const hungerVersion = typeof HUNGER_SYSTEM_VERSION === "number" ? HUNGER_SYSTEM_VERSION : defaults.version;
-  const storedVersion = Math.max(0, Math.round(Number(targetState.hungerVersion) || 0));
-  const activeVersion = storedVersion || 1;
-
-  if (activeVersion < hungerVersion) {
-    const previousMax = activeVersion <= 1 && typeof LEGACY_HUNGER_MAX === "number"
-      ? LEGACY_HUNGER_MAX
-      : hungerMax;
-    const previousInterval = activeVersion <= 1 && typeof LEGACY_HUNGER_DECAY_INTERVAL_MINUTES === "number"
-      ? LEGACY_HUNGER_DECAY_INTERVAL_MINUTES
-      : HUNGER_DECAY_INTERVAL_MINUTES;
-    const previousValue = Math.max(0, Math.min(previousMax, Math.round(Number(targetState.hunger) || previousMax)));
-    const previousProgress = Math.max(0, Math.min(previousInterval, Math.round(Number(targetState.hungerDecayProgress) || 0)));
-    const valueRatio = previousMax > 0 ? previousValue / previousMax : 1;
-    const progressRatio = previousInterval > 0 ? previousProgress / previousInterval : 0;
-
-    targetState.hunger = clampHungerValue(Math.round(valueRatio * hungerMax));
-    targetState.hungerDecayProgress = Math.round(progressRatio * HUNGER_DECAY_INTERVAL_MINUTES);
-  }
-
-  targetState.hunger = clampHungerValue(targetState.hunger ?? defaults.value);
-  targetState.hungerDecayProgress = Math.max(0, Math.round(Number(targetState.hungerDecayProgress) || 0));
-  targetState.hungerVersion = hungerVersion;
-
-  return {
-    value: targetState.hunger,
-    decayProgressMinutes: targetState.hungerDecayProgress,
-    version: targetState.hungerVersion,
-  };
-}
-
-function getHungerStatusTone(targetState = state) {
-  const hungerValue = ensureHungerState(targetState).value;
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
-  const steadyThreshold = Math.max(2, Math.ceil(hungerMax * 0.6));
-  const hungryThreshold = Math.max(1, Math.ceil(hungerMax * 0.25));
-
-  if (hungerValue >= hungerMax) {
-    return "sated";
-  }
-  if (hungerValue >= steadyThreshold) {
-    return "steady";
-  }
-  if (hungerValue >= hungryThreshold) {
-    return "hungry";
-  }
-  return "critical";
-}
-
-function getHungerStatusLabel(targetState = state) {
-  const tone = getHungerStatusTone(targetState);
-  if (tone === "sated") {
-    return "든든";
-  }
-  if (tone === "steady") {
-    return "보통";
-  }
-  if (tone === "hungry") {
-    return "공복";
-  }
-  return "위험";
-}
-
-function restoreHunger(amount = 0, targetState = state, { resetProgress = true } = {}) {
-  const hungerState = ensureHungerState(targetState);
-  const nextValue = clampHungerValue(hungerState.value + Math.max(0, Math.round(Number(amount) || 0)));
-  targetState.hunger = nextValue;
-  if (resetProgress) {
-    targetState.hungerDecayProgress = 0;
-  }
-  return targetState.hunger;
-}
-
-function getTotalLiquidFunds(targetState = state) {
-  const cash = typeof getWalletBalance === "function"
-    ? getWalletBalance(targetState)
-    : Math.max(0, Number(targetState?.money) || 0);
-  const bankBalance = typeof getBankDomainState === "function"
-    ? Math.max(0, Number(getBankDomainState(targetState).balance) || 0)
-    : Math.max(0, Number(targetState?.bank?.balance) || 0);
-  return cash + bankBalance;
-}
-
-function spendEmergencyFunds(amount, targetState = state) {
-  const cost = Math.max(0, Math.round(Number(amount) || 0));
-  if (!cost || getTotalLiquidFunds(targetState) < cost) {
-    return null;
-  }
-
-  const cashOnHand = typeof getWalletBalance === "function"
-    ? getWalletBalance(targetState)
-    : Math.max(0, Number(targetState?.money) || 0);
-  const cashPaid = Math.min(cost, cashOnHand);
-  const bankPaid = Math.max(0, cost - cashPaid);
-
-  if (cashPaid > 0) {
-    if (typeof spendCash === "function") {
-      spendCash(cashPaid, targetState);
-    } else if (targetState) {
-      targetState.money = Math.max(0, (Number(targetState.money) || 0) - cashPaid);
-    }
-  }
-
-  if (bankPaid > 0) {
-    if (typeof patchBankDomainState === "function" && typeof getBankDomainState === "function") {
-      const bankState = getBankDomainState(targetState);
-      patchBankDomainState(targetState, {
-        balance: Math.max(0, bankState.balance - bankPaid),
-      });
-    } else if (targetState?.bank) {
-      targetState.bank.balance = Math.max(0, (Number(targetState.bank.balance) || 0) - bankPaid);
-    }
-
-    if (typeof recordBankTransaction === "function") {
-      recordBankTransaction({
-        title: "응급 진료비",
-        amount: -bankPaid,
-        direction: "out",
-        type: "emergency",
-        note: "배고픔으로 배금병원 응급 이송",
-      }, targetState);
-    }
-  }
-
-  return {
-    totalPaid: cost,
-    cashPaid,
-    bankPaid,
-  };
-}
-
-function buildBankruptcyEndingSummary() {
-  return {
-    noRanking: true,
-    title: "당신은 파산하였습니다",
-    speaker: "배금병원 응급실",
-    tags: ["파산", "배고픔", "응급실"],
-    character: "",
-    backgroundConfig: typeof DAY01_WORLD_BAEGEUM_HOSPITAL_BACKGROUND !== "undefined"
-      ? DAY01_WORLD_BAEGEUM_HOSPITAL_BACKGROUND
-      : null,
-    lines: [
-      "배고픔이 바닥나 배금병원으로 실려 갔다.",
-      `${formatMoney(HUNGER_HOSPITAL_COST)} 진료비를 낼 돈이 남아 있지 않았다.`,
-      "이번 판은 여기서 끝난다.",
-    ],
-  };
-}
-
-function triggerBankruptcyEnding(targetState = state) {
-  if (!targetState) {
-    return false;
-  }
-
-  if (typeof closeMemoryPanel === "function") {
-    closeMemoryPanel(targetState);
-  }
-  if (typeof closeInventoryPanel === "function") {
-    closeInventoryPanel(targetState);
-  }
-  targetState._characterPanelOpen = false;
-  targetState.scene = "ending";
-  targetState.currentOffer = null;
-  targetState.currentIncident = null;
-  targetState.endingSummary = buildBankruptcyEndingSummary();
-  targetState.headline = {
-    badge: "파산",
-    text: "응급실 비용을 감당하지 못해 이번 판이 그대로 끝났다.",
-  };
-  return true;
-}
-
-function resolveHungerEmergency(targetState = state) {
-  if (!targetState || targetState.scene === "ending" || targetState.scene === "ranking") {
-    return false;
-  }
-
-  const hungerState = ensureHungerState(targetState);
-  if (hungerState.value > 0) {
-    return false;
-  }
-
-  if (getTotalLiquidFunds(targetState) < HUNGER_HOSPITAL_COST) {
-    if (typeof recordActionMemory === "function") {
-      recordActionMemory("응급실 비용을 감당하지 못했다", "배고픔이 0이 되어 배금병원으로 실려 갔지만 진료비를 낼 돈이 남아 있지 않았다.", {
-        type: "event",
-        source: "배금병원",
-        tags: ["배고픔", "파산", "병원"],
-      });
-    }
-    triggerBankruptcyEnding(targetState);
-    return true;
-  }
-
-  const payment = spendEmergencyFunds(HUNGER_HOSPITAL_COST, targetState);
-  const paidFromBank = Boolean(payment?.bankPaid);
-  restoreHunger(typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3, targetState, { resetProgress: true });
-
-  if (typeof resetDialogueState === "function") {
-    resetDialogueState(targetState);
-  }
-  if (typeof closeMemoryPanel === "function") {
-    closeMemoryPanel(targetState);
-  }
-  if (typeof closeInventoryPanel === "function") {
-    closeInventoryPanel(targetState);
-  }
-
-  targetState._characterPanelOpen = false;
-  targetState.scene = "outside";
-  syncWorldState(targetState);
-  targetState.world.currentLocation = "baegeum-hospital";
-  targetState.world.currentDistrict = typeof getWorldLocationDistrictId === "function"
-    ? getWorldLocationDistrictId("baegeum-hospital", targetState.day)
-    : targetState.world.currentDistrict;
-  clearPendingTravelState(targetState);
-  clearAlleyNpcState(targetState);
-  clearWanderResultState(targetState);
-  targetState.headline = {
-    badge: "응급 이송",
-    text: paidFromBank
-      ? `배고픔이 0이 되어 배금병원으로 옮겨졌고 진료비 ${formatMoney(HUNGER_HOSPITAL_COST)}이 현금과 계좌에서 빠져나갔다.`
-      : `배고픔이 0이 되어 배금병원으로 옮겨졌고 진료비 ${formatMoney(HUNGER_HOSPITAL_COST)}이 빠져나갔다.`,
-  };
-
-  return true;
-}
-
-function applyHungerTimePassage(minutes = 0, targetState = state) {
-  const normalizedMinutes = Math.max(0, Math.round(Number(minutes) || 0));
-  if (!normalizedMinutes || !targetState || targetState.scene === "ending" || targetState.scene === "ranking") {
-    return false;
-  }
-
-  ensureHungerState(targetState);
-  targetState.hungerDecayProgress += normalizedMinutes;
-
-  while (targetState.hungerDecayProgress >= HUNGER_DECAY_INTERVAL_MINUTES && targetState.hunger > 0) {
-    targetState.hungerDecayProgress -= HUNGER_DECAY_INTERVAL_MINUTES;
-    targetState.hunger = Math.max(0, targetState.hunger - 1);
-
-    if (targetState.hunger <= 0) {
-      targetState.hungerDecayProgress = 0;
-      return resolveHungerEmergency(targetState);
-    }
-  }
-
-  return false;
-}
+// Keep logic.js focused on orchestration. Domain rules belong in
+// js/systems/* or js/apps/* per docs/design/logic-split-plan.md.
 
 const DEFAULT_DAY_DEV_PRESETS = [
   {
@@ -722,6 +81,7 @@ function getCurrentOutsideSceneConfig(targetState = state) {
       const sourceLabel = getPendingTravelSourceLabel(targetState);
       const targetLabel = getPendingTravelTargetLabel(targetState);
       const durationLabel = getPendingTravelDurationLabel(targetState);
+      const methodLabel = getPendingTravelMethodLabel(targetState);
       const travelMinutes = syncWorldState(targetState).pendingTravelMinutes;
       resolvedScene.title = "걷는 중...";
       resolvedScene.background = getWalkTravelBackgroundForMinutes(travelMinutes);
@@ -729,6 +89,7 @@ function getCurrentOutsideSceneConfig(targetState = state) {
         `${sourceLabel}에서 나와 ${targetLabel} 쪽으로 걷는 중... 도보 ${durationLabel} 소요 됨.`,
         "신호등과 골목 모퉁이를 지나며 발걸음을 계속 이어간다.",
       ];
+      resolvedScene.lines[0] = `${sourceLabel}에서 ${targetLabel} 쪽으로 ${methodLabel} ${durationLabel} 코스를 잡고 걸음을 옮긴다.`;
     }
 
     const activeAlleyNpc = getActiveAlleyNpcConfig(targetState);
@@ -845,6 +206,101 @@ function getDefaultTimeSlotForState(targetState = state) {
   }
 
   return DAY_START_TIME_SLOT;
+}
+
+function getCurrentPrologueStep(targetState = state) {
+  const steps = getActiveStorySteps(targetState);
+  const stepIndex = Number.isFinite(targetState?.storyStep)
+    ? Math.max(0, Math.floor(targetState.storyStep))
+    : 0;
+  return steps[stepIndex] || steps[0] || null;
+}
+
+function getInteractivePrologueStepConfig(targetState = state) {
+  if (targetState?.scene !== "prologue") {
+    return null;
+  }
+
+  const step = getCurrentPrologueStep(targetState);
+  return ["walk-to-exit", "press-exit"].includes(step?.startMode) ? step : null;
+}
+
+function createDefaultPrologueIntroState(targetState = state) {
+  const step = getInteractivePrologueStepConfig(targetState) || getCurrentPrologueStep(targetState);
+  const playerConfig = step?.player || {};
+  const startLeft = Number(playerConfig.startLeft);
+
+  return {
+    playerLeft: Number.isFinite(startLeft) ? startLeft : 24,
+    facing: Number(playerConfig.facing) < 0 ? -1 : 1,
+  };
+}
+
+function syncPrologueIntroState(targetState = state) {
+  const defaults = createDefaultPrologueIntroState(targetState);
+  if (!targetState || typeof targetState !== "object") {
+    return defaults;
+  }
+
+  const current = targetState.prologueIntro && typeof targetState.prologueIntro === "object"
+    ? targetState.prologueIntro
+    : {};
+
+  targetState.prologueIntro = {
+    playerLeft: Number.isFinite(current.playerLeft)
+      ? Math.max(0, Math.min(100, current.playerLeft))
+      : defaults.playerLeft,
+    facing: Number(current.facing) < 0 ? -1 : 1,
+  };
+
+  return targetState.prologueIntro;
+}
+
+function canUseInteractivePrologueExit(targetState = state) {
+  const step = getInteractivePrologueStepConfig(targetState);
+  if (!step) {
+    return false;
+  }
+
+  const introState = syncPrologueIntroState(targetState);
+  const exitThreshold = Number(step.player?.exitThreshold);
+  if (!Number.isFinite(exitThreshold)) {
+    return true;
+  }
+  return introState.playerLeft >= exitThreshold;
+}
+
+function enterInteractivePrologueExit(targetState = state) {
+  if (!canUseInteractivePrologueExit(targetState)) {
+    return false;
+  }
+
+  prepareDayState(targetState);
+  syncWorldState(targetState);
+  targetState.scene = "outside";
+  targetState.world.currentLocation = getDayHomeLocationId(targetState.day) || targetState.world.currentLocation;
+  targetState.world.currentDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(targetState.world.currentLocation, targetState.day)
+    : targetState.world.currentDistrict;
+  clearAlleyNpcState(targetState);
+  clearWanderResultState(targetState);
+  clearPendingTravelState(targetState);
+  targetState.prologueIntro = createDefaultPrologueIntroState(targetState);
+  targetState.headline = {
+    badge: "",
+    text: "",
+  };
+
+  if (targetState === state && typeof recordActionMemory === "function") {
+    recordActionMemory("집 밖으로 나갔다", `${getCurrentLocationLabel()} 쪽으로 문을 열고 나갔다.`, {
+      type: "travel",
+      source: "집",
+      tags: ["이동", "외출"],
+    });
+  }
+
+  renderGame();
+  return true;
 }
 
 function matchesEventTrigger(event, action) {
@@ -1016,6 +472,8 @@ function finishRegisteredCleanupEvent() {
 
 let state = createInitialState();
 let pendingSavedState = null;
+let startScreenDrawState = createDefaultStartScreenDrawState();
+let startScreenDrawTimer = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   cacheUi();
@@ -1026,6 +484,39 @@ document.addEventListener("DOMContentLoaded", () => {
   pendingSavedState = loadSavedState();
   showStartScreen(Boolean(pendingSavedState));
 });
+
+function createDefaultStartScreenDrawState() {
+  return {
+    phase: "idle",
+    previewTierId: "",
+    resultTierId: "",
+  };
+}
+
+function getStartScreenDrawState() {
+  return {
+    ...startScreenDrawState,
+  };
+}
+
+function stopStartScreenDrawTimer() {
+  if (startScreenDrawTimer) {
+    clearInterval(startScreenDrawTimer);
+    startScreenDrawTimer = null;
+  }
+}
+
+function syncStartScreenDrawUi() {
+  if (typeof renderStartScreenDrawState === "function") {
+    renderStartScreenDrawState(Boolean(pendingSavedState));
+  }
+}
+
+function resetStartScreenDrawState() {
+  stopStartScreenDrawTimer();
+  startScreenDrawState = createDefaultStartScreenDrawState();
+  syncStartScreenDrawUi();
+}
 
 function createInitialState() {
   const phoneDefaults = typeof createDefaultPhoneDeviceState === "function"
@@ -1169,6 +660,12 @@ function createInitialState() {
     scene: "prologue",
     storyKey: "intro",
     storyStep: 0,
+    prologueIntro: createDefaultPrologueIntroState({
+      day: 1,
+      scene: "prologue",
+      storyKey: "intro",
+      storyStep: 0,
+    }),
     devices: {
       phone: { ...phoneDefaults },
     },
@@ -1277,6 +774,19 @@ function createInitialState() {
     day1CleanupDone: false,
     cleaningGame: null,
     devPreviewMode: false,
+    startingOrigin: typeof createDefaultSpoonStartState === "function"
+      ? createDefaultSpoonStartState()
+      : {
+          tierId: "",
+          label: "",
+          bracket: "",
+          summary: "",
+          toneLabel: "",
+          initialCash: 0,
+          startHappiness: 45,
+          accent: "#94a3b8",
+          applied: false,
+        },
     headline: {
       badge: "",
       text: "",
@@ -1517,6 +1027,16 @@ function hydrateState(rawState = {}) {
           : [],
       }
     : null;
+  mergedState.startingOrigin = rawState.startingOrigin && typeof rawState.startingOrigin === "object"
+    ? {
+        ...(typeof createDefaultSpoonStartState === "function"
+          ? createDefaultSpoonStartState()
+          : {}),
+        ...rawState.startingOrigin,
+      }
+    : (typeof createDefaultSpoonStartState === "function"
+      ? createDefaultSpoonStartState()
+      : { tierId: "", label: "", bracket: "", summary: "", toneLabel: "", initialCash: 0, startHappiness: 45, accent: "#94a3b8", applied: false });
   mergedState.phonePreview = rawState.phonePreview
     ? { ...nextState.phonePreview, ...rawState.phonePreview }
     : createPhoneHomePreview(mergedState.day);
@@ -1618,6 +1138,9 @@ function hydrateState(rawState = {}) {
       }
     : { ...(nextState.disGambleDrafts || { "odd-even": "1000", ladder: "5000" }) };
   mergedState.headline = { ...nextState.headline, ...(rawState.headline || {}) };
+  mergedState.prologueIntro = rawState.prologueIntro && typeof rawState.prologueIntro === "object"
+    ? { ...nextState.prologueIntro, ...rawState.prologueIntro }
+    : { ...nextState.prologueIntro };
   mergedState.timeSlot = Number.isFinite(rawState.timeSlot)
     ? rawState.timeSlot
     : getDefaultTimeSlotForState(mergedState);
@@ -1670,6 +1193,7 @@ function hydrateState(rawState = {}) {
   }
 
   syncWorldState(mergedState);
+  syncPrologueIntroState(mergedState);
 
   return mergedState;
 }
@@ -1679,7 +1203,7 @@ function createPhoneHomePreview(day = 1) {
     appId: "",
     kicker: "HOME",
     state: "READY",
-    title: `${day}일차 스마트폰`,
+    title: `${typeof formatTurnLabel === "function" ? formatTurnLabel(day) : `${day}턴`} 스마트폰`,
     body: "Diggle, 뉴스, 플레이스토어, 전화, 갤러리를 바로 열 수 있다.",
   };
 }
@@ -1732,15 +1256,28 @@ function setPhoneAppStatus(appId, nextStatus = {}, targetState = state) {
 }
 
 function canUsePhoneApps(targetState = state) {
+  const interactivePrologueStep = typeof getInteractivePrologueStepConfig === "function"
+    ? getInteractivePrologueStepConfig(targetState)
+    : null;
+
+  if (interactivePrologueStep) {
+    return true;
+  }
+
   return !["prologue", "cleanup"].includes(targetState.scene);
 }
 
 function canOpenPhoneStage(targetState = state) {
+  const interactivePrologueStep = typeof getInteractivePrologueStepConfig === "function"
+    ? getInteractivePrologueStepConfig(targetState)
+    : null;
+  const canExpandInScene = ["room", "outside", "board"].includes(targetState.scene) || Boolean(interactivePrologueStep);
+
   return Boolean(
     targetState.hasPhone
     && !targetState.phoneMinimized
     && canUsePhoneApps(targetState)
-    && ["room", "outside", "board"].includes(targetState.scene),
+    && canExpandInScene,
   );
 }
 
@@ -1920,7 +1457,7 @@ function refreshPhoneHomePreviewForState(targetState = state) {
       kicker: "BOOKED",
       state: "READY",
       title: `${job.title} 예약 완료`,
-      body: `${pendingShift.day}일차 출근이 잡혀 있다.`,
+      body: `${typeof formatTurnLabel === "function" ? formatTurnLabel(pendingShift.day) : `${pendingShift.day}턴`} 출근이 잡혀 있다.`,
     };
     return;
   }
@@ -1957,7 +1494,7 @@ function refreshPhoneHomePreviewForState(targetState = state) {
       kicker: "CAREER",
       state: "REVIEW",
       title: "직장지원 심사중",
-      body: `DAY ${String(career.resultDay).padStart(2, "0")}에 결과가 도착할 예정이다.`,
+      body: `${typeof formatTurnLabel === "function" ? formatTurnLabel(career.resultDay) : `${career.resultDay}턴`}에 결과가 도착할 예정이다.`,
     };
     return;
   }
@@ -2327,7 +1864,7 @@ function applyToCareerJob(index) {
 
   state.headline = {
     badge: "직장지원 접수",
-    text: `${offer.title} 지원서를 넣었다. 결과는 다음 날 도착할 예정이다.`,
+    text: `${offer.title} 지원서를 넣었다. 결과는 다음 턴 도착할 예정이다.`,
   };
 
   if (typeof recordActionMemory === "function") {
@@ -2401,7 +1938,7 @@ function applyToPhoneJobLegacy(index) {
     lines: success
       ? [
           `${job.title} 지원 결과가 도착했다.`,
-          `${state.day + 1}일차에 출근하라는 연락을 받았다.`,
+          `${typeof formatTurnLabel === "function" ? formatTurnLabel(state.day + 1) : `${state.day + 1}턴`}에 출근하라는 연락을 받았다.`,
         ]
       : [
           `${job.title} 지원 결과가 도착했다.`,
@@ -2416,7 +1953,7 @@ function applyToPhoneJobLegacy(index) {
     };
     state.headline = {
       badge: "면접 합격",
-      text: `${job.title}에 붙었다. ${state.day + 1}일차 출근이 예약됐다.`,
+      text: `${job.title}에 붙었다. ${typeof formatTurnLabel === "function" ? formatTurnLabel(state.day + 1) : `${state.day + 1}턴`} 출근이 예약됐다.`,
     };
   } else {
     state.headline = {
@@ -2428,7 +1965,7 @@ function applyToPhoneJobLegacy(index) {
   recordActionMemory(
     "공고에 지원했다",
     success
-      ? `${job.title} 지원 결과가 좋아서 ${state.day + 1}일차 출근이 잡혔다.`
+      ? `${job.title} 지원 결과가 좋아서 ${typeof formatTurnLabel === "function" ? formatTurnLabel(state.day + 1) : `${state.day + 1}턴`} 출근이 잡혔다.`
       : `${job.title} 공고에 지원했지만 이번에는 이어지지 않았다.`,
     {
       type: "job",
@@ -2890,6 +2427,10 @@ function skipScheduledShiftLegacy() {
 }
 
 function normalizeStateForCurrentRules() {
+  if (typeof ensureSpoonStartState === "function") {
+    ensureSpoonStartState(state);
+  }
+
   if (state.day >= 1) {
     state.hasPhone = true;
   }
@@ -3250,10 +2791,10 @@ function runAction(action) {
 
 function bindStaticEvents() {
   ui.continueButton?.addEventListener("click", continueSavedGame);
-  ui.startButton.addEventListener("click", startGame);
+  ui.startButton.addEventListener("click", handleStartScreenPrimaryAction);
   ui.nameInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
-      startGame();
+      handleStartScreenPrimaryAction();
     }
   });
   window.addEventListener("keydown", handleWorldKeyDown);
@@ -3278,6 +2819,55 @@ function bindStaticEvents() {
   ui.phoneStage?.addEventListener("click", handlePhoneScreenClick);
   ui.phonePanel?.addEventListener("input", handlePhoneScreenInput);
   ui.phoneStage?.addEventListener("input", handlePhoneScreenInput);
+}
+
+function beginStartScreenDraw() {
+  if (startScreenDrawState.phase === "drawing") {
+    return;
+  }
+
+  stopStartScreenDrawTimer();
+  startScreenDrawState.phase = "drawing";
+  startScreenDrawState.resultTierId = "";
+  startScreenDrawState.previewTierId = typeof getDefaultSpoonStartTier === "function"
+    ? getDefaultSpoonStartTier().id
+    : "steel";
+  syncStartScreenDrawUi();
+
+  let ticks = 0;
+  startScreenDrawTimer = setInterval(() => {
+    startScreenDrawState.previewTierId = typeof drawSpoonStartTierId === "function"
+      ? drawSpoonStartTierId()
+      : "steel";
+    ticks += 1;
+    syncStartScreenDrawUi();
+
+    if (ticks < 15) {
+      return;
+    }
+
+    stopStartScreenDrawTimer();
+    const finalTierId = typeof drawSpoonStartTierId === "function"
+      ? drawSpoonStartTierId()
+      : startScreenDrawState.previewTierId;
+    startScreenDrawState.phase = "result";
+    startScreenDrawState.previewTierId = finalTierId;
+    startScreenDrawState.resultTierId = finalTierId;
+    syncStartScreenDrawUi();
+  }, 90);
+}
+
+function handleStartScreenPrimaryAction() {
+  if (startScreenDrawState.phase === "drawing") {
+    return;
+  }
+
+  if (!startScreenDrawState.resultTierId) {
+    beginStartScreenDraw();
+    return;
+  }
+
+  startGame();
 }
 
 function handlePhoneScreenInput(event) {
@@ -3331,17 +2921,24 @@ function handlePhoneScreenInput(event) {
 
 function startGame() {
   const playerName = ui.nameInput.value.trim() || "이름 없음";
+  const selectedTierId = startScreenDrawState.resultTierId
+    || (typeof drawSpoonStartTierId === "function" ? drawSpoonStartTierId() : "steel");
 
   clearSavedState();
   pendingSavedState = null;
   state = createInitialState();
   state.playerName = playerName;
+  if (typeof applySpoonStartPackage === "function") {
+    applySpoonStartPackage(state, selectedTierId);
+  }
 
   hideStartScreen();
+  resetStartScreenDrawState();
   renderGame();
 }
 
 function continueSavedGame() {
+  resetStartScreenDrawState();
   if (restoreSavedState()) {
     return;
   }
@@ -3360,9 +2957,9 @@ function startStory(storyKey) {
   renderGame();
 }
 
-function getActiveStorySteps() {
-  const storyData = getDayStoryData();
-  return state.storyKey === "phoneUnlock" ? storyData.phoneUnlockSteps : storyData.introSteps;
+function getActiveStorySteps(targetState = state) {
+  const storyData = getDayStoryData(targetState?.day || getCurrentDayNumber());
+  return targetState?.storyKey === "phoneUnlock" ? storyData.phoneUnlockSteps : storyData.introSteps;
 }
 
 function handlePrologueOption(action) {
@@ -3592,8 +3189,8 @@ function openBusPhoneSurface(route = "bus/home") {
   if (typeof setPhoneAppStatus === "function") {
     setPhoneAppStatus("playstore", {
       kicker: "STORE",
-      title: "배금버스 앱이 필요함",
-      body: "플레이스토어에서 배금버스를 설치하면 노선도와 터미널 시간표를 폰에서 바로 볼 수 있다.",
+      title: "배금버스 앱 필요",
+      body: "플레이스토어에서 바로 설치 가능.",
       tone: "accent",
     }, state);
   }
@@ -3620,7 +3217,7 @@ function rideBusFromPhone(locationId = "") {
       setPhoneAppStatus("bus", {
         kicker: "BUS",
         title: "터미널 앞에서만 탑승 가능",
-        body: "배금시외버스터미널 앞이나 안내판 앞에서만 버스 탑승 버튼을 사용할 수 있다.",
+        body: "정류장이나 안내판 앞에서 이용 가능.",
         tone: "fail",
       }, state);
     }
@@ -3632,8 +3229,8 @@ function rideBusFromPhone(locationId = "") {
     if (typeof setPhoneAppStatus === "function") {
       setPhoneAppStatus("bus", {
         kicker: "BUS",
-        title: "이미 터미널 앞에 서 있음",
-        body: "현재 위치가 배금시외버스터미널이므로 다른 정차 구간을 골라야 한다.",
+        title: "현재 정류장",
+        body: "다른 정차 구간을 선택.",
         tone: "accent",
       }, state);
     }
@@ -3649,17 +3246,21 @@ function rideBusFromPhone(locationId = "") {
 }
 
 function buildEscapeEndingSummary() {
+  const originLabel = getStartingOriginLabel();
   return {
     noRanking: true,
+    originLabel,
+    originTierId: getStartingOriginTierId(),
     title: "당신은 배금도시를 떠났다",
     speaker: "메트로폴리스행 고속버스",
-    tags: ["도시 이탈", "새로운 자유"],
+    tags: ["도시 이탈", "새로운 자유", originLabel],
     character: "",
     backgroundConfig: typeof DAY01_WORLD_METROPOLIS_ENDING_BACKGROUND !== "undefined"
       ? DAY01_WORLD_METROPOLIS_ENDING_BACKGROUND
       : null,
     lines: [
       "고속버스를 타고 배금도시를 떠났다.",
+      `출신 수저 ${originLabel}`,
       "이번 선택은 랭킹에 반영되지 않았다.",
       "당신은 새로운 자유를 찾아 도시 밖으로 나갔다.",
     ],
@@ -4971,7 +4572,7 @@ function runStocksEnter() {
   state.stockHolding = { betAmount, buyDay: state.day };
   state.stocksUsedToday = true;
 
-  const message = `${formatMoney(betAmount)}을 증권 시장에 투자했다. 내일 결과를 확인하자.`;
+  const message = `${formatMoney(betAmount)}을 증권 시장에 투자했다. 다음 턴 결과를 확인하자.`;
   setPhoneAppStatus("stocks", { kicker: "STOCKS", title: "매수 완료", body: message, tone: "accent" });
   setHeadline("📈 증권", message);
   recordActionMemory("주식을 매수했다", message, { type: "finance", source: "증권 앱", tags: ["증권", "매수"] });
@@ -5008,7 +4609,7 @@ function runStocksSell() {
 function runStocksHold() {
   if (state.stocksUsedToday || !state.stockHolding) return;
   state.stocksUsedToday = true;
-  const message = "오늘은 매도하지 않기로 했다. 내일 다시 확인하자.";
+  const message = "오늘은 매도하지 않기로 했다. 다음 턴 다시 확인하자.";
   setPhoneAppStatus("stocks", { kicker: "STOCKS", title: "보유 유지", body: message, tone: "accent" });
   setHeadline("📈 증권", message);
   finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
@@ -5050,7 +4651,7 @@ function runCoinEnter() {
   state.coinHolding = { betAmount, buyDay: state.day, coinType };
   state.coinUsedToday = true;
 
-  const message = `${coinInfo.label}(${coinType}) ${formatMoney(betAmount)}어치를 매수했다. 내일 결과를 확인하자.`;
+  const message = `${coinInfo.label}(${coinType}) ${formatMoney(betAmount)}어치를 매수했다. 다음 턴 결과를 확인하자.`;
   setPhoneAppStatus("coin", { kicker: "COIN", title: "매수 완료", body: message, tone: "accent" });
   setHeadline("🪙 코인", message);
   recordActionMemory("코인을 매수했다", message, { type: "finance", source: "코인 앱", tags: ["코인", "매수", coinType] });
@@ -5090,7 +4691,7 @@ function runCoinHold() {
   if (state.coinUsedToday || !state.coinHolding) return;
   state.coinUsedToday = true;
   const coinInfo = typeof getCoinTypeInfo === "function" ? getCoinTypeInfo(state.coinHolding.coinType) : { label: state.coinHolding.coinType };
-  const message = `${coinInfo.label} 보유를 유지하기로 했다. 내일 다시 확인하자.`;
+  const message = `${coinInfo.label} 보유를 유지하기로 했다. 다음 턴 다시 확인하자.`;
   setPhoneAppStatus("coin", { kicker: "COIN", title: "보유 유지", body: message, tone: "accent" });
   setHeadline("🪙 코인", message);
   finishPhoneAppTimeSpend({ type: "slot", amount: TIME_COSTS.phoneApp });
@@ -5384,6 +4985,10 @@ function handlePhoneScreenClickLegacy(event) {
     return;
   }
 
+  if (typeof handleMarketAppAction === "function" && handleMarketAppAction(phoneAction, actionTarget, state)) {
+    return;
+  }
+
   if (phoneAction === "dis-set-gamble-bet") {
     setDisGambleDraftAmount(actionTarget.dataset.gameId, actionTarget.dataset.amount, state);
     renderGame();
@@ -5577,7 +5182,7 @@ function applyToPhoneJob(index) {
     lines: success
       ? [
           `${job.title} 지원 결과가 도착했다.`,
-          `${state.day + 1}일차에 출근하라는 연락을 받았다.`,
+          `${typeof formatTurnLabel === "function" ? formatTurnLabel(state.day + 1) : `${state.day + 1}턴`}에 출근하라는 연락을 받았다.`,
         ]
       : [
           `${job.title} 지원 결과가 도착했다.`,
@@ -5600,7 +5205,7 @@ function applyToPhoneJob(index) {
   if (success) {
     state.headline = {
       badge: "면접 합격",
-      text: `${job.title}에 붙었고 ${state.day + 1}일차 출근이 예약됐다.`,
+      text: `${job.title}에 붙었고 ${typeof formatTurnLabel === "function" ? formatTurnLabel(state.day + 1) : `${state.day + 1}턴`} 출근이 예약됐다.`,
     };
   } else {
     state.headline = {
@@ -5612,7 +5217,7 @@ function applyToPhoneJob(index) {
   recordActionMemory(
     "공고에 지원했다",
     success
-      ? `${job.title} 지원 결과가 좋아서 ${state.day + 1}일차 출근이 잡혔다.`
+      ? `${job.title} 지원 결과가 좋아서 ${typeof formatTurnLabel === "function" ? formatTurnLabel(state.day + 1) : `${state.day + 1}턴`} 출근이 잡혔다.`
       : `${job.title} 공고에 지원했지만 이번에는 이어지지 않았다.`,
     {
       type: "job",
@@ -5862,6 +5467,10 @@ function handlePhoneScreenClick(event) {
 
   if (phoneAction === "dis-run-search") {
     runDisInternetSearch(actionTarget);
+    return;
+  }
+
+  if (typeof handleMarketAppAction === "function" && handleMarketAppAction(phoneAction, actionTarget, state)) {
     return;
   }
 
@@ -6334,6 +5943,10 @@ function completeBusTravel() {
   clearAlleyNpcState(state);
   clearWanderResultState(state);
   clearPendingTravelState(state);
+  state.world.currentLocation = targetLocation;
+  state.world.currentDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(targetLocation, state.day)
+    : state.world.currentDistrict;
   state.headline = {
     badge: "버스 도착",
     text: `${locationMap[targetLocation].label}에 내려 주변을 둘러본다.`,
@@ -6350,6 +5963,8 @@ function completeWalkTravel() {
   const worldState = syncWorldState(state);
   const targetLocation = worldState.pendingTravelTarget;
   const locationMap = getDayWorldLocationMap(state.day);
+  const travelMethod = getPendingTravelMethodLabel(state);
+  const isPureWalkTravel = travelMethod === "도보";
 
   if (!targetLocation || !locationMap?.[targetLocation]) {
     worldState.currentLocation = getDayHomeLocationId(state.day) || "apt-alley";
@@ -6377,14 +5992,22 @@ function completeWalkTravel() {
   clearAlleyNpcState(state);
   clearWanderResultState(state);
   clearPendingTravelState(state);
+  state.world.currentLocation = targetLocation;
+  state.world.currentDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(targetLocation, state.day)
+    : state.world.currentDistrict;
   state.headline = {
-    badge: "도보 도착",
-    text: `${locationMap[targetLocation].label}에 걸어서 도착했다.`,
+    badge: isPureWalkTravel ? "도보 도착" : "이동 도착",
+    text: isPureWalkTravel
+      ? `${locationMap[targetLocation].label}에 걸어서 도착했다.`
+      : `${locationMap[targetLocation].label}에 ${travelMethod}로 도착했다.`,
   };
-  recordActionMemory("걸어서 이동했다", `${locationMap[targetLocation].label}에 걸어서 도착했다.`, {
+  recordActionMemory(isPureWalkTravel ? "걸어서 이동했다" : "이동을 마쳤다", isPureWalkTravel
+    ? `${locationMap[targetLocation].label}에 걸어서 도착했다.`
+    : `${locationMap[targetLocation].label}에 ${travelMethod}로 도착했다.`, {
     type: "travel",
-    source: "도보",
-    tags: ["이동", "도보", targetLocation],
+    source: travelMethod,
+    tags: ["이동", ...(travelMethod.includes("버스") ? ["버스"] : []), ...(travelMethod.includes("도보") ? ["도보"] : []), targetLocation],
   });
   renderGame();
 }
@@ -6472,6 +6095,80 @@ function handleTextboxClick(event) {
   }
 }
 
+function startWorldTravelToLocation(targetLocation = "", config = {}) {
+  const normalizedTargetLocation = String(targetLocation || "").trim();
+  const currentLocationId = getCurrentLocationId();
+  const currentLocation = getCurrentOutsideSceneConfig();
+  const locationMap = getDayWorldLocationMap(state.day);
+  const currentLabel = currentLocation?.label || getCurrentLocationLabel();
+  const targetLabel = locationMap?.[normalizedTargetLocation]?.label || normalizedTargetLocation;
+  const canMove = config.skipExitCheck
+    || !Array.isArray(currentLocation?.exits)
+    || currentLocation.exits.includes(normalizedTargetLocation);
+
+  if (!normalizedTargetLocation || !locationMap?.[normalizedTargetLocation] || !canMove || currentLocationId === normalizedTargetLocation) {
+    return false;
+  }
+
+  const travelMinutes = Math.max(
+    TIME_SLOT_MINUTES,
+    Math.round(
+      Number(config.travelMinutes)
+      || estimateWalkTravelMinutes(currentLocationId, normalizedTargetLocation, state)
+      || TIME_SLOT_MINUTES
+    )
+  );
+  const travelSlots = Number.isFinite(config.travelSlots)
+    ? Math.max(TIME_COSTS.moveBetweenScenes, Math.round(config.travelSlots))
+    : Math.max(TIME_COSTS.moveBetweenScenes, Math.ceil(travelMinutes / TIME_SLOT_MINUTES));
+  const travelMethod = typeof config.travelMethod === "string" && config.travelMethod.trim()
+    ? config.travelMethod.trim()
+    : (config.travelSceneId === "bus-ride" ? "버스" : "도보");
+  const memoryTags = Array.isArray(config.memoryTags) && config.memoryTags.length
+    ? config.memoryTags
+    : ["이동", travelMethod.includes("버스") ? "bus" : "walk", normalizedTargetLocation];
+
+  const reachedDayEnd = spendMinorTime(travelMinutes);
+  if (reachedDayEnd) {
+    advanceDayOrFinish();
+    return true;
+  }
+
+  syncWorldState(state);
+  state.world.pendingTravelTarget = normalizedTargetLocation;
+  state.world.pendingTravelDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(normalizedTargetLocation, state.day)
+    : state.world.pendingTravelDistrict;
+  state.world.pendingTravelSource = currentLabel;
+  state.world.pendingTravelMinutes = travelMinutes;
+  state.world.pendingTravelMethod = travelMethod;
+  state.world.currentLocation = config.travelSceneId === "bus-ride" ? "bus-ride" : "walk-travel";
+
+  recordActionMemory(
+    config.memoryTitle || `${targetLabel}로 이동한다`,
+    config.memoryText || `${currentLabel}에서 ${targetLabel}까지 ${travelMethod} ${formatTravelDurationLabel(travelMinutes)} 이동 코스를 잡았다.`,
+    {
+      type: "travel",
+      source: currentLabel,
+      tags: memoryTags,
+    }
+  );
+
+  clearAlleyNpcState(state);
+  clearWanderResultState(state);
+  state.headline = {
+    badge: "",
+    text: "",
+  };
+
+  if (typeof hideCityMapOverlay === "function") {
+    hideCityMapOverlay();
+  }
+
+  renderGame();
+  return true;
+}
+
 function handleOutsideOption(action) {
   const option = typeof action === "string" ? { action } : action;
   if (!option) {
@@ -6480,60 +6177,27 @@ function handleOutsideOption(action) {
 
   if (option.action === "move" && option.targetLocation) {
     const currentLocationId = getCurrentLocationId();
-    const currentLocation = getCurrentOutsideSceneConfig();
-    const locationMap = getDayWorldLocationMap(state.day);
     const shouldUseBusTravel = (currentLocationId === "bus-stop-map" || currentLocationId === "bus-stop")
       && option.travelVia === "bus";
-    const walkTravelMinutes = shouldUseBusTravel
-      ? TIME_SLOT_MINUTES
-      : estimateWalkTravelMinutes(currentLocationId, option.targetLocation, state);
-    const travelSlots = shouldUseBusTravel
-      ? TIME_COSTS.moveBetweenScenes
-      : Math.max(TIME_COSTS.moveBetweenScenes, Math.round(walkTravelMinutes / TIME_SLOT_MINUTES));
-    const canMove = !Array.isArray(currentLocation?.exits)
-      || currentLocation.exits.includes(option.targetLocation);
-    const currentLabel = currentLocation?.label || getCurrentLocationLabel();
-    const targetLabel = locationMap?.[option.targetLocation]?.label || option.targetLocation;
+    const cityMapSummary = shouldUseBusTravel || typeof getCityMapTravelSummary !== "function"
+      ? null
+      : getCityMapTravelSummary(option.targetLocation, state);
 
-    if (!canMove || currentLocationId === option.targetLocation) {
-      return;
-    }
-
-    if (spendTimeSlots(travelSlots)) {
-      advanceDayOrFinish();
-      return;
-    }
-
-    syncWorldState(state);
-    if (shouldUseBusTravel) {
-      state.world.pendingTravelTarget = option.targetLocation;
-      state.world.currentLocation = "bus-ride";
-      recordActionMemory("버스를 타러 움직였다", `${targetLabel} 쪽으로 가는 버스를 타기 위해 정류장 안쪽으로 들어갔다.`, {
-        type: "travel",
-        source: currentLabel,
-        tags: ["이동", "버스", option.targetLocation],
-      });
-    } else {
-      state.world.pendingTravelTarget = option.targetLocation;
-      state.world.pendingTravelDistrict = typeof getWorldLocationDistrictId === "function"
-        ? getWorldLocationDistrictId(option.targetLocation, state.day)
-        : state.world.pendingTravelDistrict;
-      state.world.pendingTravelSource = currentLabel;
-      state.world.pendingTravelMinutes = walkTravelMinutes;
-      state.world.currentLocation = "walk-travel";
-      recordActionMemory(`${targetLabel}로 걸어갔다`, `${currentLabel}에서 나와 ${targetLabel} 쪽으로 발걸음을 옮겼다.`, {
-        type: "travel",
-        source: currentLabel,
-        tags: ["이동", "도보", option.targetLocation],
-      });
-    }
-    clearAlleyNpcState(state);
-    clearWanderResultState(state);
-    state.headline = {
-      badge: "",
-      text: "",
-    };
-    renderGame();
+    startWorldTravelToLocation(option.targetLocation, {
+      travelMinutes: shouldUseBusTravel ? TIME_SLOT_MINUTES : cityMapSummary?.minutes,
+      travelSlots: shouldUseBusTravel ? TIME_COSTS.moveBetweenScenes : cityMapSummary?.slots,
+      travelMethod: shouldUseBusTravel ? "버스" : cityMapSummary?.methodLabel,
+      travelSceneId: shouldUseBusTravel ? "bus-ride" : cityMapSummary?.sceneId,
+      memoryTitle: shouldUseBusTravel ? "버스를 타고 이동한다" : undefined,
+      memoryText: shouldUseBusTravel ? undefined : cityMapSummary?.routeText
+        ? `${cityMapSummary.currentLabel}에서 ${cityMapSummary.targetLabel}까지 ${cityMapSummary.methodLabel} ${cityMapSummary.durationLabel} 코스를 잡았다.`
+        : undefined,
+      memoryTags: shouldUseBusTravel
+        ? ["이동", "bus", option.targetLocation]
+        : (cityMapSummary?.pathModes?.length
+          ? ["이동", ...cityMapSummary.pathModes, option.targetLocation]
+          : undefined),
+    });
     return;
   }
 
@@ -6593,7 +6257,7 @@ function enterJobBoard() {
 
   state.scene = "board";
   state.headline = {
-    badge: state.hasPhone ? "스마트폰" : `${state.day}일차`,
+    badge: state.hasPhone ? "스마트폰" : (typeof formatTurnLabel === "function" ? formatTurnLabel(state.day) : `${state.day}턴`),
     text: state.hasPhone
       ? (boardHeadline.phone || "밖에서도 스마트폰으로 오늘 공고를 본다.")
       : (boardHeadline.board || "골목 끝 게시판에서 오늘 공고를 확인한다."),
@@ -6655,7 +6319,7 @@ function finishRun() {
   state.endingSummary = buildEndingSummary();
   state.headline = {
     badge: "최종 정산",
-    text: `${MAX_DAYS}일이 끝났다. 손에 남은 현금으로 마지막 랭킹이 매겨진다.`,
+    text: `${MAX_DAYS}턴이 끝났다. 손에 남은 현금으로 마지막 랭킹이 매겨진다.`,
   };
 
   const summary = state.endingSummary;
@@ -6664,6 +6328,8 @@ function finishRun() {
     money: summary.totalCash,
     rank: summary.rank.label,
     job: summary.jobTitle,
+    spoon: summary.originLabel,
+    spoonId: summary.originTierId,
     happiness: summary.happiness,
   };
 
@@ -6682,19 +6348,44 @@ function finishRun() {
   }
 }
 
+function getStartingOriginInfo(targetState = state) {
+  const originState = typeof ensureSpoonStartState === "function"
+    ? ensureSpoonStartState(targetState)
+    : (targetState?.startingOrigin || null);
+  const label = String(originState?.label || "").trim() || "수저 미정";
+  const tierId = String(originState?.tierId || "").trim().toLowerCase();
+  return {
+    label,
+    tierId,
+  };
+}
+
+function getStartingOriginLabel(targetState = state) {
+  return getStartingOriginInfo(targetState).label;
+}
+
+function getStartingOriginTierId(targetState = state) {
+  return getStartingOriginInfo(targetState).tierId;
+}
+
 function buildEndingSummaryLegacy() {
   const rank = getRankByMoney(state.money);
   const lastJob = JOB_LOOKUP[state.lastWorkedJobId];
   const jobTitle = lastJob ? lastJob.title : "무직";
+  const originLabel = getStartingOriginLabel(state);
+  const originTierId = getStartingOriginTierId(state);
 
   return {
     totalCash: state.money,
     rank,
     jobTitle,
     playerName: state.playerName,
+    originLabel,
+    originTierId,
     lines: [
-      `${MAX_DAYS}일 동안 모은 현금을 전부 정산했다.`,
+      `${MAX_DAYS}턴 동안 모은 현금을 전부 정산했다.`,
       `최종 현금 ${formatMoney(state.money)}`,
+      `출신 수저 ${originLabel}`,
       `최종 랭킹 ${rank.label} · ${rank.title}`,
       rank.comment,
     ],
@@ -6705,6 +6396,8 @@ function buildEndingSummary() {
   const rank = getRankByMoney(state.money);
   const lastJob = JOB_LOOKUP[state.lastWorkedJobId];
   const jobTitle = lastJob ? lastJob.title : "무직";
+  const originLabel = getStartingOriginLabel(state);
+  const originTierId = getStartingOriginTierId(state);
   const happinessState = typeof syncHappinessState === "function"
     ? syncHappinessState(state)
     : createDefaultHappinessState();
@@ -6724,11 +6417,14 @@ function buildEndingSummary() {
     rank,
     jobTitle,
     playerName: state.playerName,
+    originLabel,
+    originTierId,
     happiness: happinessState.value,
     happinessStatus: happinessState.status,
     lines: [
-      `${MAX_DAYS}일 동안 모은 현금을 모두 정산했다.`,
+      `${MAX_DAYS}턴 동안 모은 현금을 모두 정산했다.`,
       `최종 현금 ${formatMoney(state.money)}`,
+      `출신 수저 ${originLabel}`,
       `최종 행복도 ${happinessState.value} (${happinessLabel})`,
       `최종 정산 ${rank.label} / ${rank.title}`,
       rank.comment,
@@ -6744,6 +6440,7 @@ function getRankByMoney(money) {
 function restartToTitle() {
   clearSavedState();
   pendingSavedState = null;
+  resetStartScreenDrawState();
   ui.nameInput.value = "";
   state = createInitialState();
   showStartScreen(false);

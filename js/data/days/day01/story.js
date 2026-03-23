@@ -1,19 +1,29 @@
 const DAY01_INTRO_STEPS = [
   {
-    speaker: "부모님집",
+    speaker: "거실",
     title: "",
     lines: [],
     character: "",
-    options: [
-      {
-        title: "잠을 계속 잔다",
-        action: "keepSleeping",
-      },
-      {
-        title: "눈을 뜬다",
-        action: "wakeUp",
-      },
-    ],
+    startMode: "press-exit",
+    background: {
+      image: "1.png",
+      overlay: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 100%)",
+      position: "center",
+      size: "96% auto",
+      repeat: "no-repeat",
+      color: "#050505",
+      className: "custom-location-bg",
+    },
+    player: {
+      src: "assets/characters/player/standing.png",
+      alt: "player",
+      startLeft: 50,
+      prompt: "E를 눌러 밖으로 나가기",
+      bottom: 4,
+      height: 72,
+      zIndex: 2,
+    },
+    options: [],
   },
   {
     speaker: "부모님집",
@@ -28,6 +38,7 @@ const DAY01_INTRO_STEPS = [
       {
         title: "방청소를 한다",
         action: "cleanRoom",
+        hidden: true,
       },
     ],
   },

@@ -87,6 +87,68 @@
   color: #aaa;
 }
 
+.ranking-job-stack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ranking-job-main {
+  color: #b2b7c5;
+  font-size: 0.78rem;
+}
+
+.ranking-spoon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ranking-spoon-badge--gold {
+  background: rgba(240, 192, 64, 0.18);
+  border-color: rgba(240, 192, 64, 0.34);
+  color: #ffd56c;
+}
+
+.ranking-spoon-badge--silver {
+  background: rgba(203, 213, 225, 0.16);
+  border-color: rgba(203, 213, 225, 0.28);
+  color: #e2e8f0;
+}
+
+.ranking-spoon-badge--bronze {
+  background: rgba(207, 124, 86, 0.16);
+  border-color: rgba(207, 124, 86, 0.28);
+  color: #f5b393;
+}
+
+.ranking-spoon-badge--steel {
+  background: rgba(127, 149, 178, 0.16);
+  border-color: rgba(127, 149, 178, 0.28);
+  color: #c7d6ea;
+}
+
+.ranking-spoon-badge--dirt {
+  background: rgba(141, 91, 55, 0.16);
+  border-color: rgba(141, 91, 55, 0.28);
+  color: #d9ae8f;
+}
+
+.ranking-spoon-badge--unknown {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
 .ranking-my-rank {
   font-size: 1rem;
   font-weight: 900;

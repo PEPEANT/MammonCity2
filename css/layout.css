@@ -70,6 +70,10 @@ body {
   width: 240px;
 }
 
+.dev-section.market-overview {
+  width: 384px;
+}
+
 .dev-window-bar {
   width: 100%;
   display: flex;
@@ -366,6 +370,190 @@ body {
   font-family: Consolas, "Courier New", monospace;
 }
 
+.dev-market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dev-market-card,
+.dev-market-preview,
+.dev-market-news-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dev-market-card {
+  padding: 8px;
+}
+
+.dev-market-card-label,
+.dev-market-preview-kicker,
+.dev-market-news-kicker {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8ea1bf;
+}
+
+.dev-market-card-value {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f2f4ff;
+}
+
+.dev-market-card-meta {
+  margin-top: 3px;
+  font-size: 9px;
+  color: #97a0b5;
+}
+
+.dev-market-chip-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dev-market-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dev-market-chip-label {
+  font-size: 9px;
+  color: #97a0b5;
+}
+
+.dev-market-chip-value {
+  font-size: 12px;
+  color: #f2f4ff;
+}
+
+.dev-market-chip.is-up {
+  border-color: rgba(70, 184, 120, 0.38);
+  background: rgba(28, 78, 52, 0.28);
+}
+
+.dev-market-chip.is-down {
+  border-color: rgba(219, 90, 90, 0.36);
+  background: rgba(102, 34, 34, 0.26);
+}
+
+.dev-market-chip.is-neutral {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dev-market-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dev-market-turn {
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+  opacity: 0.68;
+}
+
+.dev-market-turn.is-past {
+  opacity: 0.45;
+}
+
+.dev-market-turn.is-current {
+  border-color: rgba(255, 200, 60, 0.66);
+  box-shadow: inset 0 0 0 1px rgba(255, 200, 60, 0.22);
+  opacity: 1;
+}
+
+.dev-market-turn.is-up {
+  background: rgba(36, 78, 56, 0.28);
+}
+
+.dev-market-turn.is-hot {
+  background: rgba(102, 62, 18, 0.26);
+}
+
+.dev-market-turn.is-down {
+  background: rgba(78, 38, 38, 0.26);
+}
+
+.dev-market-turn.is-neutral {
+  background: rgba(39, 48, 70, 0.26);
+}
+
+.dev-market-turn-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f2f4ff;
+}
+
+.dev-market-turn-month,
+.dev-market-turn-phase {
+  font-size: 9px;
+  color: #a8b0c4;
+}
+
+.dev-market-preview {
+  padding: 10px;
+}
+
+.dev-market-preview-title {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f2f4ff;
+}
+
+.dev-market-preview-body {
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #a8b0c4;
+}
+
+.dev-market-news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dev-market-news-item {
+  padding: 10px;
+}
+
+.dev-market-news-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dev-market-news-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #f2f4ff;
+}
+
+.dev-market-news-body {
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.55;
+  color: #a8b0c4;
+}
+
 /* ═══════════════════════════════════════════════════════
    #game: 720×480 뷰포트 비율 유지
    -- 씬이 전체를 채우고 HUD가 위에 float
@@ -498,7 +686,8 @@ body {
   pointer-events: none;
 }
 
-#game.outside-mode #outside-goal {
+#game.outside-mode #outside-goal,
+#game.interactive-start-mode #outside-goal {
   opacity: 1;
   transform: translateY(0);
 }
@@ -793,7 +982,7 @@ body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.62) 100%),
+    var(--start-origin-screen-overlay, linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.62) 100%)),
     url('../assets/days/day00/intro.jpg') center / cover no-repeat;
   z-index: 200;
   display: flex;
@@ -885,6 +1074,12 @@ body {
     right: 12px;
     max-width: calc(100% - 24px);
     font-size: 10px;
+  }
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  #hud-right {
+    top: calc(env(safe-area-inset-top, 0px) + 2px);
   }
 }
 
