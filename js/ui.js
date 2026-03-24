@@ -56,6 +56,7 @@ function cacheUi() {
   ui.playerDisplay = document.getElementById("player-display");
   ui.dayDisplay = document.getElementById("day-display");
   ui.moneyDisplay = document.getElementById("money-display");
+  ui.bankDisplay = document.getElementById("bank-display");
   ui.staminaDisplay = document.getElementById("stamina-display");
   ui.energyDisplay = document.getElementById("energy-display");
   ui.hungerDisplay = document.getElementById("hunger-display");
@@ -133,6 +134,7 @@ function cacheUi() {
   ui.rankingSubtitle = document.querySelector(".ranking-subtitle");
   ui.phonePanel = document.getElementById("phone-panel");
   ui.phoneStage = document.getElementById("phone-stage");
+  ui.phoneFocusDim = document.getElementById("phone-focus-dim");
   ui.textbox = document.getElementById("textbox");
   ui.phoneControls = document.getElementById("phone-controls");
   ui.phoneStageButton = document.getElementById("phone-stage-btn");
@@ -588,6 +590,44 @@ function getPhonePanelState() {
   };
 }
 
+function getPhoneLayoutState(screenState = getPhonePanelState(), targetState = state) {
+  const phoneView = typeof normalizePhoneRoute === "function"
+    ? normalizePhoneRoute(screenState?.phoneView || "home")
+    : String(screenState?.phoneView || "home");
+  const onHomeRoute = typeof isPhoneHomeRoute === "function"
+    ? isPhoneHomeRoute(phoneView)
+    : phoneView === "home";
+  const currentLocationId = targetState?.scene === "outside" && typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+  const locationMap = typeof getDayWorldLocationMap === "function"
+    ? getDayWorldLocationMap(targetState?.day || 1) || {}
+    : {};
+  const currentLocation = currentLocationId ? locationMap[currentLocationId] || null : null;
+  const interiorLikeLocation = Boolean(
+    currentLocation
+    && (
+      currentLocation.cityMapHidden
+      || !currentLocation.mapNode
+      || (Array.isArray(currentLocation.exits) && currentLocation.exits.length <= 2)
+    )
+  );
+  const mcdonaldsLikeLocation = /mcdonalds/.test(String(currentLocationId || ""));
+  const focusActive = Boolean(
+    screenState?.unlocked
+    && !screenState?.minimized
+    && (screenState?.stageExpanded || !onHomeRoute)
+  );
+
+  return {
+    onHomeRoute,
+    focusActive,
+    stageDocked: Boolean(screenState?.stageExpanded),
+    safeLayout: Boolean(focusActive && (interiorLikeLocation || mcdonaldsLikeLocation)),
+    currentLocationId,
+  };
+}
+
 function buildPhoneHomeGridMarkup(targetState = state) {
   const manifests = typeof getInstalledPhoneAppRegistry === "function"
     ? getInstalledPhoneAppRegistry(targetState)
@@ -722,8 +762,18 @@ function updatePhonePanel() {
   const panelScreenMode = !onHomeRoute
     ? getPhoneRouteScreenMode(phoneView, state)
     : "";
+  const layoutState = getPhoneLayoutState(screenState, state);
   if (ui.phoneAppScreen && !ui.phoneAppScreen.hidden) {
     rememberPhoneScrollPosition("panel", phoneView, ui.phoneAppScreen.scrollTop);
+  }
+
+  if (
+    layoutState.focusActive
+    && typeof hideCityMapOverlay === "function"
+    && typeof cityMapUiState !== "undefined"
+    && cityMapUiState?.open
+  ) {
+    hideCityMapOverlay({ preserveSelection: true });
   }
 
   if (ui.phoneApps) {
@@ -751,6 +801,21 @@ function updatePhonePanel() {
   }
 
   renderPhoneStage(screenState);
+
+  ui.phonePanel.classList.toggle("is-focus-mode", layoutState.focusActive);
+  ui.phonePanel.classList.toggle("is-stage-docked", layoutState.stageDocked);
+  ui.phonePanel.classList.toggle("is-safe-layout", layoutState.safeLayout);
+  ui.phoneStage?.classList.toggle("is-safe-layout", layoutState.safeLayout);
+  if (ui.game) {
+    ui.game.classList.toggle("phone-focus-active", layoutState.focusActive);
+    ui.game.classList.toggle("phone-safe-layout", layoutState.safeLayout);
+    ui.game.classList.toggle("phone-collapsed", screenState.minimized || layoutState.focusActive);
+  }
+  if (ui.phoneFocusDim) {
+    ui.phoneFocusDim.hidden = !layoutState.focusActive;
+    ui.phoneFocusDim.setAttribute("aria-hidden", layoutState.focusActive ? "false" : "true");
+    ui.phoneFocusDim.classList.toggle("is-active", layoutState.focusActive);
+  }
 
   if (typeof syncCasinoSlotMachineMounts === "function") {
     syncCasinoSlotMachineMounts();
@@ -1467,16 +1532,18 @@ function setSceneInteractionPrompt(text = "", visible = false) {
     return;
   }
 
-  const shouldShow = Boolean(visible && text);
-  ui.outsideGoal.textContent = shouldShow ? text : "";
+  const normalizedText = String(text || "").trim();
+  const shouldShow = Boolean(visible && normalizedText);
+  ui.outsideGoal.textContent = shouldShow ? `현재 목표 · ${normalizedText}` : "";
   ui.outsideGoal.style.display = shouldShow ? "block" : "none";
+  ui.outsideGoal.classList.toggle("is-visible", shouldShow);
 }
 
 function syncGameplayObjectivePrompt(targetState = state) {
   const objective = typeof createGameplayObjectiveSnapshot === "function"
     ? createGameplayObjectiveSnapshot(targetState)
     : null;
-  const supportedScene = ["room", "outside", "casino-floor"].includes(targetState?.scene);
+  const supportedScene = !["prologue", "cleanup", "job-minigame", "ending", "ranking", "turn-briefing"].includes(targetState?.scene);
   const promptText = objective?.prompt || "";
   setSceneInteractionPrompt(promptText, supportedScene && Boolean(promptText));
 }
@@ -1543,7 +1610,20 @@ function renderTrashGame() {
     button.appendChild(image);
 
     applyTrashItemLayout(button, item);
-    button.addEventListener("click", () => collectTrash(item.id));
+    button.addEventListener("click", () => {
+      if (typeof runGuardedUiAction === "function") {
+        runGuardedUiAction(() => {
+          collectTrash(item.id);
+        }, {
+          source: "minigame-action",
+          actionId: `cleanup:${item.id}`,
+          allowedModes: ["minigame"],
+          suppressFeedback: true,
+        });
+        return;
+      }
+      collectTrash(item.id);
+    });
     ui.trashItems.appendChild(button);
   });
 }
@@ -1587,7 +1667,20 @@ function renderJobMiniGame() {
     button.appendChild(label);
 
     applyJobMiniGameItemLayout(button, item);
-    button.addEventListener("click", () => completeJobMiniGameTask(item.id));
+    button.addEventListener("click", () => {
+      if (typeof runGuardedUiAction === "function") {
+        runGuardedUiAction(() => {
+          completeJobMiniGameTask(item.id);
+        }, {
+          source: "minigame-action",
+          actionId: `job-minigame:${item.id}`,
+          allowedModes: ["minigame"],
+          suppressFeedback: true,
+        });
+        return;
+      }
+      completeJobMiniGameTask(item.id);
+    });
     ui.jobMiniGameItems.appendChild(button);
   });
 }
@@ -1920,6 +2013,10 @@ function createChoiceButton({
   routeEta = "",
   routeBadge = "",
   routeStopType = "normal",
+  gateSource = "scene-choice",
+  gateActionId = "",
+  allowedModes = null,
+  suppressGateFeedback = false,
 }) {
   const button = document.createElement("button");
   button.type = "button";
@@ -1964,9 +2061,23 @@ function createChoiceButton({
 
   button.addEventListener("click", (event) => {
     event.preventDefault();
-    if (typeof onClick === "function") {
-      onClick();
+    if (typeof onClick !== "function") {
+      return;
     }
+
+    if (typeof runGuardedUiAction === "function") {
+      runGuardedUiAction(() => {
+        onClick();
+      }, {
+        source: gateSource,
+        actionId: gateActionId || title || "choice",
+        allowedModes,
+        suppressFeedback: suppressGateFeedback,
+      });
+      return;
+    }
+
+    onClick();
   });
   ui.choices.appendChild(button);
   syncTextboxContentState();
@@ -2021,12 +2132,15 @@ function renderNextDayButton() {
   });
 }
 
-function showMoneyEffect(amount) {
+function showMoneyEffect(amount, { destination = "" } = {}) {
   if (!amount) {
     return;
   }
 
-  ui.moneyEffect.textContent = `${amount > 0 ? "+" : ""}${formatMoney(amount)}`;
+  const destinationLabel = destination === "bank"
+    ? "계좌 "
+    : (destination === "cash" ? "현금 " : "");
+  ui.moneyEffect.textContent = `${destinationLabel}${amount > 0 ? "+" : ""}${formatMoney(amount)}`;
   ui.moneyEffect.style.color = amount > 0 ? "#7fff7f" : "#ff6b6b";
   ui.moneyEffect.style.left = "50%";
   ui.moneyEffect.style.top = "160px";
@@ -2039,6 +2153,58 @@ function showMoneyEffect(amount) {
     ui.moneyEffect.style.top = "100px";
     ui.moneyEffect.style.opacity = "0";
   }, 30);
+}
+
+function setHudValueWarningState(element, level = "", title = "") {
+  if (!element) {
+    return;
+  }
+
+  element.classList.toggle("is-warning", level === "warning");
+  element.classList.toggle("is-danger", level === "danger");
+  if (title) {
+    element.title = title;
+  } else {
+    element.removeAttribute("title");
+  }
+}
+
+function applyHudResourceStatus(targetState = state) {
+  const warningSnapshot = typeof getCriticalResourceWarningSnapshot === "function"
+    ? getCriticalResourceWarningSnapshot(targetState)
+    : null;
+  const lifestyle = typeof getPlayerLifestyleSnapshot === "function"
+    ? getPlayerLifestyleSnapshot(targetState)
+    : null;
+  const hungerState = typeof ensureHungerState === "function"
+    ? ensureHungerState(targetState)
+    : { value: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100 };
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
+  const cashOnHand = Math.max(0, Number(lifestyle?.cashOnHand ?? targetState?.money) || 0);
+  const bankBalance = Math.max(0, Number(lifestyle?.bankBalance) || 0);
+  const totalFunds = Math.max(0, Number(lifestyle?.liquidFunds ?? (cashOnHand + bankBalance)) || 0);
+  const staminaValue = Math.max(0, Number(targetState?.stamina) || 0);
+
+  setHudValueWarningState(
+    ui.moneyDisplay,
+    warningSnapshot?.cashLevel || "",
+    `현금 ${formatMoney(cashOnHand)} / 총자금 ${formatMoney(totalFunds)}`,
+  );
+  setHudValueWarningState(
+    ui.bankDisplay,
+    warningSnapshot?.economyLevel || "",
+    `계좌 ${formatMoney(bankBalance)} / 총자금 ${formatMoney(totalFunds)}`,
+  );
+  setHudValueWarningState(
+    ui.staminaDisplay,
+    warningSnapshot?.staminaLevel || "",
+    `체력 ${staminaValue}`,
+  );
+  setHudValueWarningState(
+    ui.hungerDisplay,
+    warningSnapshot?.hungerLevel || "",
+    `배고픔 ${hungerState.value}/${hungerMax}`,
+  );
 }
 
 function renderPrologueScene() {
@@ -2062,9 +2228,13 @@ function renderPrologueScene() {
     const introState = typeof syncPrologueIntroState === "function"
       ? syncPrologueIntroState(state)
       : { playerLeft: Number(step?.player?.startLeft) || 24, facing: 1 };
+    const spoonSpawnPlayerLayout = typeof getSpoonStartSpawnPlayerLayout === "function"
+      ? getSpoonStartSpawnPlayerLayout(state)
+      : null;
     const rawPlayerActor = step?.player
       ? {
           ...step.player,
+          ...(spoonSpawnPlayerLayout || {}),
           left: introState.playerLeft,
           facing: introState.facing,
         }
@@ -2354,20 +2524,20 @@ function renderRoomScene() {
   if (shiftStatus) {
     if (shiftStatus.waiting) {
       createChoiceButton({
-        title: `${typeof formatClockTime === "function" ? formatClockTime(shiftStatus.startSlot) : "\ucd9c\uadfc"}\uae4c\uc9c0 \uc2dc\uac04 \ubcf4\ub0b4\uae30`,
+        title: "출근 전까지 방에서 쉬기",
         onClick: waitForScheduledShift,
       });
     }
 
     if (shiftStatus.waiting || shiftStatus.active) {
       createChoiceButton({
-        title: `밖으로 나가 ${shiftUi?.workplaceLabel || "\uadfc\ubb34\uc9c0"}로 이동하기`,
+        title: `${shiftUi?.workplaceLabel || "근무지"}로 이동하기`,
         onClick: goOutside,
       });
     }
 
     createChoiceButton({
-      title: "\uacb0\uadfc\ud558\uace0 \ub118\uae30\uae30",
+      title: "오늘 근무 포기",
       onClick: skipScheduledShift,
     });
   }
@@ -2384,15 +2554,15 @@ function renderRoomScene() {
   }
 
   createChoiceButton({
-    title: "30\ubd84 \ubcf4\ub0b4\uae30",
+    title: "방에서 쉬기",
     onClick: waitInRoom,
   });
   createChoiceButton({
-    title: "\ubc16\uc744 \ub098\uac00\uae30",
+    title: "밖으로 나가기",
     onClick: goOutside,
   });
   createChoiceButton({
-    title: "\uc7a0\uc744 \uc794\ub2e4",
+    title: "잠자기",
     onClick: sleepInRoom,
   });
   syncGameplayObjectivePrompt(state);
@@ -2620,7 +2790,11 @@ function renderRomanceScene() {
   if (!applySceneBackgroundConfig(romanceScene.backgroundConfig || null)) {
     clearSceneBackgroundOverride();
   }
-  setWorldMode(romanceScene.sceneType === "home-invite" ? "room" : "outside");
+  const sceneType = String(romanceScene.sceneType || "").trim().toLowerCase();
+  const isHomeInvite = sceneType === "home-invite";
+  const isAmbientScene = sceneType.startsWith("ambient");
+
+  setWorldMode(isHomeInvite ? "room" : "outside");
   setCharacter("");
 
   const playerActor = typeof resolveSceneActorPresentation === "function"
@@ -2632,6 +2806,9 @@ function renderRomanceScene() {
         bottom: 4,
         height: 86,
         zIndex: 2,
+        ...(romanceScene.playerActor && typeof romanceScene.playerActor === "object"
+          ? romanceScene.playerActor
+          : {}),
       }, state, {
         source: "romance-scene",
         scene: state.scene,
@@ -2641,17 +2818,43 @@ function renderRomanceScene() {
   const npcDefinition = typeof NPC_DATA === "object"
     ? NPC_DATA?.[romanceScene.npcId] || null
     : null;
-  const npcActor = npcDefinition?.art
-    ? {
+  const npcActorSource = String(
+    (romanceScene.npcActor && typeof romanceScene.npcActor === "object" ? romanceScene.npcActor.src : "")
+    || npcDefinition?.art
+    || ""
+  ).trim();
+  const npcActor = npcActorSource
+    ? (typeof resolveSceneActorPresentation === "function"
+      ? resolveSceneActorPresentation({
         kind: "npc",
-        src: npcDefinition.art,
+        src: npcActorSource,
         alt: romanceScene.label || romanceScene.npcId || "romance-npc",
         left: 72,
         bottom: 5,
         height: 88,
         zIndex: 2,
-      }
+        ...(romanceScene.npcActor && typeof romanceScene.npcActor === "object"
+          ? romanceScene.npcActor
+          : {}),
+      }, state, {
+        source: "romance-scene",
+        scene: state.scene,
+        day: state.day,
+      })
+      : {
+          kind: "npc",
+          src: npcActorSource,
+          alt: romanceScene.label || romanceScene.npcId || "romance-npc",
+          left: 72,
+          bottom: 5,
+          height: 88,
+          zIndex: 2,
+          ...(romanceScene.npcActor && typeof romanceScene.npcActor === "object"
+            ? romanceScene.npcActor
+            : {}),
+        })
     : null;
+  const sceneChoices = Array.isArray(romanceScene.choices) ? romanceScene.choices : [];
 
   renderActors([playerActor, npcActor].filter((actor) => actor?.src));
   setCharacterPosition(50, 1);
@@ -2672,12 +2875,42 @@ function renderRomanceScene() {
     return;
   }
 
+  if (sceneChoices.length) {
+    sceneChoices.forEach((choice, index) => {
+      const choiceLabel = String(choice?.label || "").trim();
+      if (!choiceLabel) {
+        return;
+      }
+
+      createChoiceButton({
+        title: choiceLabel,
+        gateActionId: `romance-choice:${romanceScene.eventId || romanceScene.contactId || romanceScene.npcId || "scene"}:${choice.id || index}`,
+        onClick: () => {
+          if (typeof chooseAmbientRomanceChoice === "function" && chooseAmbientRomanceChoice(index, state) !== false) {
+            renderGame();
+          }
+        },
+      });
+    });
+    return;
+  }
+
   createChoiceButton({
-    title: romanceScene.sceneType === "home-invite" ? "집 초대 마치기" : "데이트 마치기",
+    title: isAmbientScene
+      ? "이야기 마치기"
+      : (isHomeInvite ? "집 초대 마치기" : "데이트 마치기"),
     earnText: romanceScene.plannedCost > 0 ? `-${formatMoney(romanceScene.plannedCost)}` : "",
     onClick: () => {
+      if (isAmbientScene) {
+        if (typeof completeAmbientRomanceScene === "function" && completeAmbientRomanceScene(state) !== false) {
+          renderGame();
+        }
+        return;
+      }
+
       if (typeof completeActiveRomanceScene === "function") {
         completeActiveRomanceScene(state);
+        renderGame();
       }
     },
   });
@@ -2716,6 +2949,27 @@ function renderRomanceCallScene() {
   syncGameplayObjectivePrompt(state);
 
   if (!showChoices) {
+    return;
+  }
+
+  const sceneChoices = Array.isArray(callScene.choices) ? callScene.choices : [];
+  if (sceneChoices.length) {
+    sceneChoices.forEach((choice, index) => {
+      const choiceLabel = String(choice?.label || "").trim();
+      if (!choiceLabel) {
+        return;
+      }
+
+      createChoiceButton({
+        title: choiceLabel,
+        gateActionId: `romance-call:${callScene.contactId || callScene.npcId || "call"}:${choice.id || index}`,
+        onClick: () => {
+          if (typeof chooseRomanceCallChoice === "function" && chooseRomanceCallChoice(index, state) !== false) {
+            renderGame();
+          }
+        },
+      });
+    });
     return;
   }
 
@@ -2863,8 +3117,12 @@ function renderJobMiniGameScene() {
     : (game?.jobId ? JOB_LOOKUP[game.jobId] : null);
 
   if (!game || !job) {
-    hideJobMiniGame();
-    renderGame();
+    if (typeof recoverBrokenJobMiniGameState === "function") {
+      recoverBrokenJobMiniGameState("render-missing-context");
+    } else {
+      hideJobMiniGame();
+      renderGame();
+    }
     return;
   }
 
@@ -2886,6 +3144,19 @@ function renderJobMiniGameScene() {
     ]),
   });
   clearChoices();
+  createChoiceButton({
+    title: "준비를 중단한다",
+    description: "보너스 없이 다음 단계로 넘어간다",
+    onClick: () => {
+      if (typeof cancelJobMiniGame === "function") {
+        cancelJobMiniGame("choice-cancel");
+      }
+    },
+    gateSource: "minigame-action",
+    gateActionId: `job-minigame:cancel:${game.id || game.jobId || "current"}`,
+    allowedModes: ["minigame"],
+    suppressGateFeedback: true,
+  });
   renderJobMiniGame();
 }
 
@@ -3142,6 +3413,9 @@ function renderEndingScene() {
 
 function renderGame() {
   const totalDays = typeof MAX_DAYS === "number" ? MAX_DAYS : 30;
+  let lifestyle = null;
+  let cashOnHand = Math.max(0, Number(state?.money) || 0);
+  let bankBalance = 0;
 
   if (typeof normalizeStateForCurrentRules === "function") {
     normalizeStateForCurrentRules();
@@ -3149,8 +3423,18 @@ function renderGame() {
   if (typeof normalizePlayerProgressionState === "function") {
     normalizePlayerProgressionState(state);
   }
+  lifestyle = typeof getPlayerLifestyleSnapshot === "function"
+    ? getPlayerLifestyleSnapshot(state)
+    : null;
+  cashOnHand = Math.max(0, Number(lifestyle?.cashOnHand ?? state.money) || 0);
+  bankBalance = Math.max(0, Number(lifestyle?.bankBalance) || 0);
   if (typeof refreshPhoneHomePreviewForState === "function") {
     refreshPhoneHomePreviewForState(state);
+  }
+  if (ui.game && typeof getCurrentInputGateMode === "function") {
+    const inputMode = getCurrentInputGateMode(state);
+    ui.game.dataset.inputMode = inputMode;
+    ui.game.classList.toggle("is-input-locked", inputMode !== "normal");
   }
 
   updatePhonePanel();
@@ -3164,7 +3448,10 @@ function renderGame() {
   ui.dayDisplay.textContent = typeof formatTurnProgress === "function"
     ? formatTurnProgress(state.day, totalDays)
     : `${state.day}/${totalDays}`;
-  ui.moneyDisplay.textContent = typeof formatCashHud === "function" ? formatCashHud(state.money) : formatMoney(state.money);
+  ui.moneyDisplay.textContent = `현금 ${typeof formatCashHud === "function" ? formatCashHud(cashOnHand) : formatMoney(cashOnHand)}`;
+  if (ui.bankDisplay) {
+    ui.bankDisplay.textContent = `계좌 ${typeof formatCashHud === "function" ? formatCashHud(bankBalance) : formatMoney(bankBalance)}`;
+  }
   ui.staminaDisplay.textContent = `${state.stamina}`;
   ui.energyDisplay.textContent = `${state.energy}`;
   if (ui.hungerDisplay) {
@@ -3174,6 +3461,7 @@ function renderGame() {
     const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
     ui.hungerDisplay.textContent = `${hungerState.value}/${hungerMax}`;
   }
+  applyHudResourceStatus(state);
   ui.timeDisplay.textContent = getSceneTimeText();
   setHeadline(state.headline.badge, state.headline.text);
   renderGameplayFeedback();
@@ -3183,7 +3471,7 @@ function renderGame() {
   renderCharacterPanel();
   setSceneInteractionPrompt("", false);
   if (typeof persistState === "function") {
-    persistState();
+    persistState("render");
   }
 
   if (state.scene !== "outside" && typeof hideCityMapOverlay === "function") {
@@ -3281,103 +3569,6 @@ function renderGame() {
   }
 
   renderResultScene();
-}
-
-function unusedLegacyShowRankingScreen(myEntry, allEntries) {
-  if (!ui.rankingScreen) return;
-  const metricLabel = escapeHtml(String(myEntry.metricLabel || "최종 보유 자금"));
-  const mySpoon = escapeHtml(String(myEntry.spoon || "수저 미정"));
-  const mySpoonClass = getRankingSpoonClass(myEntry.spoonId || myEntry.spoon);
-  const sourceEntries = Array.isArray(allEntries) ? allEntries : [];
-  const includesMyEntry = sourceEntries.some((entry) => {
-    if (myEntry.id && entry.id) {
-      return String(entry.id) === String(myEntry.id);
-    }
-    if (myEntry.entryKey && entry.entryKey) {
-      return String(entry.entryKey) === String(myEntry.entryKey);
-    }
-
-    return String(entry.name || "") === String(myEntry.name || "")
-      && Number(entry.money || 0) === Number(myEntry.money || 0)
-      && String(entry.job || "") === String(myEntry.job || "")
-      && String(entry.rank || "") === String(myEntry.rank || "")
-      && String(entry.spoonId || entry.spoon || "") === String(myEntry.spoonId || myEntry.spoon || "");
-  });
-  const mergedEntries = includesMyEntry ? [...sourceEntries] : [...sourceEntries, myEntry];
-  const firebaseReady = typeof isFirebaseReady === "function" ? isFirebaseReady() : false;
-
-  if (ui.rankingSubtitle) {
-    ui.rankingSubtitle.textContent = firebaseReady
-      ? `${MAX_DAYS}턴 ${myEntry.metricLabel || "최종 보유 자금"} 랭킹`
-      : `${MAX_DAYS}턴 ${myEntry.metricLabel || "최종 보유 자금"} 랭킹 · 오프라인`;
-  }
-
-  // 내 카드 렌더링
-  if (ui.rankingMyCard) {
-    ui.rankingMyCard.innerHTML = `
-      <div class="ranking-my-label">내 결과</div>
-      <div class="ranking-my-name">${escapeHtml(myEntry.name)}</div>
-      <div class="ranking-my-stats">
-        <span class="ranking-my-money">${metricLabel} ${formatMoney(myEntry.money)}</span>
-        <span class="ranking-my-job">${escapeHtml(myEntry.job)}</span>
-        <span class="ranking-spoon-badge ${mySpoonClass}">${mySpoon}</span>
-        <span class="ranking-my-rank ranking-rank--${String(myEntry.rank || "d").toLowerCase()}">${myEntry.rank}</span>
-      </div>
-    `;
-  }
-
-  // 전체 랭킹 리스트 렌더링
-  if (ui.rankingList) {
-    // money 내림차순 정렬
-    const sorted = mergedEntries.sort((a, b) => (b.money || 0) - (a.money || 0));
-    let matchedFallbackEntry = false;
-    const isMe = (entry) => {
-      if (myEntry.id && entry.id) {
-        return String(entry.id) === String(myEntry.id);
-      }
-      if (myEntry.entryKey && entry.entryKey) {
-        return String(entry.entryKey) === String(myEntry.entryKey);
-      }
-      if (matchedFallbackEntry) {
-        return false;
-      }
-
-      const matched = String(entry.name || "") === String(myEntry.name || "")
-        && Number(entry.money || 0) === Number(myEntry.money || 0)
-        && String(entry.job || "") === String(myEntry.job || "")
-        && String(entry.rank || "") === String(myEntry.rank || "")
-        && String(entry.spoonId || entry.spoon || "") === String(myEntry.spoonId || myEntry.spoon || "");
-
-      if (matched) {
-        matchedFallbackEntry = true;
-      }
-
-      return matched;
-    };
-
-    ui.rankingList.innerHTML = sorted
-      .map((entry, idx) => {
-        const me = isMe(entry);
-        const spoonLabel = escapeHtml(String(entry.spoon || "수저 미정"));
-        const spoonClass = getRankingSpoonClass(entry.spoonId || entry.spoon);
-        return `<tr class="ranking-row${me ? " ranking-row--me" : ""}">
-          <td class="ranking-pos">${idx + 1}</td>
-          <td class="ranking-name">${escapeHtml(entry.name || "무명")}${me ? " <span class=\"ranking-me-badge\">나</span>" : ""}</td>
-          <td class="ranking-money">${formatMoney(entry.money || 0)}</td>
-          <td class="ranking-job">
-            <div class="ranking-job-stack">
-              <span class="ranking-job-main">${escapeHtml(entry.job || "무직")}</span>
-              <span class="ranking-spoon-badge ${spoonClass}">${spoonLabel}</span>
-            </div>
-          </td>
-          <td class="ranking-rank ranking-rank--${(entry.rank || "d").toLowerCase()}">${entry.rank || "D"}</td>
-        </tr>`;
-      })
-      .join("");
-  }
-
-  ui.rankingScreen.hidden = false;
-  ui.rankingScreen.setAttribute("aria-hidden", "false");
 }
 
 function closeRankingScreen() {

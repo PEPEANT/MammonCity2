@@ -562,10 +562,10 @@ if (JOB_LOOKUP.warehouse) {
 }
 
 const CAREER_PREP_LABELS = {
-  service: "서비스 준비",
-  labor: "생산직 준비",
-  office: "사무직 준비",
-  academic: "연구직 준비",
+  service: "서비스 감각",
+  labor: "현장 경험",
+  office: "사무 준비",
+  academic: "학업 준비",
 };
 
 const CAREER_CERTIFICATION_LABELS = {
@@ -624,7 +624,7 @@ const CAREER_JOB_POSTINGS = [
       },
     ],
     baseChance: 0.22,
-    description: "배금전자 사무동에서 문서, 일정, 부서 행정을 맡을 신입 채용이다. 대학 졸업과 사무 준비도가 먼저 요구된다.",
+    description: "배금전자 사무동에서 문서, 일정, 부서 행정을 맡을 신입 채용이다. 대학 졸업과 사무 준비가 먼저 필요하다.",
   },
   {
     id: "baegeum-research-lab",
@@ -652,7 +652,7 @@ const CAREER_JOB_POSTINGS = [
       },
     ],
     baseChance: 0.16,
-    description: "배금연구소에서 데이터 정리와 실험 보조를 맡는 연구직 루트다. 대학 졸업과 높은 연구 준비도가 없으면 면접에서 계속 떨어진다.",
+    description: "배금연구소에서 데이터 정리와 실험 보조를 맡는 연구직 루트다. 대학 졸업과 높은 학업 준비가 없으면 면접에서 계속 떨어진다.",
   },
 ];
 
@@ -681,6 +681,60 @@ if (CAREER_JOB_POSTING_LOOKUP["baegeum-research-lab"]) {
   });
 }
 
+const JOB_MINIGAME_TRIGGER_RULES = {
+  delivery: {
+    label: "배달 집결지",
+    locationIds: ["logistics-center"],
+    requiredShiftPhase: "active",
+  },
+  "delivery-motorbike": {
+    label: "다운타운 배달 거점",
+    locationIds: ["downtown"],
+    requiredShiftPhase: "active",
+  },
+  "delivery-courier": {
+    label: "역 앞 택배 집하장",
+    locationIds: ["station-front"],
+    requiredShiftPhase: "active",
+  },
+  tutoring: {
+    label: "대학가 과외 현장",
+    locationIds: ["university-district"],
+    requiredShiftPhase: "active",
+  },
+  "mcd-counter": {
+    label: "맥도날드 카운터",
+    locationIds: ["mcdonalds-counter"],
+    requiredShiftPhase: "active",
+  },
+  "mcd-kitchen": {
+    label: "맥도날드 주방",
+    locationIds: ["mcdonalds-kitchen"],
+    requiredShiftPhase: "active",
+    sessionType: "dynamic-kitchen",
+  },
+  warehouse: {
+    label: "물류센터 상하차 구역",
+    locationIds: ["logistics-center"],
+    requiredShiftPhase: "active",
+  },
+  "factory-operator": {
+    label: "생산 라인",
+    locationIds: ["production-line"],
+    requiredShiftPhase: "active",
+  },
+  "baegeum-electronics-office": {
+    label: "관제 오피스",
+    locationIds: ["mobility-control-center"],
+    requiredShiftPhase: "active",
+  },
+  "baegeum-research-lab": {
+    label: "연구실",
+    locationIds: ["research-lab-interior"],
+    requiredShiftPhase: "active",
+  },
+};
+
 function getCareerPostingById(postingId) {
   return CAREER_JOB_POSTING_LOOKUP[postingId] || null;
 }
@@ -699,6 +753,42 @@ function getOfferKey(offer = null) {
   }
 
   return String(offer.jobId || "").trim();
+}
+
+function getOfferMiniGameTriggerRule(offer = null, targetState = state) {
+  if (!offer) {
+    return null;
+  }
+
+  const key = offer.careerPostingId
+    ? String(offer.careerPostingId || "").trim()
+    : String(offer.jobId || "").trim();
+  const runtimeDefinition = getOfferRuntimeDefinition(offer);
+  const baseRule = key ? JOB_MINIGAME_TRIGGER_RULES[key] || null : null;
+
+  if (!runtimeDefinition?.minigame && !baseRule) {
+    return null;
+  }
+
+  const workplace = typeof getOfferWorkplaceSummary === "function"
+    ? getOfferWorkplaceSummary(offer, targetState)
+    : null;
+  const locationIds = [
+    ...(Array.isArray(baseRule?.locationIds) ? baseRule.locationIds : []),
+    workplace?.locationId || "",
+  ]
+    .map((locationId) => String(locationId || "").trim())
+    .filter(Boolean)
+    .filter((locationId, index, list) => list.indexOf(locationId) === index);
+
+  return {
+    key: key || runtimeDefinition?.id || "",
+    label: baseRule?.label || workplace?.workplaceName || runtimeDefinition?.title || offer.title || "근무",
+    trigger: baseRule?.trigger || "scheduled-shift",
+    requiredShiftPhase: baseRule?.requiredShiftPhase || "active",
+    sessionType: baseRule?.sessionType || "",
+    locationIds,
+  };
 }
 
 function getOfferRuntimeDefinition(offer = null) {

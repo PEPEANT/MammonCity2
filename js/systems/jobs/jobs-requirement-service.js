@@ -235,7 +235,7 @@ function getShortTermJobFailureReason(offer = null, targetState = state) {
     return "";
   }
 
-  return eligibility.unmetRequirements[0] || "조건 부족";
+  return eligibility.unmetRequirements[0] || "지원 조건";
 }
 
 function buildCareerPostingRequirements(posting = null) {
@@ -281,5 +281,5 @@ function getCareerPostingFailureReason(posting = null, targetState = state) {
     return "";
   }
 
-  return eligibility.unmetRequirements[0] || "조건 부족";
+  return eligibility.unmetRequirements[0] || "지원 조건";
 }

@@ -235,35 +235,87 @@ function buildBankHeaderMarkup({
   kicker = "BANK",
   title = "",
   note = "",
+  actionRoute = "",
+  actionLabel = "",
+  showHomeButton = false,
+  homeButtonLabel = "홈",
 }) {
+  const actionsHtml = actionRoute && actionLabel
+    ? buildPhoneRouteButtonMarkup({
+        route: actionRoute,
+        label: actionLabel,
+        className: "phone-app-mini-btn",
+      })
+    : "";
+
   return buildPhoneAppScreenHeaderMarkup({
     kicker,
     title,
     note,
-    showHomeButton: false,
+    showHomeButton,
+    homeButtonLabel,
+    actionsHtml,
   });
 }
 
-function buildBankBalanceCardMarkup(viewModel, { compact = false } = {}) {
-  const metaItems = [
-    `보유 현금 ${formatCash(viewModel.cashOnHand)}`,
-    compact ? "" : `거래 ${viewModel.transactionCount}건`,
-  ].filter(Boolean);
+function buildBankBalanceCardMarkup(viewModel, {
+  compact = false,
+  label = "현재 돈",
+  note = "",
+  showCashOnHand = true,
+  showLiquidFunds = true,
+  showTransactionCount = false,
+} = {}) {
+  const metaItems = [];
+
+  if (showCashOnHand) {
+    metaItems.push(`보유 현금 ${formatCash(viewModel.cashOnHand)}`);
+  }
+
+  if (showLiquidFunds) {
+    metaItems.push(`즉시 자금 ${formatCash(viewModel.liquidFunds)}`);
+  }
+
+  if (showTransactionCount) {
+    metaItems.push(`거래 ${viewModel.transactionCount}건`);
+  }
 
   return `
     <section class="bank-balance-card${compact ? " is-compact" : ""}">
       <div class="bank-balance-top">
         <div>
-          <div class="bank-balance-label">배금은행 입출금</div>
-          ${compact ? "" : `<div class="bank-balance-account">배금은행 주거래 계좌</div>`}
+          <div class="bank-balance-label">${escapePhoneAppHtml(label)}</div>
+          ${note ? `<div class="bank-balance-account">${escapePhoneAppHtml(note)}</div>` : ""}
         </div>
         <div class="bank-balance-badge">BANK</div>
       </div>
       <div class="bank-balance-amount">${escapePhoneAppHtml(formatCash(viewModel.balance))}</div>
-      <div class="bank-balance-meta">
-        ${metaItems.map((item) => `<span>${escapePhoneAppHtml(item)}</span>`).join("")}
-      </div>
+      ${metaItems.length ? `
+        <div class="bank-balance-meta">
+          ${metaItems.map((item) => `<span>${escapePhoneAppHtml(item)}</span>`).join("")}
+        </div>
+      ` : ""}
     </section>
+  `;
+}
+
+function buildBankHomeActionsMarkup(viewModel, { panelMode = false } = {}) {
+  const actionClassName = panelMode ? "bank-panel-actions" : "bank-primary-actions";
+
+  return `
+    <div class="${actionClassName}">
+      ${buildPhoneRouteButtonMarkup({
+        route: "bank/deposit",
+        label: "입금",
+        className: "bank-action-btn is-dark",
+      })}
+      ${buildPhoneRouteButtonMarkup({
+        route: "bank/withdraw",
+        label: "출금",
+        disabled: viewModel.balance <= 0,
+        className: "bank-action-btn is-light",
+      })}
+    </div>
   `;
 }
 
@@ -273,23 +325,19 @@ function buildBankPanelHomeScreenMarkup(viewModel) {
       ${buildBankHeaderMarkup({
         kicker: "",
         title: "배금은행",
-        note: "",
+        note: "현재 돈만 바로 확인",
+        actionRoute: "bank/manage",
+        actionLabel: "더보기",
       })}
       ${buildPhoneAppStatusMarkup("bank")}
-      ${buildBankBalanceCardMarkup(viewModel, { compact: true })}
-      <div class="bank-panel-actions">
-        ${buildPhoneRouteButtonMarkup({
-          route: "bank/deposit",
-          label: "입금",
-          className: "bank-action-btn is-dark",
-        })}
-        ${buildPhoneRouteButtonMarkup({
-          route: "bank/withdraw",
-          label: "출금",
-          disabled: viewModel.balance <= 0,
-          className: "bank-action-btn is-light",
-        })}
-      </div>
+      ${buildBankBalanceCardMarkup(viewModel, {
+        compact: true,
+        showCashOnHand: true,
+        showLiquidFunds: true,
+        label: "현재 돈",
+        note: "입금과 출금만 빠르게",
+      })}
+      ${buildBankHomeActionsMarkup(viewModel, { panelMode: true })}
     </div>
   `;
 }
@@ -304,38 +352,81 @@ function buildBankHomeScreenMarkup(viewModel, { stageMode = false } = {}) {
       ${buildBankHeaderMarkup({
         kicker: "BANK",
         title: "배금은행",
-        note: "잔액과 주요 거래를 한 화면에서 정리",
+        note: "현재 돈만 빠르게 확인",
+        actionRoute: "bank/manage",
+        actionLabel: "더보기",
       })}
       ${buildPhoneAppStatusMarkup("bank")}
-      ${buildBankBalanceCardMarkup(viewModel)}
-      <div class="bank-primary-actions">
-        ${buildPhoneRouteButtonMarkup({
-          route: "bank/deposit",
-          label: "입금",
-          className: "bank-action-btn is-dark",
+      ${buildBankBalanceCardMarkup(viewModel, {
+        label: "현재 돈",
+        note: "계좌 잔액만 간단하게 확인",
+      })}
+      ${buildBankHomeActionsMarkup(viewModel)}
+    </div>
+  `;
+}
+
+function buildBankManageScreenMarkup(viewModel, { stageMode = false } = {}) {
+  return `
+    <div class="bank-layout ${stageMode ? "is-stage" : "is-panel"} bank-screen-manage">
+      ${buildBankHeaderMarkup({
+        kicker: "BANK",
+        title: "은행 더보기",
+        note: "부가 기능은 여기서 확인",
+        actionRoute: "bank/home",
+        actionLabel: "홈",
+      })}
+      ${buildPhoneAppStatusMarkup("bank")}
+      <section class="phone-app-card bank-surface-card">
+        <div class="bank-section-head">
+          <div>
+            <div class="bank-section-eyebrow">부가 기능</div>
+            <div class="bank-section-title">송금과 내역 관리</div>
+          </div>
+        </div>
+        <div class="bank-secondary-actions">
+          ${buildPhoneRouteButtonMarkup({
+            route: "bank/transfer",
+            label: "송금",
+            className: "bank-nav-btn",
+          })}
+          ${buildPhoneRouteButtonMarkup({
+            route: "bank/history",
+            label: "거래내역",
+            className: "bank-nav-btn",
+          })}
+          ${buildPhoneRouteButtonMarkup({
+            route: "bank/loans",
+            label: "대출/상환",
+            className: "bank-nav-btn",
+          })}
+        </div>
+      </section>
+      <section class="phone-app-card bank-surface-card">
+        <div class="bank-section-head">
+          <div>
+            <div class="bank-section-eyebrow">최근 거래</div>
+            <div class="bank-section-title">${escapePhoneAppHtml(`${viewModel.transactionCount}건`)}</div>
+          </div>
+        </div>
+        ${buildBankTransactionsMarkup(viewModel, {
+          limit: stageMode ? 4 : 2,
         })}
+      </section>
+      <section class="phone-app-card bank-surface-card">
+        <div class="bank-section-head">
+          <div>
+            <div class="bank-section-eyebrow">대출 상태</div>
+            <div class="bank-section-title">현재 요약</div>
+          </div>
+        </div>
+        ${buildBankLoanSummaryMarkup(viewModel)}
+      </section>
+      <div class="bank-footer-actions">
         ${buildPhoneRouteButtonMarkup({
-          route: "bank/withdraw",
-          label: "출금",
-          disabled: viewModel.balance <= 0,
-          className: "bank-action-btn is-light",
-        })}
-      </div>
-      <div class="bank-secondary-actions">
-        ${buildPhoneRouteButtonMarkup({
-          route: "bank/transfer",
-          label: "송금",
-          className: "bank-nav-btn",
-        })}
-        ${buildPhoneRouteButtonMarkup({
-          route: "bank/history",
-          label: "거래내역",
-          className: "bank-nav-btn",
-        })}
-        ${buildPhoneRouteButtonMarkup({
-          route: "bank/loans",
-          label: "대출/상환",
-          className: "bank-nav-btn",
+          route: "bank/home",
+          label: "홈",
+          className: "bank-inline-btn",
         })}
       </div>
     </div>
@@ -355,6 +446,8 @@ function buildBankCashFlowScreenMarkup(viewModel, mode, { stageMode = false } = 
         kicker: isDeposit ? "DEPOSIT" : "WITHDRAW",
         title: isDeposit ? "입금" : "출금",
         note: isDeposit ? "현금을 계좌로 넣습니다." : "계좌 잔액을 현금으로 찾습니다.",
+        actionRoute: "bank/home",
+        actionLabel: "홈",
       })}
       ${buildPhoneAppStatusMarkup("bank")}
       <section class="phone-app-card bank-surface-card bank-flow-card">
@@ -383,7 +476,7 @@ function buildBankCashFlowScreenMarkup(viewModel, mode, { stageMode = false } = 
         <div class="bank-footer-actions">
           ${buildPhoneRouteButtonMarkup({
             route: "bank/home",
-            label: "대시보드",
+            label: "홈",
             className: "bank-inline-btn",
           })}
         </div>
@@ -403,6 +496,8 @@ function buildBankTransferScreenMarkup(viewModel, { stageMode = false } = {}) {
         kicker: "TRANSFER",
         title: "송금",
         note: "이체할 대상과 금액만 간단하게 입력",
+        actionRoute: "bank/home",
+        actionLabel: "홈",
       })}
       ${buildPhoneAppStatusMarkup("bank")}
       <section class="phone-app-card bank-surface-card bank-transfer-form" data-bank-transfer-form>
@@ -447,7 +542,7 @@ function buildBankTransferScreenMarkup(viewModel, { stageMode = false } = {}) {
             })}
             ${buildPhoneRouteButtonMarkup({
               route: "bank/home",
-              label: "대시보드",
+              label: "홈",
               className: "bank-inline-btn",
             })}
           </div>
@@ -464,6 +559,8 @@ function buildBankHistoryScreenMarkup(viewModel, { stageMode = false } = {}) {
         kicker: "HISTORY",
         title: "거래내역",
         note: "계좌에서 오간 흐름을 한 번에 확인",
+        actionRoute: "bank/home",
+        actionLabel: "홈",
       })}
       ${buildPhoneAppStatusMarkup("bank")}
       <section class="phone-app-card bank-surface-card">
@@ -474,7 +571,7 @@ function buildBankHistoryScreenMarkup(viewModel, { stageMode = false } = {}) {
           </div>
           ${buildPhoneRouteButtonMarkup({
             route: "bank/home",
-            label: "대시보드",
+            label: "홈",
             className: "bank-inline-btn",
           })}
         </div>
@@ -495,6 +592,8 @@ function buildBankLoansScreenMarkup(viewModel, { stageMode = false } = {}) {
         kicker: "LOANS",
         title: "대출 / 상환",
         note: "필요한 자금과 상환 일정을 정리",
+        actionRoute: "bank/home",
+        actionLabel: "홈",
       })}
       ${buildPhoneAppStatusMarkup("bank")}
       <section class="phone-app-card bank-surface-card">
@@ -534,12 +633,12 @@ function buildBankLoansScreenMarkup(viewModel, { stageMode = false } = {}) {
       <div class="bank-secondary-actions">
         ${buildPhoneRouteButtonMarkup({
           route: "bank/home",
-          label: "대시보드",
+          label: "홈",
           className: "bank-nav-btn",
         })}
         ${buildPhoneRouteButtonMarkup({
-          route: "bank/transfer",
-          label: "송금",
+          route: "bank/manage",
+          label: "더보기",
           className: "bank-nav-btn",
         })}
       </div>
@@ -576,6 +675,10 @@ function getBankAppManifest(targetState = state) {
 
       if (screenId === "withdraw") {
         return buildBankCashFlowScreenMarkup(viewModel, "withdraw", { stageMode });
+      }
+
+      if (screenId === "manage") {
+        return buildBankManageScreenMarkup(viewModel, { stageMode });
       }
 
       if (screenId === "transfer") {

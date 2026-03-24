@@ -53,6 +53,33 @@ const ROMANCE_NPC_CONFIG = {
       "문제집 들고 있던 손이 바쁜 와중에도 또 연락하라는 말은 남겼다.",
     ],
   },
+  "girlfriend-student": {
+    npcId: "girlfriend-student",
+    contactId: "girlfriendStudent",
+    label: "도서관 여학생",
+    shortLabel: "여학생",
+    sourceLabel: "도서관",
+    introNote: "도서관과 대학가 복도에서 마주치는 조용한 학생.",
+    dialogueChanceByLevel: {
+      1: 0,
+      2: 0,
+      3: 0.16,
+    },
+    streetChanceByLevel: {
+      1: 0,
+      2: 0,
+      3: 0,
+    },
+    dateLocationId: "campus-park",
+    dateVenueLabel: "캠퍼스 공원",
+    dateCost: 8000,
+    homeInviteCost: 5000,
+    callLines: [
+      "도서관 여학생이 작은 목소리로 오늘은 책보다 당신 목소리가 더 기억난다고 말한다.",
+      "복도에서 마주쳤던 순간을 떠올리며 조용히 웃는 숨결이 전화기 너머로 전해진다.",
+      "다음엔 공부 이야기 말고 서로 이야기부터 해보자며 천천히 말을 잇는다.",
+    ],
+  },
   "npc-woman": {
     npcId: "npc-woman",
     contactId: "npcWoman",
@@ -619,6 +646,184 @@ function syncLegacyRomanceSceneState(targetState = state) {
   return targetState.romanceScene;
 }
 
+function cloneRomanceSceneChoice(choice = null) {
+  if (!choice || typeof choice !== "object") {
+    return null;
+  }
+
+  return {
+    ...choice,
+    lines: Array.isArray(choice.lines)
+      ? choice.lines.map((line) => String(line || "").trim()).filter(Boolean)
+      : [],
+    resultLines: Array.isArray(choice.resultLines)
+      ? choice.resultLines.map((line) => String(line || "").trim()).filter(Boolean)
+      : [],
+    tags: Array.isArray(choice.tags)
+      ? choice.tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [],
+    resultTags: Array.isArray(choice.resultTags)
+      ? choice.resultTags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [],
+    headline: choice.headline && typeof choice.headline === "object"
+      ? { ...choice.headline }
+      : null,
+    memory: choice.memory && typeof choice.memory === "object"
+      ? { ...choice.memory }
+      : null,
+    grantContact: choice.grantContact && typeof choice.grantContact === "object"
+      ? {
+          ...choice.grantContact,
+          headline: choice.grantContact.headline && typeof choice.grantContact.headline === "object"
+            ? { ...choice.grantContact.headline }
+            : null,
+          memory: choice.grantContact.memory && typeof choice.grantContact.memory === "object"
+            ? { ...choice.grantContact.memory }
+            : null,
+        }
+      : null,
+  };
+}
+
+function cloneRomanceSceneSnapshot(scene = null) {
+  if (!scene || typeof scene !== "object") {
+    return null;
+  }
+
+  return {
+    ...scene,
+    tags: Array.isArray(scene.tags) ? scene.tags.map((tag) => String(tag || "").trim()).filter(Boolean) : [],
+    introLines: Array.isArray(scene.introLines) ? scene.introLines.map((line) => String(line || "").trim()).filter(Boolean) : [],
+    choices: Array.isArray(scene.choices)
+      ? scene.choices.map((choice) => cloneRomanceSceneChoice(choice)).filter(Boolean)
+      : [],
+    backgroundConfig: scene.backgroundConfig && typeof scene.backgroundConfig === "object"
+      ? { ...scene.backgroundConfig }
+      : null,
+    playerActor: scene.playerActor && typeof scene.playerActor === "object"
+      ? { ...scene.playerActor }
+      : null,
+    npcActor: scene.npcActor && typeof scene.npcActor === "object"
+      ? { ...scene.npcActor }
+      : null,
+  };
+}
+
+function cloneRomanceCallChoice(choice = null) {
+  if (!choice || typeof choice !== "object") {
+    return null;
+  }
+
+  return {
+    ...choice,
+    tags: Array.isArray(choice.tags)
+      ? choice.tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [],
+    resultTags: Array.isArray(choice.resultTags)
+      ? choice.resultTags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [],
+    resultLines: Array.isArray(choice.resultLines)
+      ? choice.resultLines.map((line) => String(line || "").trim()).filter(Boolean)
+      : [],
+    headline: choice.headline && typeof choice.headline === "object"
+      ? { ...choice.headline }
+      : null,
+  };
+}
+
+function cloneRomanceCallSceneSnapshot(scene = null) {
+  if (!scene || typeof scene !== "object") {
+    return null;
+  }
+
+  return {
+    ...scene,
+    lines: Array.isArray(scene.lines)
+      ? scene.lines.map((line) => String(line || "").trim()).filter(Boolean)
+      : [],
+    tags: Array.isArray(scene.tags)
+      ? scene.tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [],
+    choices: Array.isArray(scene.choices)
+      ? scene.choices.map((choice) => cloneRomanceCallChoice(choice)).filter(Boolean)
+      : [],
+  };
+}
+
+function createDefaultAmbientRomanceState() {
+  return {
+    seenEventIds: [],
+    cooldownUntilDayByNpcId: {},
+    followUpStateByNpcId: {},
+    lastTriggerId: "",
+    activeEventId: "",
+  };
+}
+
+function syncAmbientRomanceState(targetState = state) {
+  if (!targetState || typeof targetState !== "object") {
+    return createDefaultAmbientRomanceState();
+  }
+
+  const defaults = createDefaultAmbientRomanceState();
+  const currentState = targetState.ambientRomance && typeof targetState.ambientRomance === "object"
+    ? targetState.ambientRomance
+    : {};
+
+  targetState.ambientRomance = {
+    seenEventIds: Array.isArray(currentState.seenEventIds)
+      ? currentState.seenEventIds.map((id) => String(id || "").trim()).filter(Boolean)
+      : defaults.seenEventIds,
+    cooldownUntilDayByNpcId: currentState.cooldownUntilDayByNpcId && typeof currentState.cooldownUntilDayByNpcId === "object"
+      ? Object.fromEntries(
+          Object.entries(currentState.cooldownUntilDayByNpcId).map(([npcId, day]) => [
+            String(npcId || "").trim(),
+            Math.max(0, Math.round(Number(day) || 0)),
+          ]).filter(([npcId]) => Boolean(npcId))
+        )
+      : { ...defaults.cooldownUntilDayByNpcId },
+    followUpStateByNpcId: currentState.followUpStateByNpcId && typeof currentState.followUpStateByNpcId === "object"
+      ? Object.fromEntries(
+          Object.entries(currentState.followUpStateByNpcId).map(([npcId, followUpState]) => [
+            String(npcId || "").trim(),
+            String(followUpState || "").trim(),
+          ]).filter(([npcId]) => Boolean(npcId))
+        )
+      : { ...defaults.followUpStateByNpcId },
+    lastTriggerId: String(currentState.lastTriggerId || "").trim(),
+    activeEventId: String(currentState.activeEventId || "").trim(),
+  };
+
+  return targetState.ambientRomance;
+}
+
+function getAmbientRomanceFollowUpState(npcId = "", targetState = state) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return "";
+  }
+
+  return String(syncAmbientRomanceState(targetState).followUpStateByNpcId?.[normalizedNpcId] || "").trim();
+}
+
+function setAmbientRomanceFollowUpState(npcId = "", followUpState = "", targetState = state) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return "";
+  }
+
+  const normalizedFollowUpState = String(followUpState || "").trim();
+  const ambientState = syncAmbientRomanceState(targetState);
+
+  if (!normalizedFollowUpState) {
+    delete ambientState.followUpStateByNpcId[normalizedNpcId];
+    return "";
+  }
+
+  ambientState.followUpStateByNpcId[normalizedNpcId] = normalizedFollowUpState;
+  return normalizedFollowUpState;
+}
+
 function createDefaultRomanceDomainState() {
   return {
     activePlan: null,
@@ -627,6 +832,777 @@ function createDefaultRomanceDomainState() {
     callScene: null,
     girlfriendContactIds: [],
   };
+}
+
+const AMBIENT_ROMANCE_LIBRARY_CORRIDOR_BACKGROUND = Object.freeze({
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/library-corridor.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(8, 10, 16, 0.1) 0%, rgba(8, 10, 16, 0.28) 100%)",
+});
+
+const AMBIENT_ROMANCE_CAMPUS_PARK_BACKGROUND = Object.freeze({
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/campus-park.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(11, 18, 14, 0.08) 0%, rgba(11, 18, 14, 0.26) 100%)",
+});
+
+const AMBIENT_ROMANCE_MCDONALDS_COUNTER_BACKGROUND = Object.freeze({
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/mcdonalds-counter.png",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(15, 8, 8, 0.1) 0%, rgba(15, 8, 8, 0.3) 100%)",
+});
+
+const AMBIENT_ROMANCE_EVENTS = Object.freeze({
+  "library-student-confession": Object.freeze({
+    id: "library-student-confession",
+    triggerId: "study-academic-prep",
+    npcId: "girlfriend-student",
+    contactId: "girlfriendStudent",
+    locationId: "library",
+    sceneType: "ambient-confession",
+    oncePerContact: true,
+    blockedAmbientFollowUpStates: ["soft-declined"],
+    title: "복도로 나가려는 순간 여학생이 조심스럽게 앞을 막는다",
+    speaker: "도서관 여학생",
+    headlineBadge: "돌발 고백",
+    headlineText: "도서관 복도에서 누군가 먼저 말을 걸어 왔다.",
+    appearanceLevelMin: 2,
+    chanceByAppearanceLevel: {
+      2: 0.08,
+      3: 0.18,
+      4: 0.32,
+    },
+    gates: {
+      timeBands: ["day", "evening"],
+      blockedIfContactKnown: true,
+      blockedIfDating: true,
+    },
+    tags: ["돌발", "고백", "도서관"],
+    introLines: [
+      "도서관에서 책을 덮고 나오려는 순간, 여학생 하나가 잠깐만 괜찮냐며 조심스럽게 말을 건다.",
+      "\"잠깐 시간 괜찮으세요? 꼭 하고 싶은 말이 있어요.\"",
+    ],
+    backgroundConfig: AMBIENT_ROMANCE_LIBRARY_CORRIDOR_BACKGROUND,
+    playerActor: {
+      kind: "player",
+      left: 28,
+      bottom: 4,
+      height: 86,
+      zIndex: 2,
+    },
+    npcActor: {
+      kind: "npc",
+      left: 72,
+      bottom: 5,
+      height: 88,
+      zIndex: 2,
+    },
+    choices: [
+      Object.freeze({
+        id: "accept-talk",
+        label: "잠깐 이야기한다",
+        resultTitle: "여학생은 떨리는 목소리로 오래 지켜봤다고 털어놓는다",
+        resultLines: [
+          "\"도서관에서 몇 번 마주쳤는데, 계속 생각나서요.\"",
+          "짧은 고백 끝에 연락처를 조심스럽게 건네받고, 다음엔 복도 말고 밖에서 제대로 이야기하자는 약속까지 잡힌다.",
+        ],
+        resultTags: ["고백", "연락처"],
+        ambientFollowUpState: "",
+        contactPatch: {
+          ambientOriginEventId: "library-student-confession",
+          ambientCallSceneVariant: "library-first-call",
+          ambientFollowUpStatus: "new-contact",
+          note: "도서관 복도에서 고백을 받고 연락처를 교환했다.",
+        },
+        grantContact: {
+          npcId: "girlfriend-student",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "연락처 교환",
+            text: "도서관 여학생과 연락처를 주고받았다.",
+          },
+          memory: {
+            title: "도서관 복도에서 뜻밖의 고백을 받았다",
+            body: "도서관 복도에서 말을 걸어온 여학생과 한참 이야기한 끝에 연락처를 주고받았다.",
+          },
+        },
+        markSeen: true,
+      }),
+      Object.freeze({
+        id: "soft-decline",
+        label: "오늘은 공부가 먼저라고 말한다",
+        resultTitle: "여학생은 아쉬운 표정으로 고개를 끄덕이고 먼저 물러난다",
+        resultLines: [
+          "\"아, 네. 공부하시는 중이었죠. 괜히 붙잡았네요.\"",
+          "짧게 인사하고 지나가지만, 마지막 눈빛에는 다음에 다시 말을 걸 용기가 남아 있다.",
+        ],
+        resultTags: ["스쳐감", "다음 기회"],
+        ambientFollowUpState: "soft-declined",
+        headline: {
+          badge: "돌발 이벤트",
+          text: "도서관 복도에서 온 고백을 부드럽게 넘겼다.",
+        },
+        memory: {
+          title: "도서관 복도에서 말을 걸려다 놓친 인연이 있었다",
+          body: "오늘은 공부가 먼저라고 말하고 지나쳤지만, 낯선 여학생의 표정이 오래 남았다.",
+        },
+        cooldownDays: 2,
+      }),
+      Object.freeze({
+        id: "ask-contact",
+        label: "연락처부터 묻는다",
+        resultTitle: "여학생은 놀라다가도 곧 웃으며 번호를 적어 준다",
+        resultLines: [
+          "\"바로요? ...그래도 좋아요. 다음엔 더 편하게 이야기해요.\"",
+          "고백을 길게 듣지는 못했지만, 복도에서의 긴장감은 곧 다음 만남 약속으로 바뀐다.",
+        ],
+        resultTags: ["연락처", "빠른 진전"],
+        ambientFollowUpState: "",
+        contactPatch: {
+          ambientOriginEventId: "library-student-confession",
+          ambientCallSceneVariant: "library-first-call",
+          ambientFollowUpStatus: "new-contact",
+          note: "도서관 복도에서 먼저 연락처를 받아냈다.",
+        },
+        grantContact: {
+          npcId: "girlfriend-student",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "빠른 진전",
+            text: "도서관 여학생이 먼저 연락처를 넘겨줬다.",
+          },
+          memory: {
+            title: "도서관 복도에서 번호부터 받았다",
+            body: "망설일 틈도 없이 연락처를 묻자, 여학생은 웃으며 다음에 더 길게 이야기하자고 했다.",
+          },
+        },
+        markSeen: true,
+      }),
+    ],
+  }),
+  "library-student-reappearance": Object.freeze({
+    id: "library-student-reappearance",
+    triggerId: "study-academic-prep",
+    npcId: "girlfriend-student",
+    contactId: "girlfriendStudent",
+    locationId: "library",
+    sceneType: "ambient-confession",
+    requiredAmbientFollowUpState: "soft-declined",
+    title: "복도 끝에서 다시 마주친 여학생이 조심스럽게 웃는다",
+    speaker: "도서관 여학생",
+    headlineBadge: "복도 재등장",
+    headlineText: "예전에 지나쳤던 여학생이 다시 말을 건다.",
+    appearanceLevelMin: 2,
+    chanceByAppearanceLevel: {
+      2: 0.12,
+      3: 0.24,
+      4: 0.38,
+    },
+    gates: {
+      timeBands: ["day", "evening"],
+      blockedIfContactKnown: true,
+      blockedIfDating: true,
+    },
+    tags: ["재등장", "도서관", "두 번째 기회"],
+    introLines: [
+      "복도 모퉁이를 돌아서는 순간, 전에 말을 걸었던 그 여학생이 멈칫하다가 먼저 웃어 보인다.",
+      "\"그날은 정말 바빠 보였어요. 그래도 이번엔 잠깐 괜찮을까요?\"",
+    ],
+    backgroundConfig: AMBIENT_ROMANCE_LIBRARY_CORRIDOR_BACKGROUND,
+    playerActor: {
+      kind: "player",
+      left: 28,
+      bottom: 4,
+      height: 86,
+      zIndex: 2,
+    },
+    npcActor: {
+      kind: "npc",
+      left: 72,
+      bottom: 5,
+      height: 88,
+      zIndex: 2,
+    },
+    choices: [
+      Object.freeze({
+        id: "accept-second-talk",
+        label: "이번엔 멈춰서 이야기한다",
+        resultTitle: "여학생은 다시 만난 걸 다행이라며 천천히 마음을 꺼낸다",
+        resultLines: [
+          "\"그날 그냥 지나치고도 계속 생각났어요. 이번엔 놓치고 싶지 않았어요.\"",
+          "두 번째 만남은 처음보다 더 편안했고, 복도 끝에서 연락처를 교환한 뒤 다음 통화를 약속한다.",
+        ],
+        resultTags: ["재등장", "연락처"],
+        ambientFollowUpState: "",
+        contactPatch: {
+          ambientOriginEventId: "library-student-reappearance",
+          ambientCallSceneVariant: "library-first-call",
+          ambientFollowUpStatus: "reappeared-contact",
+          note: "도서관 복도에서 다시 말을 걸어온 여학생과 연락처를 교환했다.",
+        },
+        grantContact: {
+          npcId: "girlfriend-student",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "두 번째 기회",
+            text: "도서관 여학생과 이번에는 연락처를 교환했다.",
+          },
+          memory: {
+            title: "도서관 복도에서 다시 만난 인연을 붙잡았다",
+            body: "예전에 지나쳤던 여학생이 다시 말을 걸어왔고, 이번에는 연락처를 교환했다.",
+          },
+        },
+        markSeen: true,
+      }),
+      Object.freeze({
+        id: "still-busy",
+        label: "이번에도 짧게 사과하고 지나간다",
+        resultTitle: "여학생은 서운한 기색을 감추고 다시 거리를 둔다",
+        resultLines: [
+          "\"괜찮아요. 언젠가 타이밍이 맞으면 그때 이야기해요.\"",
+          "이번에도 스쳐 지나갔지만, 완전히 끝났다는 느낌보다는 잠시 미뤄 둔 인연에 가깝다.",
+        ],
+        resultTags: ["보류", "재등장"],
+        ambientFollowUpState: "soft-declined",
+        headline: {
+          badge: "다시 보류",
+          text: "도서관 여학생과의 대화를 또 다음으로 미뤘다.",
+        },
+        memory: {
+          title: "도서관 복도에서 다시 만났지만 또 지나쳤다",
+          body: "여학생은 아쉬워했지만, 언젠가 다시 보자는 말을 남기고 물러났다.",
+        },
+        cooldownDays: 3,
+      }),
+    ],
+  }),
+  "campus-park-bench-talk": Object.freeze({
+    id: "campus-park-bench-talk",
+    triggerId: "study-campus-network",
+    npcId: "high-school-girl",
+    contactId: "highSchoolGirl",
+    locationId: "campus-park",
+    sceneType: "ambient-campus-talk",
+    oncePerContact: true,
+    title: "캠퍼스 공원 벤치에서 학생이 먼저 인사를 건넨다",
+    speaker: "골목 여고생",
+    headlineBadge: "공원 조우",
+    headlineText: "캠퍼스 공원에서 학생 하나가 먼저 웃어 보인다.",
+    appearanceLevelMin: 2,
+    chanceByAppearanceLevel: {
+      2: 0.06,
+      3: 0.16,
+      4: 0.28,
+    },
+    gates: {
+      timeBands: ["day", "evening"],
+      blockedIfContactKnown: true,
+      blockedIfDating: true,
+    },
+    tags: ["캠퍼스", "공원", "돌발"],
+    introLines: [
+      "캠퍼스 공원 벤치 쪽을 지나는데, 휴대폰을 내려다보던 학생이 먼저 눈을 맞추고 인사한다.",
+      "\"아까부터 몇 번 스쳐 지나가서요. 그냥 지나치기엔 조금 아쉬웠어요.\"",
+    ],
+    backgroundConfig: AMBIENT_ROMANCE_CAMPUS_PARK_BACKGROUND,
+    playerActor: {
+      kind: "player",
+      left: 26,
+      bottom: 4,
+      height: 86,
+      zIndex: 2,
+    },
+    npcActor: {
+      kind: "npc",
+      left: 73,
+      bottom: 5,
+      height: 86,
+      zIndex: 2,
+    },
+    choices: [
+      Object.freeze({
+        id: "sit-and-chat",
+        label: "같이 벤치에 앉는다",
+        resultTitle: "학생은 예상보다 편하게 웃으며 대화를 이어 간다",
+        resultLines: [
+          "\"캠퍼스 분위기 좋아 보여서 자주 와요. 오늘은 말 걸어보고 싶었어요.\"",
+          "벤치에서 잠깐 이야기를 나누다 보니 번호를 주고받는 흐름이 자연스럽게 이어진다.",
+        ],
+        resultTags: ["벤치", "연락처"],
+        contactPatch: {
+          ambientOriginEventId: "campus-park-bench-talk",
+          note: "캠퍼스 공원 벤치에서 짧은 대화 끝에 연락처를 교환했다.",
+        },
+        grantContact: {
+          npcId: "high-school-girl",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "공원 인연",
+            text: "캠퍼스 공원에서 학생과 연락처를 교환했다.",
+          },
+          memory: {
+            title: "캠퍼스 공원에서 연락처를 교환했다",
+            body: "벤치에 잠깐 앉아 이야기를 나누다 학생과 연락처를 주고받았다.",
+          },
+        },
+        markSeen: true,
+      }),
+      Object.freeze({
+        id: "smile-and-pass",
+        label: "웃어 주고 지나간다",
+        resultTitle: "학생은 민망한 웃음을 남기고 다시 휴대폰을 내려다본다",
+        resultLines: [
+          "\"다음에 또 마주치면 그땐 조금 더 길게 이야기해요.\"",
+          "짧은 눈인사만 남겼지만, 캠퍼스 공원에서 스쳐 지나간 인상은 오래 남는다.",
+        ],
+        resultTags: ["공원", "스침"],
+        cooldownDays: 2,
+        headline: {
+          badge: "스쳐 지나감",
+          text: "캠퍼스 공원에서 말을 걸어온 학생과 짧게 눈인사만 나눴다.",
+        },
+      }),
+      Object.freeze({
+        id: "ask-number-first",
+        label: "연락처부터 묻는다",
+        resultTitle: "학생은 웃음을 터뜨리며 휴대폰을 내민다",
+        resultLines: [
+          "\"바로요? ... 이런 전개도 나쁘지 않네요.\"",
+          "가벼운 농담 섞인 분위기 속에서 연락처를 저장하고, 다음 통화를 기약한다.",
+        ],
+        resultTags: ["연락처", "빠른 전개"],
+        contactPatch: {
+          ambientOriginEventId: "campus-park-bench-talk",
+          note: "캠퍼스 공원에서 먼저 번호를 물어 연락처를 교환했다.",
+        },
+        grantContact: {
+          npcId: "high-school-girl",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "빠른 전개",
+            text: "캠퍼스 공원에서 학생의 연락처를 먼저 받아냈다.",
+          },
+          memory: {
+            title: "캠퍼스 공원에서 번호를 먼저 물었다",
+            body: "먼저 연락처를 묻자 학생이 웃으며 번호를 건넸다.",
+          },
+        },
+        markSeen: true,
+      }),
+    ],
+  }),
+  "mcdonalds-counter-line-talk": Object.freeze({
+    id: "mcdonalds-counter-line-talk",
+    triggerId: "buy-mcdonalds-coffee",
+    npcId: "npc-woman",
+    contactId: "npcWoman",
+    locationId: "mcdonalds-counter",
+    sceneType: "ambient-coffee-talk",
+    oncePerContact: true,
+    title: "주문 줄 뒤에서 여자가 먼저 말을 건넨다",
+    speaker: "길거리 여자",
+    headlineBadge: "카운터 조우",
+    headlineText: "맥도날드 카운터에서 낯선 여자가 먼저 미소를 보낸다.",
+    appearanceLevelMin: 2,
+    chanceByAppearanceLevel: {
+      2: 0.05,
+      3: 0.14,
+      4: 0.26,
+    },
+    gates: {
+      timeBands: ["day", "evening"],
+      blockedIfContactKnown: true,
+      blockedIfDating: true,
+    },
+    tags: ["맥도날드", "카운터", "돌발"],
+    introLines: [
+      "커피를 기다리며 옆으로 비켜서자, 뒤에 서 있던 여자가 의미심장한 눈빛으로 말을 건넨다.",
+      "\"방금 주문하는 거 봤는데, 오늘은 그냥 지나치면 아쉬울 것 같았어요.\"",
+    ],
+    backgroundConfig: AMBIENT_ROMANCE_MCDONALDS_COUNTER_BACKGROUND,
+    playerActor: {
+      kind: "player",
+      left: 28,
+      bottom: 4,
+      height: 86,
+      zIndex: 2,
+    },
+    npcActor: {
+      kind: "npc",
+      left: 72,
+      bottom: 5,
+      height: 88,
+      zIndex: 2,
+    },
+    choices: [
+      Object.freeze({
+        id: "share-coffee",
+        label: "커피 얘기로 대화를 잇는다",
+        resultTitle: "여자는 웃으면서 같은 메뉴를 자주 시킨다고 말한다",
+        resultLines: [
+          "\"이런 데서는 커피부터 보면 사람 성격이 좀 보이더라고요.\"",
+          "줄이 조금씩 줄어드는 동안 대화를 이어가다 자연스럽게 번호를 주고받는다.",
+        ],
+        resultTags: ["커피", "연락처"],
+        contactPatch: {
+          ambientOriginEventId: "mcdonalds-counter-line-talk",
+          note: "맥도날드 카운터에서 커피 얘기를 하다 연락처를 교환했다.",
+        },
+        grantContact: {
+          npcId: "npc-woman",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "카운터 인연",
+            text: "맥도날드 카운터에서 연락처를 교환했다.",
+          },
+          memory: {
+            title: "맥도날드 카운터에서 인연이 생겼다",
+            body: "커피를 기다리던 동안 여자가 먼저 말을 걸어왔고, 짧은 대화 끝에 연락처를 교환했다.",
+          },
+        },
+        markSeen: true,
+      }),
+      Object.freeze({
+        id: "nod-and-smile",
+        label: "웃고 넘긴다",
+        resultTitle: "여자는 어깨를 가볍게 으쓱하고 먼저 주문대로 걸어간다",
+        resultLines: [
+          "\"그냥 인사 정도였어요. 다음에 또 마주치면 그땐 커피 한 잔쯤은 같이요.\"",
+          "짧은 농담처럼 지나갔지만, 번화가 특유의 빠른 분위기 속에서도 인상은 남는다.",
+        ],
+        resultTags: ["번화가", "스침"],
+        cooldownDays: 2,
+        headline: {
+          badge: "카운터 스침",
+          text: "맥도날드 카운터에서 말을 걸어온 여자를 가볍게 넘겼다.",
+        },
+      }),
+      Object.freeze({
+        id: "ask-contact",
+        label: "연락처부터 묻는다",
+        resultTitle: "여자는 예상했다는 듯 휴대폰을 바로 꺼낸다",
+        resultLines: [
+          "\"좋아요. 이런 건 템포가 중요하니까요.\"",
+          "빠른 분위기 그대로 연락처를 저장하고, 다음엔 카운터 말고 밖에서 보자는 말을 남긴다.",
+        ],
+        resultTags: ["연락처", "빠른 전개"],
+        contactPatch: {
+          ambientOriginEventId: "mcdonalds-counter-line-talk",
+          note: "맥도날드 카운터에서 먼저 연락처를 물어 교환했다.",
+        },
+        grantContact: {
+          npcId: "npc-woman",
+          source: "ambient-romance",
+          relationshipStage: "contact",
+          headline: {
+            badge: "빠른 템포",
+            text: "맥도날드 카운터에서 곧바로 연락처를 교환했다.",
+          },
+          memory: {
+            title: "맥도날드 카운터에서 번호를 먼저 물었다",
+            body: "빠르게 연락처를 묻자, 여자가 망설임 없이 번호를 건넸다.",
+          },
+        },
+        markSeen: true,
+      }),
+    ],
+  }),
+});
+
+function getAmbientRomanceEventConfig(eventId = "") {
+  return AMBIENT_ROMANCE_EVENTS[String(eventId || "").trim()] || null;
+}
+
+function getAmbientRomanceTriggerLocationId(context = {}, targetState = state) {
+  const contextLocationId = String(context?.locationId || "").trim();
+  if (contextLocationId) {
+    return contextLocationId;
+  }
+
+  return typeof getCurrentLocationId === "function"
+    ? String(getCurrentLocationId(targetState) || "").trim()
+    : "";
+}
+
+function getAmbientRomanceChanceForEvent(event = null, targetState = state) {
+  if (!event) {
+    return 0;
+  }
+
+  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
+    ? getPlayerAppearanceLevel(targetState)
+    : 1;
+  const chanceTable = event.chanceByAppearanceLevel && typeof event.chanceByAppearanceLevel === "object"
+    ? event.chanceByAppearanceLevel
+    : null;
+
+  if (chanceTable) {
+    const directChance = Number(chanceTable[appearanceLevel]);
+    if (Number.isFinite(directChance) && directChance > 0) {
+      return Math.min(1, directChance);
+    }
+  }
+
+  return appearanceLevel >= Number(event.appearanceLevelMin || 99) ? 0.08 : 0;
+}
+
+function isAmbientRomanceEventEligible(event = null, triggerId = "", context = {}, targetState = state) {
+  if (!event || String(event.triggerId || "").trim() !== String(triggerId || "").trim()) {
+    return false;
+  }
+
+  if (!targetState || targetState.scene !== "outside" || targetState.currentIncident || targetState.jobMiniGame) {
+    return false;
+  }
+
+  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
+    ? getPlayerAppearanceLevel(targetState)
+    : 1;
+  if (appearanceLevel < Math.max(1, Math.round(Number(event.appearanceLevelMin) || 1))) {
+    return false;
+  }
+
+  const ambientState = syncAmbientRomanceState(targetState);
+  const locationId = getAmbientRomanceTriggerLocationId(context, targetState);
+  const timeBand = typeof getWorldTimeBand === "function"
+    ? getWorldTimeBand(targetState)
+    : "day";
+  const followUpState = getAmbientRomanceFollowUpState(event.npcId, targetState);
+  const contact = typeof getRomanceConfigByContactId === "function"
+    ? (targetState?.social?.contacts?.[event.contactId] || null)
+    : null;
+  const relationshipStage = String(contact?.relationshipStage || "").trim().toLowerCase();
+
+  if (event.locationId && locationId !== event.locationId) {
+    return false;
+  }
+  if (Array.isArray(event.gates?.timeBands) && event.gates.timeBands.length && !event.gates.timeBands.includes(timeBand)) {
+    return false;
+  }
+  if (event.gates?.blockedIfContactKnown && hasRomanceContact(event.npcId, targetState)) {
+    return false;
+  }
+  if (event.gates?.blockedIfDating && ["dating", "serious"].includes(relationshipStage)) {
+    return false;
+  }
+  if (event.requiredAmbientFollowUpState && followUpState !== String(event.requiredAmbientFollowUpState || "").trim()) {
+    return false;
+  }
+  if (Array.isArray(event.blockedAmbientFollowUpStates) && event.blockedAmbientFollowUpStates.includes(followUpState)) {
+    return false;
+  }
+  if ((ambientState.cooldownUntilDayByNpcId[event.npcId] || 0) >= Math.max(1, Math.round(Number(targetState?.day) || 1))) {
+    return false;
+  }
+  if (ambientState.activeEventId) {
+    return false;
+  }
+  if (event.oncePerContact && ambientState.seenEventIds.includes(event.id) && hasRomanceContact(event.npcId, targetState)) {
+    return false;
+  }
+
+  return getAmbientRomanceChanceForEvent(event, targetState) > 0;
+}
+
+function buildAmbientRomanceScene(event = null, triggerId = "", context = {}, targetState = state) {
+  if (!event) {
+    return null;
+  }
+
+  const npcConfig = typeof getNpcConfig === "function"
+    ? getNpcConfig(event.npcId)
+    : null;
+  const locationId = getAmbientRomanceTriggerLocationId(context, targetState);
+  const locationLabel = context?.locationLabel
+    || (typeof getWorldLocationConfig === "function"
+      ? getWorldLocationConfig(locationId, targetState?.day)?.label || ""
+      : "")
+    || (typeof getCurrentLocationLabel === "function"
+      ? getCurrentLocationLabel(targetState)
+      : "");
+
+  return {
+    sceneType: String(event.sceneType || "ambient-event").trim() || "ambient-event",
+    eventId: event.id,
+    sourceTriggerId: String(triggerId || event.triggerId || "").trim(),
+    contactId: String(event.contactId || "").trim(),
+    npcId: String(event.npcId || "").trim(),
+    label: String(event.speaker || npcConfig?.name || event.contactId || "상대").trim(),
+    speaker: String(event.speaker || npcConfig?.name || event.contactId || "상대").trim(),
+    title: String(event.title || "").trim(),
+    tags: Array.isArray(event.tags) ? [...event.tags] : ["로맨스", "돌발"],
+    introLines: Array.isArray(event.introLines) ? [...event.introLines] : [],
+    backgroundConfig: event.backgroundConfig && typeof event.backgroundConfig === "object"
+      ? { ...event.backgroundConfig }
+      : null,
+    plannedCost: 0,
+    venueLabel: locationLabel,
+    returnScene: "outside",
+    returnLocationId: locationId,
+    choices: Array.isArray(event.choices)
+      ? event.choices.map((choice) => cloneRomanceSceneChoice(choice)).filter(Boolean)
+      : [],
+    playerActor: {
+      src: CHARACTER_ART?.player?.standing || "",
+      alt: "player-romance",
+      ...(event.playerActor || {}),
+    },
+    npcActor: {
+      src: npcConfig?.art || "",
+      alt: event.npcId || "ambient-romance-npc",
+      ...(event.npcActor || {}),
+    },
+  };
+}
+
+function tryStartAmbientRomanceEvent(triggerId = "", context = {}, targetState = state) {
+  const normalizedTriggerId = String(triggerId || "").trim();
+  if (!normalizedTriggerId) {
+    return false;
+  }
+
+  const registry = Object.values(AMBIENT_ROMANCE_EVENTS);
+  const ambientState = syncAmbientRomanceState(targetState);
+  ambientState.lastTriggerId = normalizedTriggerId;
+
+  const eligibleEvents = registry.filter((event) =>
+    isAmbientRomanceEventEligible(event, normalizedTriggerId, context, targetState)
+  );
+  if (!eligibleEvents.length) {
+    return false;
+  }
+
+  const selectedEvent = eligibleEvents.find((event) => Math.random() <= getAmbientRomanceChanceForEvent(event, targetState));
+  if (!selectedEvent) {
+    return false;
+  }
+
+  const nextScene = buildAmbientRomanceScene(selectedEvent, normalizedTriggerId, context, targetState);
+  if (!nextScene) {
+    return false;
+  }
+
+  setRomanceActiveSceneSnapshot(nextScene, targetState);
+  ambientState.activeEventId = selectedEvent.id;
+  targetState.scene = "romance";
+  targetState.headline = {
+    badge: String(selectedEvent.headlineBadge || "돌발 이벤트").trim(),
+    text: String(selectedEvent.headlineText || selectedEvent.title || "").trim(),
+  };
+  return true;
+}
+
+function applyAmbientRomanceChoice(choice = null, scene = null, targetState = state) {
+  if (!choice || !scene) {
+    return false;
+  }
+
+  const ambientState = syncAmbientRomanceState(targetState);
+  const cooldownDays = Math.max(0, Math.round(Number(choice.cooldownDays) || 0));
+  if (cooldownDays > 0) {
+    ambientState.cooldownUntilDayByNpcId[scene.npcId] = Math.max(1, Math.round(Number(targetState?.day) || 1)) + cooldownDays;
+  }
+
+  if (choice.grantContact && typeof grantRomanceContact === "function") {
+    grantRomanceContact(choice.grantContact.npcId || scene.npcId, targetState, {
+      source: choice.grantContact.source || scene.sourceTriggerId || "ambient-romance",
+      locationId: scene.returnLocationId || "",
+      headline: choice.grantContact.headline || null,
+      memory: choice.grantContact.memory || null,
+      relationshipStage: choice.grantContact.relationshipStage || "contact",
+    });
+    if (choice.contactPatch && typeof patchSocialContact === "function" && scene.contactId) {
+      patchSocialContact(scene.contactId, choice.contactPatch, targetState);
+    }
+  } else {
+    if (choice.headline && typeof choice.headline === "object") {
+      targetState.headline = {
+        badge: String(choice.headline.badge || "").trim(),
+        text: String(choice.headline.text || "").trim(),
+      };
+    }
+    if (choice.memory && typeof recordActionMemory === "function") {
+      recordActionMemory(choice.memory.title, choice.memory.body, {
+        type: "npc",
+        source: scene.venueLabel || scene.label || "로맨스",
+        tags: ["로맨스", "돌발", ...(choice.resultTags || [])],
+      });
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(choice, "ambientFollowUpState")) {
+    setAmbientRomanceFollowUpState(scene.npcId, choice.ambientFollowUpState, targetState);
+  }
+
+  if (choice.markSeen) {
+    const nextSeenEventIds = new Set(ambientState.seenEventIds);
+    nextSeenEventIds.add(String(scene.eventId || "").trim());
+    ambientState.seenEventIds = [...nextSeenEventIds];
+  }
+
+  setRomanceActiveSceneSnapshot({
+    ...scene,
+    title: String(choice.resultTitle || scene.title || "").trim(),
+    introLines: Array.isArray(choice.resultLines) && choice.resultLines.length
+      ? [...choice.resultLines]
+      : [...(scene.introLines || [])],
+    tags: Array.isArray(choice.resultTags) && choice.resultTags.length
+      ? [...choice.resultTags]
+      : [...(scene.tags || [])],
+    choices: [],
+    resolvedChoiceId: String(choice.id || "").trim(),
+    sceneOutcomeType: choice.grantContact ? "contact-unlocked" : "ambient-finished",
+  }, targetState);
+
+  return true;
+}
+
+function chooseAmbientRomanceChoice(index = 0, targetState = state) {
+  const scene = syncRomanceSceneState(targetState);
+  const choices = Array.isArray(scene?.choices) ? scene.choices : [];
+  const choice = choices[index];
+  if (!scene || !choice) {
+    return false;
+  }
+
+  return applyAmbientRomanceChoice(choice, scene, targetState);
+}
+
+function completeAmbientRomanceScene(targetState = state) {
+  const scene = syncRomanceSceneState(targetState);
+  if (!scene || !String(scene.eventId || "").trim()) {
+    return false;
+  }
+
+  const returnScene = String(scene.returnScene || "outside").trim() || "outside";
+  const returnLocationId = String(scene.returnLocationId || "").trim();
+  clearRomanceActiveSceneSnapshot(targetState);
+  syncAmbientRomanceState(targetState).activeEventId = "";
+  targetState.scene = returnScene;
+
+  if (returnScene === "outside" && typeof syncWorldState === "function") {
+    const worldState = syncWorldState(targetState);
+    if (returnLocationId) {
+      worldState.currentLocation = returnLocationId;
+      if (typeof getWorldLocationDistrictId === "function") {
+        worldState.currentDistrict = getWorldLocationDistrictId(returnLocationId, targetState?.day || getCurrentDayNumber()) || worldState.currentDistrict;
+      }
+    }
+  }
+
+  return true;
 }
 
 function getRomanceGirlfriendLimit() {
@@ -704,13 +1680,7 @@ function clearRomanceCallScene(targetState = state) {
 
 function setRomanceCallScene(scene = null, targetState = state) {
   const romanceState = syncRomanceDomainState(targetState);
-  romanceState.callScene = scene && typeof scene === "object"
-    ? {
-        ...scene,
-        lines: [...(scene.lines || [])],
-        tags: [...(scene.tags || [])],
-      }
-    : null;
+  romanceState.callScene = cloneRomanceCallSceneSnapshot(scene);
   return romanceState.callScene;
 }
 
@@ -806,26 +1776,11 @@ function syncRomanceDomainState(targetState = state) {
     : createDefaultRomanceDomainState();
 
   romanceState.activePlan = normalizeRomancePlanSnapshot(romanceState.activePlan) || getLegacyRomancePlanSnapshot(targetState);
-  romanceState.activeScene = targetState.romanceScene && typeof targetState.romanceScene === "object"
-    ? {
-        ...targetState.romanceScene,
-        tags: [...(targetState.romanceScene.tags || [])],
-        introLines: [...(targetState.romanceScene.introLines || [])],
-        backgroundConfig: targetState.romanceScene.backgroundConfig && typeof targetState.romanceScene.backgroundConfig === "object"
-          ? { ...targetState.romanceScene.backgroundConfig }
-          : null,
-      }
-    : null;
+  romanceState.activeScene = cloneRomanceSceneSnapshot(targetState.romanceScene);
   romanceState.lastOutcome = romanceState.lastOutcome && typeof romanceState.lastOutcome === "object"
     ? { ...romanceState.lastOutcome }
     : null;
-  romanceState.callScene = romanceState.callScene && typeof romanceState.callScene === "object"
-    ? {
-        ...romanceState.callScene,
-        lines: [...(romanceState.callScene.lines || [])],
-        tags: [...(romanceState.callScene.tags || [])],
-      }
-    : null;
+  romanceState.callScene = cloneRomanceCallSceneSnapshot(romanceState.callScene);
   romanceState.girlfriendContactIds = Array.isArray(romanceState.girlfriendContactIds)
     ? romanceState.girlfriendContactIds.map((id) => String(id || "").trim()).filter(Boolean).slice(0, getRomanceGirlfriendLimit())
     : [];
@@ -859,18 +1814,9 @@ function getRomanceActiveSceneSnapshot(targetState = state) {
 }
 
 function setRomanceActiveSceneSnapshot(scene = null, targetState = state) {
-  targetState.romanceScene = scene && typeof scene === "object"
-    ? {
-        ...scene,
-        tags: [...(scene.tags || [])],
-        introLines: [...(scene.introLines || [])],
-        backgroundConfig: scene.backgroundConfig && typeof scene.backgroundConfig === "object"
-          ? { ...scene.backgroundConfig }
-          : null,
-      }
-    : null;
+  targetState.romanceScene = cloneRomanceSceneSnapshot(scene);
   syncRomanceDomainState(targetState).activeScene = targetState.romanceScene
-    ? { ...targetState.romanceScene }
+    ? cloneRomanceSceneSnapshot(targetState.romanceScene)
     : null;
   return targetState.romanceScene;
 }
@@ -1243,6 +2189,301 @@ function buildRomanceGirlfriendCallScene(contactId = "", targetState = state) {
   };
 }
 
+function buildAmbientRomanceFollowUpCallScene(contactId = "", targetState = state) {
+  const contact = targetState?.social?.contacts?.[contactId] || null;
+  const config = getRomanceConfigByContactId(contactId);
+  if (!contact || !config || !contact.phoneUnlocked) {
+    return null;
+  }
+
+  const callVariant = String(contact.ambientCallSceneVariant || "").trim();
+  if (callVariant !== "library-first-call") {
+    return null;
+  }
+
+  const followUpStatus = String(contact.ambientFollowUpStatus || "").trim();
+  if (!["new-contact", "reappeared-contact", "paced", "called-once"].includes(followUpStatus)) {
+    return null;
+  }
+
+  const canSetDate = typeof canScheduleRomanceDate === "function"
+    ? canScheduleRomanceDate(contactId, targetState)
+    : false;
+  const leadLine = followUpStatus === "reappeared-contact"
+    ? "복도에서 다시 마주친 뒤라 그런지, 여학생의 목소리는 처음보다 조금 더 편안하다."
+    : "복도에서 번호를 주고받은 직후라 그런지, 조심스러운 숨소리가 전화기 너머로 또렷하게 들린다.";
+  const secondLine = followUpStatus === "paced"
+    ? "\"천천히 알아가자고 해줘서 오히려 마음이 놓였어요. 그래도 오늘은 목소리 듣고 싶었어요.\""
+    : "\"아까는 너무 갑자기 말한 것 같아서요. 그래도 지금 통화하니까 조금 안심돼요.\"";
+  const choices = [
+    {
+      id: "keep-talking",
+      label: "잠깐 더 통화한다",
+    },
+    canSetDate
+      ? {
+          id: "after-class",
+          label: "수업 끝나고 보기",
+        }
+      : null,
+    {
+      id: "slow-pace",
+      label: "천천히 알아가자",
+    },
+  ].filter(Boolean);
+
+  return {
+    contactId,
+    npcId: config.npcId,
+    label: config.label,
+    title: `${config.label}과 통화`,
+    lines: [leadLine, secondLine],
+    tags: ["통화", "후속"],
+    previousScene: String(targetState?.scene || "").trim() || "room",
+    headline: `${config.label}과 조심스러운 첫 통화가 이어진다.`,
+    sceneVariant: "ambient-follow-up",
+    choiceVariant: "library-first-call",
+    choices,
+  };
+}
+
+function scheduleAmbientRomanceDateFromCall(
+  contactId = "",
+  targetState = state,
+  {
+    preferredSameDay = true,
+    locationId = "",
+    venueLabel = "",
+    followUpStatus = "after-class-scheduled",
+  } = {},
+) {
+  if (!contactId || !canScheduleRomanceDate(contactId, targetState)) {
+    return null;
+  }
+
+  const contact = targetState?.social?.contacts?.[contactId] || null;
+  const config = getRomanceConfigByContactId(contactId);
+  if (!contact || !config) {
+    return null;
+  }
+
+  const currentDay = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  const timeBand = typeof getWorldTimeBand === "function"
+    ? getWorldTimeBand(targetState)
+    : "day";
+  const canMeetToday = preferredSameDay && ["day", "evening"].includes(timeBand);
+  const scheduledDay = canMeetToday ? currentDay : currentDay + 1;
+  const resolvedLocationId = String(locationId || config.dateLocationId || "").trim();
+  const resolvedVenueLabel = String(
+    venueLabel
+      || (typeof getWorldLocationConfig === "function"
+        ? getWorldLocationConfig(resolvedLocationId, targetState?.day)?.label || ""
+        : "")
+      || config.dateVenueLabel
+      || "약속 장소"
+  ).trim();
+  const planSnapshot = {
+    id: `date:${contactId}:${scheduledDay}`,
+    contactId,
+    npcId: config.npcId,
+    label: config.label,
+    sceneType: "date",
+    status: "scheduled",
+    scheduledDay,
+    locationId: resolvedLocationId,
+    venueLabel: resolvedVenueLabel,
+    plannedCost: Math.max(0, Number(config.dateCost) || 0),
+  };
+
+  setRomanceActivePlanSnapshot(planSnapshot, targetState);
+  if (typeof patchSocialContact === "function") {
+    patchSocialContact(contactId, {
+      relationshipStage: contact.relationshipStage === "interest" ? "contact" : (contact.relationshipStage || "contact"),
+      pendingDateDay: scheduledDay,
+      pendingDateStatus: "scheduled",
+      pendingDateLocationId: resolvedLocationId,
+      lastInvitationDay: currentDay,
+      ambientFollowUpStatus: followUpStatus,
+      note: `${scheduledDay === currentDay ? "오늘" : "내일"} ${resolvedVenueLabel}에서 ${config.label} 일정이 잡혔다.`,
+    }, targetState);
+  }
+  if (typeof patchNpcRelation === "function") {
+    patchNpcRelation(config.npcId, {
+      affinityDelta: 1,
+      attractionDelta: 1,
+      lastSeenDay: currentDay,
+    }, targetState);
+  }
+  if (scheduledDay > currentDay && typeof queueNextTurnEvent === "function") {
+    queueNextTurnEvent({
+      badge: "수업 후 약속",
+      title: `${config.label}과 보기로 했다`,
+      speaker: "다음날 요약",
+      tags: ["연락", "약속"],
+      lines: [
+        `${config.label} 통화 끝에 약속이 잡혔다.`,
+        `내일 ${resolvedVenueLabel}에서 보기로 했다.`,
+      ],
+    }, targetState, { dayOffset: 1 });
+  }
+
+  const scheduleText = scheduledDay === currentDay
+    ? `오늘 ${resolvedVenueLabel}에서 보기로 했다.`
+    : `내일 ${resolvedVenueLabel}에서 보기로 했다.`;
+  if (typeof setPhoneAppStatus === "function") {
+    setPhoneAppStatus("call", {
+      kicker: "CALL",
+      title: `${config.label} 수업 후 약속`,
+      body: scheduleText,
+      tone: "accent",
+    }, targetState);
+  }
+  if (typeof createPhoneResultPreview === "function") {
+    targetState.phonePreview = createPhoneResultPreview("call", "DATE", `${config.label} 약속`, scheduleText);
+  }
+  targetState.headline = {
+    badge: "수업 후 약속",
+    text: scheduleText,
+  };
+  if (typeof queueGameplayFeedback === "function") {
+    queueGameplayFeedback({
+      title: "약속 확정",
+      tone: "up",
+      chips: [
+        { label: `${config.label}과 통화`, tone: "up" },
+        { label: scheduleText, tone: "info" },
+      ],
+    }, targetState);
+  }
+
+  return {
+    scheduledDay,
+    venueLabel: resolvedVenueLabel,
+  };
+}
+
+function applyAmbientRomanceCallChoice(choice = null, scene = null, targetState = state) {
+  const contactId = String(scene?.contactId || "").trim();
+  const contact = targetState?.social?.contacts?.[contactId] || null;
+  const config = getRomanceConfigByContactId(contactId);
+  if (!choice || !scene || !contactId || !contact || !config) {
+    return false;
+  }
+
+  if (scene.choiceVariant !== "library-first-call") {
+    return false;
+  }
+
+  const currentDay = Math.max(1, Math.round(Number(targetState?.day) || 1));
+
+  if (choice.id === "keep-talking") {
+    if (typeof patchSocialContact === "function") {
+      patchSocialContact(contactId, {
+        lastContactDay: currentDay,
+        ambientFollowUpStatus: "called-once",
+        note: "도서관 여학생과 첫 통화를 길게 이어 갔다.",
+      }, targetState);
+    }
+    if (typeof patchNpcRelation === "function") {
+      patchNpcRelation(config.npcId, {
+        affinityDelta: 1,
+        attractionDelta: 1,
+        lastSeenDay: currentDay,
+      }, targetState);
+    }
+
+    setRomanceCallScene({
+      ...scene,
+      title: "차분한 첫 통화",
+      lines: [
+        "\"통화로 들으니까, 아까보다 훨씬 덜 떨려요.\"",
+        "짧은 통화였지만 둘 다 조금 더 편해졌고, 다음엔 얼굴 보고 이야기하자는 분위기가 자연스럽게 남는다.",
+      ],
+      tags: ["통화", "설렘"],
+      choices: [],
+      resolvedChoiceId: choice.id,
+    }, targetState);
+    targetState.headline = {
+      badge: "첫 통화",
+      text: `${config.label}과 어색하지 않게 첫 통화를 마쳤다.`,
+    };
+    return true;
+  }
+
+  if (choice.id === "after-class") {
+    const scheduled = scheduleAmbientRomanceDateFromCall(contactId, targetState, {
+      preferredSameDay: true,
+      locationId: "campus-park",
+      venueLabel: "캠퍼스 공원",
+      followUpStatus: "after-class-scheduled",
+    });
+    if (!scheduled) {
+      return false;
+    }
+
+    setRomanceCallScene({
+      ...scene,
+      title: "수업 후 보기로 했다",
+      lines: [
+        scheduled.scheduledDay === currentDay
+          ? "\"오늘 저녁이면 괜찮아요. 캠퍼스 공원에서 잠깐 걸을래요?\""
+          : "\"오늘은 조금 늦을 것 같아요. 내일 캠퍼스 공원에서 보면 좋겠어요.\"",
+        `${config.label}과 ${scheduled.scheduledDay === currentDay ? "오늘" : "내일"} ${scheduled.venueLabel}에서 보기로 했다.`,
+      ],
+      tags: ["통화", "약속"],
+      choices: [],
+      resolvedChoiceId: choice.id,
+    }, targetState);
+    return true;
+  }
+
+  if (choice.id === "slow-pace") {
+    if (typeof patchSocialContact === "function") {
+      patchSocialContact(contactId, {
+        lastContactDay: currentDay,
+        ambientFollowUpStatus: "paced",
+        note: "도서관 여학생과 천천히 알아가기로 했다.",
+      }, targetState);
+    }
+    if (typeof patchNpcRelation === "function") {
+      patchNpcRelation(config.npcId, {
+        affinityDelta: 1,
+        lastSeenDay: currentDay,
+      }, targetState);
+    }
+
+    setRomanceCallScene({
+      ...scene,
+      title: "천천히 알아가기로 했다",
+      lines: [
+        "\"그 말 들으니까 오히려 마음이 놓여요. 급하게 굴고 싶진 않았어요.\"",
+        "둘은 서두르지 말고 천천히 자주 연락해 보자는 데 뜻을 맞춘다.",
+      ],
+      tags: ["통화", "페이스 조절"],
+      choices: [],
+      resolvedChoiceId: choice.id,
+    }, targetState);
+    targetState.headline = {
+      badge: "천천히 시작",
+      text: `${config.label}과 서두르지 말고 천천히 알아가기로 했다.`,
+    };
+    return true;
+  }
+
+  return false;
+}
+
+function chooseRomanceCallChoice(index = 0, targetState = state) {
+  const callScene = getRomanceCallScene(targetState);
+  const choices = Array.isArray(callScene?.choices) ? callScene.choices : [];
+  const choice = choices[index];
+  if (!callScene || !choice) {
+    return false;
+  }
+
+  return applyAmbientRomanceCallChoice(choice, callScene, targetState);
+}
+
 function finishRomanceCallScene(targetState = state) {
   const callScene = getRomanceCallScene(targetState);
   const previousScene = String(callScene?.previousScene || "room").trim() || "room";
@@ -1267,6 +2508,32 @@ function callRomanceContact(contactId = "", targetState = state) {
   const config = Object.values(ROMANCE_NPC_CONFIG).find((entry) => entry.contactId === contactId) || null;
   if (!config) {
     return false;
+  }
+
+  const ambientFollowUpCallScene = buildAmbientRomanceFollowUpCallScene(contactId, targetState);
+  if (ambientFollowUpCallScene) {
+    setRomanceCallScene(ambientFollowUpCallScene, targetState);
+    if (typeof patchSocialContact === "function") {
+      patchSocialContact(contactId, {
+        lastContactDay: targetState.day,
+        note: `${config.label}과 첫 후속 통화를 이어 갔다.`,
+      }, targetState);
+    }
+    if (typeof patchNpcRelation === "function") {
+      patchNpcRelation(config.npcId, {
+        affinityDelta: 1,
+        lastSeenDay: targetState.day,
+      }, targetState);
+    }
+    targetState.scene = "romance-call";
+    targetState.headline = {
+      badge: "후속 통화",
+      text: ambientFollowUpCallScene.headline,
+    };
+    if (typeof finishPhoneAppTimeSpend === "function") {
+      finishPhoneAppTimeSpend({ type: "minor", amount: 1 });
+    }
+    return true;
   }
 
   const isGirlfriend = Boolean(contact.isGirlfriend)

@@ -959,6 +959,14 @@ const DAY01_WORLD_MCDONALDS_COUNTER_BACKGROUND = {
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%)",
 };
 
+const DAY01_WORLD_MCDONALDS_KITCHEN_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/mcdonalds-kitchen.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(14, 9, 8, 0.14) 0%, rgba(14, 9, 8, 0.34) 100%)",
+};
+
 const DAY01_WORLD_OFFICE_PLAZA_BACKGROUND = {
   className: "custom-location-bg",
   image: "assets/backgrounds/day01/industrial/digital-complex-exterior.png",
@@ -1608,7 +1616,7 @@ const DAY01_WORLD_LOCATIONS = {
     tags: ["패스트푸드", "카운터", "맥도날드"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     districtId: "commercial",
-    exits: ["mcdonalds"],
+    exits: ["mcdonalds", "mcdonalds-kitchen"],
     options: [
       {
         title: "세트 메뉴를 주문한다",
@@ -1623,6 +1631,29 @@ const DAY01_WORLD_LOCATIONS = {
         action: "move",
         targetLocation: "mcdonalds",
         travelMinutes: 4,
+        keepVisible: true,
+      },
+    ],
+  },
+  "mcdonalds-kitchen": {
+    label: "맥도날드 배금거리점 주방",
+    speaker: "맥도날드 배금거리점 주방",
+    title: "버거 조립대와 감자튀김 라인이 바로 옆에서 쉼 없이 돌아간다",
+    background: DAY01_WORLD_MCDONALDS_KITCHEN_BACKGROUND,
+    lines: [
+      "주방 안쪽에서는 호출 벨과 조리 타이머가 짧은 간격으로 번갈아 울린다.",
+      "직원 동선이 겹치지 않게 철판과 포장대 사이를 빠르게 비켜서야 한다.",
+    ],
+    tags: ["패스트푸드", "주방", "맥도날드"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["mcdonalds-counter"],
+    options: [
+      {
+        title: "카운터로 나온다",
+        action: "move",
+        targetLocation: "mcdonalds-counter",
+        travelMinutes: 2,
         keepVisible: true,
       },
     ],
@@ -1797,22 +1828,22 @@ const DAY01_WORLD_LOCATIONS = {
     background: DAY01_WORLD_LIBRARY_BACKGROUND,
     lines: [
       "책장 사이로 오래된 종이 냄새가 돌고, 빈 좌석마다 누군가의 준비 시간이 남아 있다.",
-      "이력서를 다듬거나 공부를 하며 직장 면접 준비도를 쌓기 좋은 곳이다.",
+      "이력서를 다듬거나 공부를 하며 직장 면접 준비를 하기 좋은 곳이다.",
     ],
     tags: ["도서관", "준비", "공부"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     exits: ["bus-stop-map"],
     options: [
       {
-        title: "사무 준비를 한다",
+        title: "이력서 정리하기",
         action: "study-office-prep",
       },
       {
-        title: "학업 준비를 한다",
+        title: "도서관에서 공부하기",
         action: "study-academic-prep",
       },
       {
-        title: "버스 정류장 지도로 돌아간다",
+        title: "버스 정류장으로 돌아가기",
         action: "move",
         targetLocation: "bus-stop-map",
       },
@@ -1832,15 +1863,15 @@ const DAY01_WORLD_LOCATIONS = {
     exits: ["bus-stop-map"],
     options: [
       {
-        title: "컴퓨터 자격을 챙긴다",
+        title: "컴퓨터 자격증 시험 보기",
         action: "take-computer-cert",
       },
       {
-        title: "운전면허를 챙긴다",
+        title: "운전면허 시험 보기",
         action: "take-driver-license",
       },
       {
-        title: "버스 정류장 지도로 돌아간다",
+        title: "버스 정류장으로 돌아가기",
         action: "move",
         targetLocation: "bus-stop-map",
       },
@@ -1861,20 +1892,20 @@ const DAY01_WORLD_LOCATIONS = {
     exits: ["study-hub", "campus-park"],
     options: [
       {
-        title: "취업지원센터에서 상담을 받는다",
+        title: "취업 상담 받기",
         action: "study-career-center-review",
       },
       {
-        title: "졸업 심사를 진행한다",
+        title: "졸업 심사 받기",
         action: "graduate-university",
       },
       {
-        title: "캠퍼스 공원으로 걸어간다",
+        title: "캠퍼스 공원으로 가기",
         action: "move",
         targetLocation: "campus-park",
       },
       {
-        title: "학습 구역 입구로 돌아간다",
+        title: "학습 구역으로 돌아가기",
         action: "move",
         targetLocation: "study-hub",
       },
@@ -1895,16 +1926,16 @@ const DAY01_WORLD_LOCATIONS = {
     exits: ["university-district", "study-hub"],
     options: [
       {
-        title: "벤치에 앉아 사람들을 살핀다",
+        title: "벤치에서 사람들과 이야기하기",
         action: "study-campus-network",
       },
       {
-        title: "대학가로 돌아간다",
+        title: "대학가로 돌아가기",
         action: "move",
         targetLocation: "university-district",
       },
       {
-        title: "학습 구역 입구로 돌아간다",
+        title: "학습 구역으로 돌아가기",
         action: "move",
         targetLocation: "study-hub",
       },
@@ -2166,15 +2197,15 @@ DAY01_WORLD_LOCATIONS["bus-stop"].options = [
 DAY01_WORLD_LOCATIONS.library.exits = ["study-hub"];
 DAY01_WORLD_LOCATIONS.library.options = [
   {
-    title: "사무 준비를 한다",
+    title: "이력서 정리하기",
     action: "study-office-prep",
   },
   {
-    title: "학업 준비를 한다",
+    title: "도서관에서 공부하기",
     action: "study-academic-prep",
   },
   {
-    title: "학습 구역 입구로 돌아간다",
+    title: "학습 구역으로 돌아가기",
     action: "move",
     targetLocation: "study-hub",
   },
@@ -2183,15 +2214,15 @@ DAY01_WORLD_LOCATIONS.library.options = [
 DAY01_WORLD_LOCATIONS["exam-center"].exits = ["study-hub"];
 DAY01_WORLD_LOCATIONS["exam-center"].options = [
   {
-    title: "컴퓨터 자격을 챙긴다",
+    title: "컴퓨터 자격증 시험 보기",
     action: "take-computer-cert",
   },
   {
-    title: "운전면허를 챙긴다",
+    title: "운전면허 시험 보기",
     action: "take-driver-license",
   },
   {
-    title: "학습 구역 입구로 돌아간다",
+    title: "학습 구역으로 돌아가기",
     action: "move",
     targetLocation: "study-hub",
   },
@@ -2297,7 +2328,7 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 80,
   },
   "station-front": {
-    x: 69,
+    x: 64,
     y: 30,
     icon: "🚉",
     shortLabel: "배금역앞",
@@ -2306,7 +2337,7 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 90,
   },
   "station-interior": {
-    x: 81,
+    x: 74,
     y: 24,
     icon: "🚈",
     shortLabel: "배금역내부",
@@ -2315,7 +2346,7 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 100,
   },
   downtown: {
-    x: 69,
+    x: 64,
     y: 52,
     icon: "🌃",
     shortLabel: "다운타운",
@@ -2423,7 +2454,7 @@ const DAY01_CITY_MAP_NODE_META = {
     ],
   },
   "office-plaza": {
-    x: 82,
+    x: 76,
     y: 48,
     icon: "🏢",
     shortLabel: "디지털단지",
@@ -2432,7 +2463,7 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 145,
   },
   "mobility-control-center": {
-    x: 85,
+    x: 79,
     y: 33,
     icon: "🖥️",
     shortLabel: "사무동",
@@ -2441,7 +2472,7 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 150,
   },
   "tower-cafe": {
-    x: 77,
+    x: 72,
     y: 63,
     icon: "🧪",
     shortLabel: "연구소",
@@ -2450,8 +2481,8 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 155,
   },
   "logistics-hub": {
-    x: 90,
-    y: 73,
+    x: 82,
+    y: 71,
     icon: "📦",
     shortLabel: "생산동",
     note: "배금전자 생산직 면접과 라인 배치가 이어지는 공장동.",
@@ -2465,6 +2496,16 @@ Object.entries(DAY01_CITY_MAP_NODE_META).forEach(([locationId, mapNode]) => {
     DAY01_WORLD_LOCATIONS[locationId].mapNode = { ...mapNode };
   }
 });
+
+DAY01_WORLD_LOCATIONS.mcdonalds.mapNode = {
+  x: 57,
+  y: 46,
+  icon: "🍔",
+  shortLabel: "맥도날드",
+  note: "배금사거리 코너 매장. 손님 모드와 알바 동선이 여기서 갈라진다.",
+  zoneTone: "commercial",
+  order: 140,
+};
 
 DAY01_WORLD_LOCATIONS["silver-home-front"].mapNode = {
   x: 10,
@@ -2493,6 +2534,7 @@ DAY01_WORLD_LOCATIONS["golden-home-front"].mapNode = {
   "logistics-center",
   "lotto-retailer-interior",
   "mcdonalds-counter",
+  "mcdonalds-kitchen",
   "production-line",
   "research-lab-interior",
 ].forEach((locationId) => {
@@ -2507,6 +2549,7 @@ DAY01_WORLD_LOCATIONS["walk-travel"].cityMapHidden = true;
 DAY01_WORLD_LOCATIONS["logistics-center"].cityMapAnchorId = "station-front";
 DAY01_WORLD_LOCATIONS["lotto-retailer-interior"].cityMapAnchorId = "lotto-retailer";
 DAY01_WORLD_LOCATIONS["mcdonalds-counter"].cityMapAnchorId = "mcdonalds";
+DAY01_WORLD_LOCATIONS["mcdonalds-kitchen"].cityMapAnchorId = "mcdonalds";
 DAY01_WORLD_LOCATIONS["production-line"].cityMapAnchorId = "logistics-hub";
 DAY01_WORLD_LOCATIONS["research-lab-interior"].cityMapAnchorId = "tower-cafe";
 DAY01_WORLD_LOCATIONS["station-seoul-route"].cityMapAnchorId = "station-interior";

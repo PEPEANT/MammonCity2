@@ -42,7 +42,23 @@ function openPhoneAppRoute(appId, targetState = state) {
     return false;
   }
 
-  return openPhoneRoute(route, targetState);
+  const opened = openPhoneRoute(route, targetState);
+
+  if (!opened) {
+    return false;
+  }
+
+  const canExpandStage = typeof canOpenPhoneStage === "function"
+    ? canOpenPhoneStage(targetState)
+    : Boolean(targetState?.hasPhone);
+
+  if (canExpandStage) {
+    patchPhoneSession(targetState, {
+      stageExpanded: true,
+    });
+  }
+
+  return true;
 }
 
 function openPhoneHomeRoute(targetState = state) {

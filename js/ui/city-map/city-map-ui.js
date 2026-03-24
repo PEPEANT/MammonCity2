@@ -87,6 +87,10 @@ function ensureCityMapSelection(targetState = state) {
 }
 
 function openCityMapOverlay(targetState = state) {
+  if (ui.game?.classList.contains("phone-focus-active")) {
+    return false;
+  }
+
   if (!canShowCityMapForState(targetState)) {
     return false;
   }
@@ -296,14 +300,16 @@ function buildCityMapBoardMarkup(targetState = state) {
   const nodeMarkup = buildCityMapNodeMarkup(nodes, targetState);
 
   return `
-    <div class="city-map-board-grid" aria-hidden="true"></div>
-    <svg class="city-map-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      ${zoneMarkup}
-      ${roadMarkup}
-      ${routeMarkup}
-    </svg>
-    <div class="city-map-node-layer">
-      ${nodeMarkup}
+    <div class="city-map-board-inner">
+      <div class="city-map-board-grid" aria-hidden="true"></div>
+      <svg class="city-map-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        ${zoneMarkup}
+        ${roadMarkup}
+        ${routeMarkup}
+      </svg>
+      <div class="city-map-node-layer">
+        ${nodeMarkup}
+      </div>
     </div>
   `;
 }
@@ -476,12 +482,13 @@ function renderCityMapOverlay(targetState = state) {
 
 function confirmCityMapTravel(targetLocationId = cityMapUiState.selectedLocationId) {
   const summary = getCityMapTravelSummary(targetLocationId, state);
-  if (!summary?.canTravel || typeof startWorldTravelToLocation !== "function") {
+  if (!summary?.canTravel || typeof moveToWorldLocation !== "function") {
     return;
   }
 
-  startWorldTravelToLocation(targetLocationId, {
+  moveToWorldLocation(targetLocationId, {
     skipExitCheck: true,
+    forceTravelMode: true,
     travelMinutes: summary.minutes,
     travelSlots: summary.slots,
     travelMethod: summary.methodLabel,

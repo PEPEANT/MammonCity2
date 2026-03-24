@@ -68,6 +68,62 @@ function buildJobsWorkplaceInfoMarkup(workplace = null) {
   `;
 }
 
+function summarizeJobsRequirementNeed(unmetRequirements = []) {
+  const requirements = (Array.isArray(unmetRequirements) ? unmetRequirements : [])
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+
+  if (!requirements.length) {
+    return "지원 조건을 먼저 맞춰야 한다.";
+  }
+
+  if (requirements.length === 1) {
+    return `${requirements[0]}부터 맞춰야 지원할 수 있다.`;
+  }
+
+  return `${requirements[0]} 등 ${requirements.length}개 조건을 먼저 맞춰야 지원할 수 있다.`;
+}
+
+function getShortTermJobsButtonLabel(viewModel = {}, offer = null, bookedShift = null) {
+  if (viewModel.career?.status === "employed") {
+    return "재직 중";
+  }
+
+  if (bookedShift) {
+    return "일정 있음";
+  }
+
+  if (viewModel.applicationDoneToday) {
+    return "오늘 완료";
+  }
+
+  if (!offer?.eligible) {
+    return "조건 필요";
+  }
+
+  return "지원하기";
+}
+
+function getCareerJobsButtonLabel(viewModel = {}, offer = null) {
+  if (viewModel.career?.status === "employed") {
+    return "재직 중";
+  }
+
+  if (viewModel.career?.status === "applied") {
+    return "결과 대기";
+  }
+
+  if (viewModel.careerApplicationDoneToday) {
+    return "오늘 완료";
+  }
+
+  if (!offer?.eligible) {
+    return "조건 필요";
+  }
+
+  return "지원하기";
+}
+
 function buildJobsAppTrackTabs(activeTrack = "short-term") {
   const tracks = [
     { id: "short-term", label: "알바" },
@@ -134,8 +190,8 @@ function getTodayShiftCardConfig(targetState = state) {
     return {
       toneClass: "is-fail",
       label: "지각",
-      body: `${workplaceLabel} 시간 지남`,
-      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="skip-shift">결근</button>',
+      body: `${workplaceLabel} 출근 시간을 놓쳤다`,
+      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="skip-shift">포기하기</button>',
     };
   }
 
@@ -143,8 +199,8 @@ function getTodayShiftCardConfig(targetState = state) {
     return {
       toneClass: "is-success",
       label: "출근",
-      body: `${workplaceLabel} 바로 출근`,
-      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="go-shift">출근</button>',
+      body: `${workplaceLabel}에서 바로 출근 가능`,
+      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="go-shift">출근하기</button>',
     };
   }
 
@@ -152,16 +208,16 @@ function getTodayShiftCardConfig(targetState = state) {
     return {
       toneClass: "is-booked",
       label: "도착",
-      body: `${workplaceLabel} 대기 중`,
-      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="go-shift">대기</button>',
+      body: `${workplaceLabel}에 먼저 도착했다`,
+      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="go-shift">기다리기</button>',
     };
   }
 
   return {
     toneClass: "is-booked",
     label: "이동",
-    body: `${workplaceLabel} 먼저 이동`,
-    actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="jobs-open-shift-route">경로</button>',
+    body: `${workplaceLabel}로 먼저 이동`,
+    actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="jobs-open-shift-route">길 보기</button>',
   };
 }
 
@@ -199,18 +255,14 @@ function buildShortTermJobsContent(viewModel) {
     const workplace = getJobsOfferWorkplaceSummary(offer);
     const tags = buildJobsTagMarkup([...(job.tags || []).slice(0, 1), ...((offer.requirementTags || []).slice(0, 2))]);
     const disabledReason = viewModel.career?.status === "employed"
-      ? "재직중"
+      ? "이미 직장을 다니고 있어 새 알바 지원은 잠시 막혀 있다."
       : bookedShift
-      ? "예약 근무 있음"
+      ? "오늘 예약된 근무가 있어 새 알바 지원은 잠시 막혀 있다."
       : viewModel.applicationDoneToday
-        ? "오늘 신청 완료"
-        : (!offer.eligible ? `요건 부족: ${(offer.unmetRequirements || []).join(", ")}` : "");
+        ? "오늘은 이미 알바 지원을 끝냈다. 다음 턴에 다시 보자."
+        : (!offer.eligible ? summarizeJobsRequirementNeed(offer.unmetRequirements) : "");
     const disabled = !viewModel.canApply || !offer.eligible;
-    const buttonLabel = !viewModel.canApply
-      ? "마감"
-      : offer.eligible
-        ? "지원"
-        : "요건";
+    const buttonLabel = getShortTermJobsButtonLabel(viewModel, offer, bookedShift);
 
     return `
       <article class="phone-job-card">
@@ -232,6 +284,7 @@ function buildShortTermJobsContent(viewModel) {
             ${escapeJobsAppHtml(buttonLabel)}
           </button>
         </div>
+        ${disabledReason ? `<div class="phone-job-card-note">${escapeJobsAppHtml(disabledReason)}</div>` : ""}
       </article>
     `;
   }).join("");
@@ -275,10 +328,10 @@ function buildCareerPrepSummary(viewModel) {
 
   return `
     <section class="phone-app-card is-accent">
-      <div class="phone-app-card-title">준비도</div>
+      <div class="phone-app-card-title">취업 준비</div>
       <div class="phone-career-summary-grid">${prepCards}</div>
       <div class="phone-career-cert-row">
-        ${buildJobsTagMarkup(certTags, 3) || '<span class="phone-job-tag">자격 없음</span>'}
+        ${buildJobsTagMarkup(certTags, 3) || '<span class="phone-job-tag">자격 아직 없음</span>'}
       </div>
     </section>
   `;
@@ -336,22 +389,15 @@ function buildCareerJobsContent(viewModel) {
     : "";
   const offerCards = viewModel.careerOffers.map((offer, index) => {
     const workplace = getCareerJobsOfferWorkplaceSummary(offer);
-    const requirementLine = (offer.unmetRequirements || []).join(", ");
     const disabledReason = viewModel.career.status === "employed"
-      ? "이미 재직중"
+      ? "이미 직장을 다니고 있어 새 직장 지원은 잠시 막혀 있다."
       : viewModel.career.status === "applied"
-        ? "면접 결과 대기중"
+        ? "이미 면접 결과를 기다리는 중이다. 결과를 확인한 뒤 다시 지원할 수 있다."
         : viewModel.careerApplicationDoneToday
-          ? "오늘 신청 완료"
-          : (!offer.eligible ? `요건 부족: ${requirementLine}` : "");
+          ? "오늘은 이미 직장 지원을 끝냈다. 다음 턴에 다시 보자."
+          : (!offer.eligible ? summarizeJobsRequirementNeed(offer.unmetRequirements) : "");
     const disabled = !viewModel.careerCanApply;
-    const buttonLabel = viewModel.career.status === "employed"
-      ? "재직"
-      : viewModel.career.status === "applied"
-        ? "대기"
-        : viewModel.careerApplicationDoneToday
-          ? "내일"
-          : "신청";
+    const buttonLabel = getCareerJobsButtonLabel(viewModel, offer);
     const tags = buildJobsTagMarkup([
       offer.categoryLabel,
       ...((offer.requirementTags || []).slice(0, 2)),
@@ -377,6 +423,7 @@ function buildCareerJobsContent(viewModel) {
             ${escapeJobsAppHtml(buttonLabel)}
           </button>
         </div>
+        ${disabledReason ? `<div class="phone-job-card-note">${escapeJobsAppHtml(disabledReason)}</div>` : ""}
       </article>
     `;
   }).join("");

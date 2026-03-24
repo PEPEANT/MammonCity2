@@ -95,3 +95,22 @@
 - [early-progression.md](./early-progression.md)
 - [design/job-tracks.md](./design/job-tracks.md)
 - [save-system.md](./save-system.md)
+
+## 2026-03 current phone UX notes
+
+- Collapsed phone controls are anchored to the bottom-right corner again. Closing the phone should never move the controls to the left edge.
+- Opening a major phone panel now enables a `phone focus` layout:
+  - the panel expands into a centered stage layout
+  - `#phone-focus-dim` darkens the background
+  - city-map overlay input is blocked while phone focus is active
+- Bank app home is intentionally minimal for release:
+  - current money
+  - deposit
+  - withdraw
+- Extra banking flows moved behind the secondary `bank/manage` route.
+- Tapping an app icon now auto-expands the phone stage when the current scene allows app usage.
+- Current release checks for the phone are:
+  - no input-softlock when tapping phone buttons quickly
+  - collapsed controls stay bottom-right
+  - bank app opens directly into the simplified home
+  - phone focus closes or blocks overlapping city-map overlays

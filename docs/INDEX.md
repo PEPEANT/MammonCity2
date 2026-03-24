@@ -67,7 +67,10 @@
   베타에서 재미와 플레이성을 먼저 살리기 위한 우선순위와 첫 구현 방향을 정리한 실행 계획 문서.
 
 - [npc-romance-implementation-plan.md](./npc-romance-implementation-plan.md)  
-  여자친구 1차 루프의 현재 구현 상태와 `길거리 조우 -> 연락처 -> 약속 -> 데이트 -> 집 초대` 흐름을 정리한 문서.
+  기존 연락처 -> 약속 -> 데이트/집 초대 루프를 정리한 로맨스 구현 기준 문서.
+
+- [ambient-romance-events.md](./ambient-romance-events.md)  
+  공부/이동/현장 행동 중 자연스럽게 끼어드는 돌발 로맨스 이벤트 구조와 첫 도서관 고백 이벤트 문서.
 
 - [stats-balance-feedback-plan.md](./stats-balance-feedback-plan.md)  
   배고픔 100 스케일, 스탯 공용 보정, 중앙 하단 행동 피드 구조를 같이 정리하는 실행 계획 문서.

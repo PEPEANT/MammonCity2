@@ -1,87 +1,120 @@
 # Release Smoke Checklist
 
-결론: 출시 전에는 새 기능보다 `새로하기부터 엔딩까지 끊기지 않는지`를 이 문서 순서대로 확인한다.
+Conclusion: before release, verify that `new game -> save/load -> shift loop -> ending -> ranking fallback` stays playable without softlocks.
 
-## 목적
+## Purpose
 
-- 완주를 막는 버그를 먼저 찾는다.
-- 저장/불러오기, 랭킹, 출근 루프처럼 실패 비용이 큰 구간을 짧게 반복 점검한다.
-- 테스트 범위를 늘리기보다 `치명 경로`를 고정한다.
+- Catch run-killing bugs first.
+- Re-verify save/load, shift flow, ending flow, and ranking fallback after stabilization work.
+- Keep console errors at `0`, and confirm that ranking failures do not stop the game.
 
-## 오늘 기준 최우선 경로
+## Automated Check
 
-1. 새로하기
-2. 수저 추첨
-3. 방 시작
-4. 집앞 이동
-5. 알바 또는 직장 예약
-6. 이동
-7. 출근
-8. 정산
-9. 하루 넘김
-10. 엔딩
-11. 랭킹
+Run this first:
 
-## 필수 스모크
+```bash
+npm run qa:core-smoke
+```
 
-### 1. 새로하기
+This script currently checks:
 
-- 이름 입력 후 `새로하기`가 바로 시작된다.
-- 수저 결과가 뜬 뒤 자동 시작되지 않는다.
-- `이 수저로 시작하기`를 눌러야 진행된다.
+- JS parse sanity for core runtime files
+- `unusedLegacy*` removal
+- single `showRankingScreen()` definition
+- save-scene sanitizer presence
+- `[hidden]` fallback for the title UI
+- hidden default state for `continue-button` and `spd-start-btn`
 
-### 2. 수저 3종 시작
+## Manual Pass
 
-- 흙수저: 방 -> 집앞 -> 바깥 이동이 된다.
-- 은수저: 방 -> 로비 -> 집앞 이동이 된다.
-- 금수저: 방 -> 로비/주차장 -> 집앞 이동이 된다.
-- 거주, 수저, 외모도 표시가 현재 시작 상태와 맞다.
+### 1. First boot
 
-### 3. 저장/불러오기
+- Open `index.html` in a clean browser profile or clean origin.
+- Confirm the title screen renders normally.
+- Confirm console shows no errors or warnings.
+- Confirm `continue` stays hidden until a real save exists.
 
-- 방에서 저장 후 새로고침하면 같은 위치와 상태로 복구된다.
-- 예약 출근이 있는 상태에서 저장/불러오기 후 예약이 유지된다.
-- 연애/연락처/여자친구 상태가 불러오기 후 유지된다.
+### 2. New game start
 
-### 4. 출근 루프
+- Start a fresh run.
+- Confirm spoon selection, spawn scene, and first room scene all load without overlap or broken UI.
+- Confirm the current objective is visible as soon as the run starts.
+- Confirm dirt-spoon and silver-spoon start actors are visibly larger in their start scenes.
 
-- 공고 앱에서 예약이 된다.
-- 근무지까지 이동이 된다.
-- 현장 도착 후 대기/출근 버튼이 뜬다.
-- 근무 종료 후 결과 -> 정산까지 닫힌다.
-- 정산 후 돈과 상태가 실제로 반영된다.
+### 3. Room save/load
 
-### 5. 생존 밸런스
+- Save from the room with no extra interaction.
+- Reload.
+- Confirm day, time, room scene, phone state, and objective text all restore correctly.
 
-- 배고픔은 100 기준으로 천천히 내려간다.
-- 체력/에너지는 100을 넘지 않는다.
-- 음식 사용 후 인벤토리와 수치가 같이 반영된다.
+### 4. Outside save/load
 
-### 6. 목표 안내
+- Move outside.
+- Open the phone, then open `jobs` or `bank`.
+- Save and reload.
+- Confirm outside location, route-safe scene, phone state, and objective text restore correctly.
 
-- 돈 부족 시 돈 관련 목표가 뜬다.
-- 예약 출근 시 출근 관련 목표가 뜬다.
-- 직장 준비 가능 시 준비/지원 목표가 뜬다.
-- 폰 홈 미리보기와 메인 목표가 크게 엇갈리지 않는다.
+### 5. Input lock / button feel
 
-### 7. 랭킹 안전화
+- Rapidly tap a normal UI button three times.
+- Confirm there is no repeated `input lock` warning spam for normal debounce hits.
+- Confirm real blocking still works during `moving`, `event`, `dialogue`, `minigame`, and `phone focus` states.
 
-- Firebase가 꺼져 있어도 엔딩 화면이 열린다.
-- 랭킹 화면이 비정상 종료 없이 열린다.
-- 내 엔트리는 항상 보인다.
+### 6. Phone layout
 
-## 출시 전 꼭 잡아야 할 구조 문제
+- Open and close the phone from both room and outside scenes.
+- Confirm collapsed phone controls stay anchored to the bottom-right corner.
+- Open bank from the app grid and confirm the phone auto-expands into the simplified bank home.
+- Confirm phone focus dims the background and blocks map click-through.
 
-- `ui.js`의 랭킹 화면 진입 경로는 한 함수만 유지한다.
-- `logic.js`의 legacy helper는 실제 사용 경로와 섞이지 않게 정리한다.
-- `state` 직접 수정 대신 서비스 경유가 필요한 큰 구간은 출근/랭킹/연애부터 우선 정리한다.
+### 7. NPC visibility and wander
 
-## 이번 주 권장 순서
+- At a home-front scene, confirm only one visible NPC is shown by default.
+- At a major hub scene, confirm the default crowd does not overfill and obvious duplicates are absent.
+- Use `돌아다니기` multiple times and confirm one focus NPC is shown after wander, with rotation when possible.
+- Click visible NPCs directly and confirm approach/dialogue works.
 
-1. 완주 스모크 1회
-2. 저장/불러오기 점검
-3. 출근 루프 점검
-4. 생존 수치 점검
-5. 랭킹 오프라인 안전화
-6. 목표 안내 문구 점검
-7. 마지막 회귀 1회
+### 8. Shift loop
+
+- Create or load a McDonald's-capable shift state.
+- Confirm inquiry is rejected outside inquiry hours.
+- Confirm customer kiosk works outside shift time.
+- Confirm shift start appears only during the assigned shift window.
+- Confirm the minigame starts, ends, and returns the player to a safe scene.
+
+### 9. Economy clarity
+
+- Confirm HUD separates cash and bank balance.
+- Open trading and confirm quantity, average entry, pnl, liquidation price, and status are visible.
+- Confirm liquidation shows an explicit warning instead of a silent disappearance.
+
+### 10. Ending and ranking fallback
+
+- Progress to ending or load an ending-adjacent save.
+- Save just before ending, reload, and confirm recovery goes to `ending`.
+- Confirm ranking failure still leaves the ending screen playable.
+- Confirm restart-to-title still works after ranking failure.
+
+## Release Gate
+
+Release should stay blocked if any of these remain:
+
+- console error or warning tied to gameplay flow
+- save/load sends the player back into a broken transient scene
+- phone controls jump to the wrong corner
+- repeated button presses trigger visible lock spam
+- major locations fail NPC visibility or NPC click interaction
+- McDonald's shift flow mixes inquiry, customer, and work states again
+- ranking failure blocks ending completion
+
+## Recommended Order
+
+1. `npm run qa:core-smoke`
+2. fresh new game
+3. room save/load
+4. outside + phone save/load
+5. input lock + phone layout checks
+6. NPC visibility + wander checks
+7. McDonald's shift loop
+8. economy visibility checks
+9. ending + ranking fallback

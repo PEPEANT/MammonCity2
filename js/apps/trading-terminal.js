@@ -205,6 +205,7 @@ function ensureTradingTerminalState(appId, targetState = state) {
       spotHoldings: {},
       futuresPositions: [],
       nextPositionId: 1,
+      lastLiquidationSummary: null,
       assets: {},
       lastSyncedTurn: 0,
     };
@@ -240,6 +241,16 @@ function ensureTradingTerminalState(appId, targetState = state) {
     ? terminal.futuresPositions
     : [];
   terminal.nextPositionId = Math.max(1, Math.round(Number(terminal.nextPositionId) || 1));
+  terminal.lastLiquidationSummary = terminal.lastLiquidationSummary && typeof terminal.lastLiquidationSummary === "object"
+    ? {
+        title: String(terminal.lastLiquidationSummary.title || ""),
+        body: String(terminal.lastLiquidationSummary.body || ""),
+        tone: String(terminal.lastLiquidationSummary.tone || "fail"),
+        items: Array.isArray(terminal.lastLiquidationSummary.items)
+          ? terminal.lastLiquidationSummary.items.map((item) => String(item || "")).filter(Boolean)
+          : [],
+      }
+    : null;
   terminal.lastSyncedTurn = currentTurn;
 
   return terminal;
@@ -335,6 +346,61 @@ function getLegacyTradingSpotHolding(appId, targetState = state) {
   return null;
 }
 
+function calculateTradingTerminalFuturesLiquidationPrice(position) {
+  const entryPrice = Math.max(1, Number(position?.entryPrice) || 1);
+  const leverage = Math.max(1, Number(position?.leverage) || 1);
+  const liquidationMove = 0.95 / leverage;
+  const direction = position?.side === "short" ? 1 : -1;
+  return Math.max(0, entryPrice * (1 + (liquidationMove * direction)));
+}
+
+function calculateTradingTerminalFuturesMetrics(position, asset) {
+  const entryPrice = Math.max(1, Number(position?.entryPrice) || 1);
+  const currentPrice = Math.max(1, Number(asset?.price) || entryPrice);
+  const margin = Math.max(0, Number(position?.margin) || 0);
+  const leverage = Math.max(1, Number(position?.leverage) || 1);
+  const direction = position?.side === "short" ? -1 : 1;
+  const priceDelta = (currentPrice - entryPrice) / entryPrice;
+  const roe = priceDelta * leverage * direction;
+  const pnl = margin * roe;
+  const notional = margin * leverage;
+  const qty = entryPrice > 0 ? notional / entryPrice : 0;
+  const liquidationPrice = calculateTradingTerminalFuturesLiquidationPrice(position);
+  const equityLeft = Math.max(0, margin * (1 + roe));
+  const liquidationThreshold = margin * 0.05;
+  const liquidationGapRatio = liquidationPrice > 0
+    ? Math.abs(currentPrice - liquidationPrice) / liquidationPrice
+    : 1;
+  const isLiquidated = equityLeft <= liquidationThreshold;
+  const isNearLiquidation = !isLiquidated && liquidationGapRatio <= 0.03;
+  let statusLabel = "보유중";
+  let statusTone = "stable";
+
+  if (isLiquidated) {
+    statusLabel = "강제청산";
+    statusTone = "danger";
+  } else if (pnl < 0) {
+    statusLabel = "손실중";
+    statusTone = isNearLiquidation ? "danger" : "warning";
+  }
+
+  return {
+    currentPrice,
+    pnl,
+    roe,
+    qty,
+    notional,
+    liquidationPrice,
+    equityLeft,
+    liquidationThreshold,
+    liquidationGapRatio,
+    isLiquidated,
+    isNearLiquidation,
+    statusLabel,
+    statusTone,
+  };
+}
+
 function getTradingTerminalFuturesPositions(appId, targetState = state) {
   const terminal = ensureTradingTerminalState(appId, targetState);
   if (!terminal) {
@@ -347,17 +413,22 @@ function getTradingTerminalFuturesPositions(appId, targetState = state) {
       if (!asset) {
         return null;
       }
-
-      const direction = position.side === "short" ? -1 : 1;
-      const priceDelta = (asset.price - position.entryPrice) / position.entryPrice;
-      const roe = priceDelta * position.leverage * direction;
-      const pnl = position.margin * roe;
+      const metrics = calculateTradingTerminalFuturesMetrics(position, asset);
 
       return {
         ...position,
-        currentPrice: asset.price,
-        pnl,
-        roe,
+        currentPrice: metrics.currentPrice,
+        pnl: metrics.pnl,
+        roe: metrics.roe,
+        qty: metrics.qty,
+        notional: metrics.notional,
+        liquidationPrice: metrics.liquidationPrice,
+        equityLeft: metrics.equityLeft,
+        liquidationThreshold: metrics.liquidationThreshold,
+        liquidationGapRatio: metrics.liquidationGapRatio,
+        isNearLiquidation: metrics.isNearLiquidation,
+        statusLabel: metrics.statusLabel,
+        statusTone: metrics.statusTone,
       };
     })
     .filter(Boolean);
@@ -405,22 +476,33 @@ function calculateTradingTerminalSummary(appId, targetState = state) {
   const walletBalance = typeof getWalletBalance === "function"
     ? getWalletBalance(targetState)
     : (targetState.money || 0);
+  const bankBalance = typeof getBankBalance === "function"
+    ? getBankBalance(targetState)
+    : Math.max(0, Number(targetState?.bank?.balance) || 0);
+  const terminal = ensureTradingTerminalState(appId, targetState);
   const spotHoldings = getTradingTerminalSpotHoldings(appId, targetState);
   const futuresPositions = getTradingTerminalFuturesPositions(appId, targetState);
   const spotValue = spotHoldings.reduce((sum, holding) => sum + holding.currentValue, 0);
   const spotPnl = spotHoldings.reduce((sum, holding) => sum + holding.pnl, 0);
   const futuresPnl = futuresPositions.reduce((sum, position) => sum + position.pnl, 0);
+  const openMargin = futuresPositions.reduce((sum, position) => sum + Math.max(0, Number(position.margin) || 0), 0);
   const openProfit = Math.round(spotPnl + futuresPnl);
-  const totalEquity = Math.round(walletBalance + spotValue + futuresPnl);
+  const totalEquity = Math.round(walletBalance + bankBalance + spotValue + openMargin + futuresPnl);
+  const atRiskCount = futuresPositions.filter((position) => position.isNearLiquidation).length;
 
   return {
     walletBalance,
+    bankBalance,
+    liquidFunds: Math.round(walletBalance + bankBalance),
     spotValue: Math.round(spotValue),
     futuresPnl: Math.round(futuresPnl),
+    openMargin: Math.round(openMargin),
     legacyProfit: 0,
     legacyValue: 0,
     openProfit,
     totalEquity,
+    atRiskCount,
+    lastLiquidationSummary: terminal?.lastLiquidationSummary || null,
     spotHoldings,
     futuresPositions,
   };
@@ -446,6 +528,7 @@ function tickTradingTerminal(appId, targetState = state) {
   }
 
   const survivingPositions = [];
+  const liquidationItems = [];
   let liquidationMessage = "";
 
   terminal.futuresPositions.forEach((position) => {
@@ -454,12 +537,9 @@ function tickTradingTerminal(appId, targetState = state) {
       return;
     }
 
-    const direction = position.side === "short" ? -1 : 1;
-    const priceDelta = (asset.price - position.entryPrice) / position.entryPrice;
-    const roe = priceDelta * position.leverage * direction;
-    const equityLeft = position.margin * (1 + roe);
+    const metrics = calculateTradingTerminalFuturesMetrics(position, asset);
 
-    if (equityLeft <= position.margin * 0.05) {
+    if (metrics.isLiquidated) {
       liquidationMessage = `${position.symbol} ${position.side === "short" ? "숏" : "롱"} 포지션이 강제청산되었습니다.`;
       return;
     }
@@ -469,7 +549,22 @@ function tickTradingTerminal(appId, targetState = state) {
 
   terminal.futuresPositions = survivingPositions;
 
-  if (liquidationMessage && typeof setPhoneAppStatus === "function") {
+  if (liquidationMessage) {
+    terminal.lastLiquidationSummary = {
+      title: "강제청산 발생",
+      body: liquidationMessage,
+      tone: "fail",
+      items: [liquidationMessage],
+    };
+    if (typeof setTradingTerminalStatus === "function") {
+      setTradingTerminalStatus(appId, {
+        kicker: "LIQUIDATION",
+        title: "강제청산 발생",
+        body: liquidationMessage,
+        tone: "fail",
+      }, targetState);
+      return;
+    }
     setPhoneAppStatus(appId, {
       kicker: "LIQUIDATION",
       title: "선물 포지션 정리",
@@ -824,32 +919,55 @@ function buildTradingTerminalCandlesMarkup(appId, targetState = state) {
   }).join("");
 }
 
+function buildTradingTerminalAlertMarkup(summary) {
+  if (summary?.lastLiquidationSummary?.body) {
+    return `
+      <section class="trade-terminal-warning-banner is-danger">
+        <div class="trade-terminal-warning-title">${escapePhoneAppHtml(summary.lastLiquidationSummary.title || "강제청산 발생")}</div>
+        <div class="trade-terminal-warning-body">${escapePhoneAppHtml(summary.lastLiquidationSummary.body)}</div>
+      </section>
+    `;
+  }
+
+  if (summary?.atRiskCount > 0) {
+    return `
+      <section class="trade-terminal-warning-banner is-warning">
+        <div class="trade-terminal-warning-title">청산 위험</div>
+        <div class="trade-terminal-warning-body">${escapePhoneAppHtml(`청산가에 가까운 포지션이 ${summary.atRiskCount}건 있다.`)}</div>
+      </section>
+    `;
+  }
+
+  return "";
+}
+
 function buildTradingTerminalCompactMarkup(appId, targetState = state, options = {}) {
   const summary = calculateTradingTerminalSummary(appId, targetState);
   const profit = summary.openProfit;
   const profitTone = profit >= 0 ? "is-up" : "is-down";
   const holdingsCount = summary.spotHoldings.length + summary.futuresPositions.length;
-  const holdingsLabel = appId === "stocks" ? "보유종목" : "보유자산";
-  const holdingsText = appId === "stocks"
-    ? `${holdingsCount}개 종목`
-    : `${holdingsCount}개 보유`;
+  const statusNote = summary.lastLiquidationSummary?.body
+    || (summary.atRiskCount > 0
+      ? `청산 위험 ${summary.atRiskCount}건`
+      : `보유 포지션 ${holdingsCount}건`);
 
   return `
     <div class="trade-summary-app ${appId === "coin" ? "is-coin" : "is-stocks"}">
       <div class="trade-summary-grid is-compact-stack">
         <section class="trade-summary-card">
-          <span class="trade-summary-label">현재 돈</span>
+          <span class="trade-summary-label">현금</span>
           <strong class="trade-summary-value">${escapePhoneAppHtml(formatTradingTerminalMoney(summary.walletBalance))}</strong>
         </section>
+        <section class="trade-summary-card">
+          <span class="trade-summary-label">계좌</span>
+          <strong class="trade-summary-value">${escapePhoneAppHtml(formatTradingTerminalMoney(summary.bankBalance))}</strong>
+        </section>
         <section class="trade-summary-card ${profitTone}">
-          <span class="trade-summary-label">현재 수익</span>
+          <span class="trade-summary-label">열린 손익</span>
           <strong class="trade-summary-value">${escapePhoneAppHtml(`${profit >= 0 ? "+" : ""}${formatTradingTerminalMoney(profit)}`)}</strong>
         </section>
-        <section class="trade-summary-card is-holdings">
-          <span class="trade-summary-label">${escapePhoneAppHtml(holdingsLabel)}</span>
-          <strong class="trade-summary-value">${escapePhoneAppHtml(holdingsText)}</strong>
-        </section>
       </div>
+      <div class="trade-summary-note ${summary.lastLiquidationSummary ? "is-danger" : (summary.atRiskCount > 0 ? "is-warning" : "")}">${escapePhoneAppHtml(statusNote)}</div>
     </div>
   `;
 }
@@ -869,6 +987,8 @@ function buildTradingTerminalStageMarkup(appId, targetState = state, options = {
   const leverageChoices = [5, 10, 20, 50];
   const assetDefinitions = getTradingTerminalAssetDefinitions(appId, targetState);
   const compactProfit = summary.openProfit;
+  const riskSummaryLabel = summary.atRiskCount > 0 ? `청산위험 ${summary.atRiskCount}건` : modeLabel;
+  const alertMarkup = buildTradingTerminalAlertMarkup(summary);
   const recentTrades = asset.trades.slice(0, 10);
   const headerKicker = Object.prototype.hasOwnProperty.call(options, "kicker")
     ? String(options.kicker || "")
@@ -910,10 +1030,13 @@ function buildTradingTerminalStageMarkup(appId, targetState = state, options = {
       <div class="trade-terminal-position-row">
         <div class="trade-terminal-position-copy">
           <div class="trade-terminal-position-title">${escapePhoneAppHtml(`${position.symbol} ${position.side === "short" ? "숏" : "롱"} x${position.leverage}`)}</div>
-          <div class="trade-terminal-position-sub">${escapePhoneAppHtml(`진입 ${formatTradingTerminalPrice(position.entryPrice)} · 증거금 ${formatTradingTerminalMoney(position.margin)}`)}</div>
+          <div class="trade-terminal-position-sub">${escapePhoneAppHtml(`보유수량 ${formatTradingTerminalSize(appId, position.qty)} · 평단 ${formatTradingTerminalPrice(position.entryPrice)}`)}</div>
+          <div class="trade-terminal-position-sub">${escapePhoneAppHtml(`청산가 ${formatTradingTerminalPrice(position.liquidationPrice)} · 증거금 ${formatTradingTerminalMoney(position.margin)}`)}</div>
         </div>
         <div class="trade-terminal-position-meta">
+          <div class="trade-terminal-position-main">${escapePhoneAppHtml(formatTradingTerminalPrice(position.currentPrice))}</div>
           <div class="trade-terminal-position-pnl ${position.pnl >= 0 ? "is-up" : "is-down"}">${escapePhoneAppHtml(`${position.pnl >= 0 ? "+" : ""}${formatTradingTerminalMoney(position.pnl)}`)}</div>
+          <div class="trade-terminal-position-status is-${escapePhoneAppHtml(position.statusTone || "stable")}">${escapePhoneAppHtml(position.statusLabel || "보유중")}</div>
           <button class="trade-terminal-close-btn" type="button" data-phone-action="terminal-close-position" data-app-id="${escapePhoneAppHtml(appId)}" data-position-id="${escapePhoneAppHtml(position.id)}">정리</button>
         </div>
       </div>
@@ -936,18 +1059,24 @@ function buildTradingTerminalStageMarkup(appId, targetState = state, options = {
 
       <div class="trade-terminal-summary-strip">
         <div class="trade-terminal-summary-card">
-          <span class="trade-terminal-summary-label">보유 현금</span>
+          <span class="trade-terminal-summary-label">현금</span>
           <strong class="trade-terminal-summary-value">${escapePhoneAppHtml(formatTradingTerminalMoney(summary.walletBalance))}</strong>
+        </div>
+        <div class="trade-terminal-summary-card">
+          <span class="trade-terminal-summary-label">계좌</span>
+          <strong class="trade-terminal-summary-value">${escapePhoneAppHtml(formatTradingTerminalMoney(summary.bankBalance))}</strong>
         </div>
         <div class="trade-terminal-summary-card ${compactProfit >= 0 ? "is-up" : "is-down"}">
           <span class="trade-terminal-summary-label">현재 손익</span>
           <strong class="trade-terminal-summary-value">${escapePhoneAppHtml(`${compactProfit >= 0 ? "+" : ""}${formatTradingTerminalMoney(compactProfit)}`)}</strong>
         </div>
         <div class="trade-terminal-summary-card">
-          <span class="trade-terminal-summary-label">거래 모드</span>
-          <strong class="trade-terminal-summary-value">${escapePhoneAppHtml(modeLabel)}</strong>
+          <span class="trade-terminal-summary-label">${summary.atRiskCount > 0 ? "청산 위험" : "거래 모드"}</span>
+          <strong class="trade-terminal-summary-value">${escapePhoneAppHtml(riskSummaryLabel)}</strong>
         </div>
       </div>
+
+      ${alertMarkup}
 
       <div class="trade-terminal-toggle-row">
         <div class="trade-terminal-mode-tabs">

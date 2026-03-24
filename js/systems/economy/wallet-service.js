@@ -36,6 +36,9 @@ function setCashBalance(nextAmount, targetState = state) {
   }
 
   targetState.money = Math.max(0, Number(nextAmount) || 0);
+  if (typeof syncCriticalResourceWarnings === "function") {
+    syncCriticalResourceWarnings(targetState);
+  }
   return targetState.money;
 }
 

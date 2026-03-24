@@ -8,6 +8,15 @@ const NPC_DATA = {
     interactionTypes: ["talk"],
     tags: ["학생", "골목"],
   },
+  "girlfriend-student": {
+    id: "girlfriend-student",
+    name: "도서관 여학생",
+    role: "student-romance",
+    homeLocation: "library",
+    art: CHARACTER_ART.girlfriendStudent.default,
+    interactionTypes: ["talk"],
+    tags: ["학생", "도서관", "로맨스"],
+  },
   "alley-office-worker": {
     id: "alley-office-worker",
     name: "퇴근길 직장인",

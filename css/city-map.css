@@ -182,6 +182,11 @@
   background: #080a0e;
 }
 
+.city-map-board-inner {
+  position: absolute;
+  inset: clamp(12px, 2.2vw, 24px) clamp(14px, 2.8vw, 30px) clamp(16px, 2.8vw, 26px);
+}
+
 .city-map-board-grid {
   position: absolute;
   inset: 0;
@@ -905,6 +910,10 @@
     min-height: 100%;
   }
 
+  .city-map-board-inner {
+    inset: clamp(18px, 2vw, 28px) clamp(20px, 2.6vw, 34px) clamp(20px, 2.4vw, 30px);
+  }
+
   .city-map-board-grid {
     background-size: 34px 34px;
   }
@@ -981,5 +990,9 @@
     min-width: 820px;
     height: max(100%, 580px);
     min-height: 580px;
+  }
+
+  .city-map-board-inner {
+    inset: 14px 18px 18px;
   }
 }

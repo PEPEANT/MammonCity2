@@ -31,6 +31,9 @@ const CHARACTER_ART = {
   highSchoolGirl: {
     default: "assets/characters/npc/high-school-girl/default.png",
   },
+  girlfriendStudent: {
+    default: "assets/characters/npc/girlfriend-student/default.png",
+  },
   alleyOfficeWorker: {
     default: "assets/characters/npc/alley-office-worker/default.png",
   },

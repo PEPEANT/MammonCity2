@@ -228,6 +228,137 @@ function getPlayerLifestyleSnapshot(targetState = state) {
   };
 }
 
+function getCriticalResourceWarningSnapshot(targetState = state) {
+  const lifestyle = getPlayerLifestyleSnapshot(targetState);
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
+  const hungerValue = typeof ensureHungerState === "function"
+    ? ensureHungerState(targetState).value
+    : Math.max(0, Number(targetState?.hunger) || hungerMax);
+  const staminaValue = Math.max(0, Number(targetState?.stamina) || 0);
+  const bankBalance = Math.max(0, Number(lifestyle.bankBalance) || 0);
+  const cashOnHand = Math.max(0, Number(lifestyle.cashOnHand) || 0);
+  const liquidFunds = Math.max(0, Number(lifestyle.liquidFunds) || 0);
+  const warningItems = [];
+  let economyLevel = "";
+  let cashLevel = "";
+  let hungerLevel = "";
+  let staminaLevel = "";
+
+  if (liquidFunds <= 10000) {
+    economyLevel = "danger";
+    warningItems.push({
+      key: "economy-critical",
+      label: `총자금 ${typeof formatCash === "function" ? formatCash(liquidFunds) : `${liquidFunds}원`}`,
+      tone: "down",
+      title: "파산 직전이다",
+    });
+  } else if (liquidFunds <= 30000) {
+    economyLevel = "warning";
+    warningItems.push({
+      key: "economy-warning",
+      label: `총자금 ${typeof formatCash === "function" ? formatCash(liquidFunds) : `${liquidFunds}원`}`,
+      tone: "down",
+      title: "자금이 거의 바닥났다",
+    });
+  }
+
+  if (cashOnHand <= 5000) {
+    cashLevel = bankBalance > 0 ? "warning" : (economyLevel || "danger");
+  } else if (cashOnHand <= 15000) {
+    cashLevel = "warning";
+  }
+
+  if (staminaValue <= 15) {
+    staminaLevel = "danger";
+    warningItems.push({
+      key: "stamina-critical",
+      label: `체력 ${staminaValue}`,
+      tone: "down",
+      title: "체력이 거의 바닥났다",
+    });
+  } else if (staminaValue <= 30) {
+    staminaLevel = "warning";
+    warningItems.push({
+      key: "stamina-warning",
+      label: `체력 ${staminaValue}`,
+      tone: "down",
+      title: "체력이 낮다",
+    });
+  }
+
+  if (hungerValue <= 15) {
+    hungerLevel = "danger";
+    warningItems.push({
+      key: "hunger-critical",
+      label: `배고픔 ${hungerValue}/${hungerMax}`,
+      tone: "down",
+      title: "배고픔이 위험 수치다",
+    });
+  } else if (hungerValue <= 35) {
+    hungerLevel = "warning";
+    warningItems.push({
+      key: "hunger-warning",
+      label: `배고픔 ${hungerValue}/${hungerMax}`,
+      tone: "down",
+      title: "배가 고프다",
+    });
+  }
+
+  const severity = warningItems.some((item) => String(item.key || "").includes("critical"))
+    ? "danger"
+    : (warningItems.length ? "warning" : "");
+  const key = warningItems.map((item) => item.key).join("|");
+  const title = warningItems.length > 1
+    ? "생존 상태 경고"
+    : (warningItems[0]?.title || "");
+
+  return {
+    key,
+    title,
+    tone: severity || "info",
+    chips: warningItems.map((item) => ({
+      label: item.label,
+      tone: item.tone,
+    })),
+    severity,
+    economyLevel,
+    cashLevel,
+    hungerLevel,
+    staminaLevel,
+    cashOnHand,
+    bankBalance,
+    liquidFunds,
+    hungerValue,
+    staminaValue,
+  };
+}
+
+function syncCriticalResourceWarnings(targetState = state, { emitFeedback = true } = {}) {
+  if (!targetState || typeof targetState !== "object") {
+    return null;
+  }
+
+  const snapshot = getCriticalResourceWarningSnapshot(targetState);
+  const nextKey = String(snapshot?.key || "").trim();
+  const previousKey = String(targetState.lastCriticalResourceWarningKey || "").trim();
+
+  if (!nextKey) {
+    targetState.lastCriticalResourceWarningKey = "";
+    return null;
+  }
+
+  targetState.lastCriticalResourceWarningKey = nextKey;
+  if (emitFeedback && nextKey !== previousKey && typeof queueGameplayFeedback === "function") {
+    queueGameplayFeedback({
+      title: snapshot.title || "생존 상태 경고",
+      tone: snapshot.tone || "warning",
+      chips: snapshot.chips || [],
+    }, targetState);
+  }
+
+  return snapshot;
+}
+
 function getPlayerHardGateStatuses(targetState = state) {
   const certifications = typeof getCareerCertificationSnapshotForState === "function"
     ? getCareerCertificationSnapshotForState(targetState)

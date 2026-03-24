@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="css/layout.css?v=20260324-romance2">
   <link rel="stylesheet" href="css/components.css?v=20260324-ranktrophy1">
   <link rel="stylesheet" href="css/city-map.css?v=20260324-maplayout1">
-  <link rel="stylesheet" href="css/phone.css?v=20260324-casinomove1">
+  <link rel="stylesheet" href="css/phone.css?v=20260324-phonefocus2">
   <link rel="stylesheet" href="css/market.css?v=20260323-assets1">
   <link rel="stylesheet" href="css/ranking.css?v=20260324-rankingpreview1">
 </head>
@@ -62,7 +62,9 @@
         <span class="hud-sep">·</span>
         <span id="time-display">06:30</span>
         <span class="hud-sep">·</span>
-        <span id="money-display" class="hud-val money">0원</span>
+        <span id="money-display" class="hud-val money">현금 0원</span>
+        <span class="hud-sep">·</span>
+        <span id="bank-display" class="hud-val bank">계좌 0원</span>
       </div>
 
       <!-- 우상단 HUD: 체력 / 에너지 / 배고픔 -->
@@ -144,6 +146,7 @@
       </div>
 
       <div id="phone-stage" hidden aria-hidden="true"></div>
+      <div id="phone-focus-dim" hidden aria-hidden="true"></div>
 
       <div id="phone-panel">
         <div class="phone-shell">

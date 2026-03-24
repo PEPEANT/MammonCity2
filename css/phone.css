@@ -1,3 +1,25 @@
+#phone-focus-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 24% 24%, rgba(87, 140, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(5, 8, 14, 0.12) 0%, rgba(5, 8, 14, 0.62) 100%);
+  backdrop-filter: blur(4px) saturate(0.88);
+  transition: opacity 0.24s ease, backdrop-filter 0.24s ease;
+}
+
+#phone-focus-dim[hidden] {
+  display: none;
+}
+
+#phone-focus-dim.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 #phone-panel {
   position: absolute;
   top: 44px;
@@ -13,8 +35,14 @@
 }
 
 #phone-panel.is-hidden-panel {
+  top: auto;
+  right: 10px;
+  bottom: 10px;
+  left: auto;
+  width: auto;
+  height: auto;
   opacity: 1;
-  transform: translateX(74px) scale(0.78);
+  transform: translateX(16px) scale(0.82);
   transform-origin: right bottom;
   filter: saturate(0.88);
 }
@@ -111,7 +139,9 @@
 }
 
 .phone-shell > #phone-controls.is-collapsed {
-  position: static;
+  position: absolute;
+  right: 0;
+  bottom: 0;
   left: auto;
   width: auto;
   gap: 0;
@@ -280,6 +310,81 @@
   bottom: 122px;
   z-index: 14;
   pointer-events: auto;
+}
+
+#game.phone-focus-active #phone-panel {
+  z-index: 24;
+}
+
+#game.phone-stage-active #phone-stage {
+  top: 34px;
+  left: 50%;
+  right: auto;
+  bottom: 92px;
+  width: min(560px, calc(100% - 40px));
+  transform: translateX(-50%);
+  z-index: 22;
+}
+
+#game.phone-stage-active.phone-safe-layout #phone-stage {
+  top: 28px;
+  bottom: 86px;
+  width: min(500px, calc(100% - 56px));
+}
+
+#phone-panel.is-stage-docked {
+  top: auto;
+  right: auto;
+  bottom: 16px;
+  left: 16px;
+  width: auto;
+  height: auto;
+  z-index: 24;
+}
+
+#phone-panel.is-stage-docked .phone-shell {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#phone-panel.is-stage-docked .phone-shell::before,
+#phone-panel.is-stage-docked .phone-shell::after,
+#phone-panel.is-stage-docked .phone-notch,
+#phone-panel.is-stage-docked .phone-screen {
+  display: none;
+}
+
+#phone-panel.is-stage-docked .phone-shell > #phone-controls {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: auto;
+  min-width: 168px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  background: rgba(7, 12, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+#phone-panel.is-stage-docked #phone-stage-btn,
+#phone-panel.is-stage-docked #phone-back-btn {
+  flex: 0 0 48px;
+}
+
+#phone-panel.is-stage-docked #phone-home-btn {
+  flex: 0 0 54px;
 }
 
 .phone-stage-shell {
@@ -813,6 +918,15 @@
   font-size: 11px;
   line-height: 1.5;
   color: rgba(200, 210, 230, 0.78);
+}
+
+.phone-app-screen-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .phone-app-mini-btn {
@@ -4165,7 +4279,7 @@
   }
 
   #phone-panel.is-hidden-panel {
-    transform: translateX(38px) scale(0.78);
+    transform: translateX(8px) scale(0.82);
   }
 
   .phone-shell {
@@ -4192,6 +4306,9 @@
   }
 
   .phone-shell > #phone-controls.is-collapsed {
+    position: absolute;
+    right: 0;
+    bottom: 0;
     left: auto;
     padding: 0;
     gap: 0;
@@ -4242,6 +4359,31 @@
     left: 8px;
   }
 
+  #game.phone-stage-active #phone-stage {
+    top: 12px;
+    bottom: 84px;
+    left: 8px;
+    width: calc(100% - 16px);
+    transform: none;
+  }
+
+  #game.phone-stage-active.phone-safe-layout #phone-stage {
+    top: 8px;
+    bottom: 80px;
+    width: calc(100% - 24px);
+    left: 12px;
+  }
+
+  #phone-panel.is-hidden-panel {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  #phone-panel.is-stage-docked {
+    left: 8px;
+    bottom: 8px;
+  }
+
   .phone-stage-shell {
     padding: 12px;
     border-radius: 20px;
@@ -4282,6 +4424,13 @@
     border-radius: 22px;
     padding: 14px 10px 72px;
     gap: 8px;
+  }
+
+  #phone-panel.is-stage-docked .phone-shell > #phone-controls {
+    min-width: 132px;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 16px;
   }
 
   #phone-panel.is-app-open .phone-screen {
@@ -6708,7 +6857,7 @@
 
 .trade-terminal-summary-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   padding: 12px;
   background: rgba(8, 13, 24, 0.94);
@@ -6730,6 +6879,55 @@
 
 .trade-terminal-summary-card.is-down .trade-terminal-summary-value {
   color: #60a5fa;
+}
+
+.trade-terminal-summary-card.is-alert .trade-terminal-summary-value {
+  color: #fbbf24;
+}
+
+.trade-summary-note {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(210, 222, 242, 0.78);
+}
+
+.trade-summary-note.is-warning {
+  color: #ffd36b;
+}
+
+.trade-summary-note.is-danger {
+  color: #ff8a8a;
+}
+
+.trade-terminal-warning-banner {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.trade-terminal-warning-banner.is-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.trade-terminal-warning-banner.is-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.trade-terminal-warning-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: #f8fbff;
+}
+
+.trade-terminal-warning-body {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: rgba(226, 236, 250, 0.82);
 }
 
 .trade-terminal-summary-value {
@@ -7108,6 +7306,36 @@
   text-align: right;
   font-size: 12px;
   font-weight: 800;
+}
+
+.trade-terminal-position-status {
+  display: inline-flex;
+  align-self: flex-end;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+}
+
+.trade-terminal-position-status.is-warning {
+  background: rgba(245, 158, 11, 0.18);
+  color: #ffd36b;
+}
+
+.trade-terminal-position-status.is-danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ff8a8a;
+}
+
+.trade-terminal-position-status.is-stable {
+  background: rgba(34, 197, 94, 0.16);
+  color: #8ff7b1;
 }
 
 .trade-terminal-close-btn {

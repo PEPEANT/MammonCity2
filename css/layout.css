@@ -689,6 +689,7 @@ body {
   pointer-events: none;
 }
 
+#outside-goal.is-visible,
 #game.room-mode #outside-goal,
 #game.outside-mode #outside-goal,
 #game.interactive-start-mode #outside-goal {

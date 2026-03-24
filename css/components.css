@@ -1,6 +1,10 @@
 /* ── 플로팅 HUD ─────────────────────────────── */
 
 /* 좌상단: 일차 · 시간 */
+[hidden] {
+  display: none !important;
+}
+
 #hud-left {
   font-size: 14px;
   font-weight: 700;
@@ -42,9 +46,18 @@
 }
 
 .hud-val.money  { color: #7fff7f; }
+.hud-val.bank { color: #7ee0ff; }
 .hud-val.stamina { color: #87ceeb; }
 .hud-val.energy  { color: #ffb36b; }
 .hud-val.hunger  { color: #ff8f6b; }
+
+.hud-val.is-warning {
+  color: #ffd36b !important;
+}
+
+.hud-val.is-danger {
+  color: #ff7b7b !important;
+}
 
 .hud-divider {
   width: 1px;

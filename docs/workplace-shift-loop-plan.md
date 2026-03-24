@@ -82,3 +82,28 @@
 - [early-progression.md](./early-progression.md)
 - [design/job-tracks.md](./design/job-tracks.md)
 - [design/logic-split-plan.md](./design/logic-split-plan.md)
+
+## 2026-03 current implemented status
+
+- McDonald's venue flow is no longer a single mixed branch. The live state machine distinguishes:
+  - not hired
+  - inquiry available
+  - hired
+  - on-shift window
+  - off-shift window
+  - customer mode
+- Job inquiry is time-gated. If the player asks outside the inquiry window, the venue rejects the request instead of silently mixing it with shift entry.
+- After hiring, shift start is only available during the assigned window. Outside that window the venue stays in customer mode.
+- Customer mode keeps the kiosk usable even when the player is an employee.
+- Counter and kitchen paths are now separated, and shift cleanup returns the player to a safe counter/outside location instead of leaving them stuck in kitchen state.
+- Minigame entry is routed through shared checks for job, place, and time so duplicate entry and missing-trigger cases are easier to trace.
+
+## Remaining release gap
+
+- This document is still partly a plan document. Before release, the manual smoke pass should confirm at least one full McDonald's loop:
+  - inquiry rejected outside inquiry time
+  - inquiry accepted in inquiry time
+  - off-shift customer kiosk access
+  - on-shift entry
+  - minigame start
+  - shift completion and safe return

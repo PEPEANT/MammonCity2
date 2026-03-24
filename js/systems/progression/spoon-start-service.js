@@ -131,10 +131,16 @@ const SPOON_START_HOME_CONFIGS = Object.freeze({
     outsideBackground: createSpoonStartBackgroundConfig("assets/days/dirt_spoon/my_house.png"),
     lobbyBackground: null,
     transitBackground: null,
+    spawnPlayerLayout: Object.freeze({
+      startLeft: 50,
+      bottom: 2,
+      height: 94,
+      zIndex: 2,
+    }),
     roomActorLayout: Object.freeze({
       left: 72,
-      bottom: -30,
-      height: 115,
+      bottom: -36,
+      height: 130,
       zIndex: 2,
     }),
   }),
@@ -148,10 +154,16 @@ const SPOON_START_HOME_CONFIGS = Object.freeze({
     outsideBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/my_house.jpg"),
     lobbyBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/lobby.jpg"),
     transitBackground: null,
+    spawnPlayerLayout: Object.freeze({
+      startLeft: 50,
+      bottom: 2,
+      height: 92,
+      zIndex: 2,
+    }),
     roomActorLayout: Object.freeze({
       left: 50,
-      bottom: -30,
-      height: 115,
+      bottom: -34,
+      height: 128,
       zIndex: 2,
     }),
   }),
@@ -347,8 +359,13 @@ function getSpoonStartHomeConfig(targetState = state) {
     outsideBackground: cloneSpoonStartBackgroundConfig(config.outsideBackground),
     lobbyBackground: cloneSpoonStartBackgroundConfig(config.lobbyBackground),
     transitBackground: cloneSpoonStartBackgroundConfig(config.transitBackground),
+    spawnPlayerLayout: cloneSpoonStartActorLayout(config.spawnPlayerLayout),
     roomActorLayout: cloneSpoonStartActorLayout(config.roomActorLayout),
   };
+}
+
+function getSpoonStartSpawnPlayerLayout(targetState = state) {
+  return cloneSpoonStartActorLayout(getSpoonStartHomeConfig(targetState)?.spawnPlayerLayout);
 }
 
 function getSpoonStartRoomActorLayout(targetState = state) {

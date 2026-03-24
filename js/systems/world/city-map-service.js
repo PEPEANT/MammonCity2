@@ -42,7 +42,9 @@ function canShowCityMapForState(targetState = state) {
     ? getCurrentCityMapLocationId(targetState)
     : "";
 
-  if (!currentLocationId || ["bus-ride", "walk-travel"].includes(currentLocationId)) {
+  if (!currentLocationId || (typeof isTravelSceneLocationId === "function"
+    ? isTravelSceneLocationId(currentLocationId)
+    : ["bus-ride", "walk-travel"].includes(currentLocationId))) {
     return false;
   }
 

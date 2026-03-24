@@ -53,6 +53,10 @@ function getCurrentOutsideSceneConfig(targetState = state) {
   const locations = worldData.locations || null;
 
   if (locations) {
+    if (typeof recoverMcDonaldsVenueLocation === "function") {
+      recoverMcDonaldsVenueLocation(targetState);
+    }
+
     const locationId = getCurrentLocationId(targetState);
     const baseScene = locationId ? locations[locationId] || null : null;
     if (!baseScene) {
@@ -97,7 +101,7 @@ function getCurrentOutsideSceneConfig(targetState = state) {
       const methodLabel = getPendingTravelMethodLabel(targetState);
       const travelMinutes = syncWorldState(targetState).pendingTravelMinutes;
       resolvedScene.title = "걷는 중...";
-      resolvedScene.background = getWalkTravelBackgroundForMinutes(travelMinutes);
+      resolvedScene.background = getWalkTravelBackgroundForMinutes(travelMinutes, targetState);
       if (isIndustrialArrival && typeof DAY01_WORLD_DIGITAL_COMPLEX_VIEW_BACKGROUND !== "undefined") {
         resolvedScene.background = DAY01_WORLD_DIGITAL_COMPLEX_VIEW_BACKGROUND;
         resolvedScene.actors = [];
@@ -111,6 +115,32 @@ function getCurrentOutsideSceneConfig(targetState = state) {
 
     const activeAlleyNpc = getActiveAlleyNpcConfig(targetState);
     const wanderResult = worldState.wanderResult || {};
+    const wanderFocusNpcId = wanderResult.locationId === locationId
+      ? (
+          activeAlleyNpc?.id
+          || (typeof getLocationWanderNpcId === "function"
+            ? getLocationWanderNpcId(locationId, targetState)
+            : "")
+        )
+      : "";
+    const wanderFocusNpc = wanderFocusNpcId
+      ? (
+          activeAlleyNpc?.id === wanderFocusNpcId
+            ? activeAlleyNpc
+            : (
+              (typeof getAdjustedLocationNpcPool === "function"
+                ? getAdjustedLocationNpcPool(targetState, locationId)
+                : getAlleyNpcPool(targetState, locationId)
+              ).find((entry) => entry.id === wanderFocusNpcId) || null
+            )
+        )
+      : null;
+    const hasWanderFocusNpc = Boolean(wanderFocusNpc?.actor && wanderResult.locationId === locationId);
+    const ambientNpcActors = typeof getLocationAmbientNpcActors === "function"
+      ? getLocationAmbientNpcActors(targetState, locationId, {
+          focusNpcId: hasWanderFocusNpc ? wanderFocusNpcId : "",
+        })
+      : [];
     resolvedScene.options = resolvedScene.options.filter((option) => option.action !== "wander");
 
     if (locationId && canUseLocationWander(locationId, targetState)) {
@@ -125,15 +155,15 @@ function getCurrentOutsideSceneConfig(targetState = state) {
       resolvedScene.lines = [...wanderResult.lines];
     }
 
-    if (activeAlleyNpc?.actor) {
-      resolvedScene.actors.push({ ...activeAlleyNpc.actor, npcId: activeAlleyNpc.id });
-      if (activeAlleyNpc.tag && !resolvedScene.tags.includes(activeAlleyNpc.tag)) {
-        resolvedScene.tags.push(activeAlleyNpc.tag);
+    if (hasWanderFocusNpc) {
+      resolvedScene.actors.push({ ...wanderFocusNpc.actor, npcId: wanderFocusNpc.id });
+      if (wanderFocusNpc.tag && !resolvedScene.tags.includes(wanderFocusNpc.tag)) {
+        resolvedScene.tags.push(wanderFocusNpc.tag);
       }
       if (!(wanderResult.locationId === locationId && wanderResult.title && wanderResult.lines?.length)) {
-        resolvedScene.title = activeAlleyNpc.sceneTitle || resolvedScene.title;
-        resolvedScene.lines = Array.isArray(activeAlleyNpc.sceneLines) && activeAlleyNpc.sceneLines.length
-          ? [...activeAlleyNpc.sceneLines]
+        resolvedScene.title = wanderFocusNpc.sceneTitle || resolvedScene.title;
+        resolvedScene.lines = Array.isArray(wanderFocusNpc.sceneLines) && wanderFocusNpc.sceneLines.length
+          ? [...wanderFocusNpc.sceneLines]
           : resolvedScene.lines;
       }
       resolvedScene.options.unshift({
@@ -141,6 +171,19 @@ function getCurrentOutsideSceneConfig(targetState = state) {
         action: "approach-alley-npc",
       });
     }
+
+    ambientNpcActors.forEach((actor) => {
+      const duplicateActor = resolvedScene.actors.some((existingActor) =>
+        (actor.npcId && existingActor?.npcId === actor.npcId)
+        || (!actor.npcId && actor.alt && existingActor?.alt === actor.alt && existingActor?.left === actor.left)
+        || (actor.src && existingActor?.src === actor.src && actor.left === existingActor?.left)
+      );
+      if (!duplicateActor) {
+        resolvedScene.actors.push({ ...actor });
+      }
+    });
+
+    applyMcDonaldsVenueSceneState(resolvedScene, locationId, targetState);
 
     if (typeof resolveSceneActorPresentation === "function") {
       resolvedScene.actors = resolvedScene.actors.map((actor) =>
@@ -158,6 +201,208 @@ function getCurrentOutsideSceneConfig(targetState = state) {
   }
 
   return worldData.outsideScene || null;
+}
+
+function hasMatchingSceneOption(options = [], option = null) {
+  if (!option || !Array.isArray(options)) {
+    return false;
+  }
+
+  return options.some((entry) =>
+    entry?.action === option.action
+    && String(entry?.targetLocation || "") === String(option.targetLocation || "")
+    && String(entry?.jobId || "") === String(option.jobId || "")
+    && String(entry?.title || "") === String(option.title || "")
+  );
+}
+
+function prependSceneOption(options = [], option = null) {
+  if (!option || hasMatchingSceneOption(options, option)) {
+    return options;
+  }
+
+  options.unshift({ ...option });
+  return options;
+}
+
+function appendSceneOption(options = [], option = null) {
+  if (!option || hasMatchingSceneOption(options, option)) {
+    return options;
+  }
+
+  options.push({ ...option });
+  return options;
+}
+
+function buildMcDonaldsVenueStatusLine(venueState = null) {
+  if (!venueState) {
+    return "";
+  }
+
+  switch (venueState.phase) {
+    case "rejected":
+      return "매니저가 오늘 채용은 여기까지라며 다음 공고가 뜰 때 다시 들르라고 한다.";
+    case "apply-ready":
+      return `지금은 채용 문의 시간이라 ${venueState.hasCounterOffer && venueState.hasKitchenOffer ? "카운터와 주방" : (venueState.hasKitchenOffer ? "주방" : "카운터")} 알바를 물어볼 수 있다.`;
+    case "apply-closed":
+      return `알바 문의는 ${venueState.applicationWindowLabel} 사이에만 받는다고 한다.`;
+    case "apply-locked":
+      return "이미 잡힌 일정이 있거나 오늘 지원을 마쳐서 더 이상 채용 문의를 받을 수 없다.";
+    case "hired":
+      return `${venueState.shiftDayLabel || "다음 근무"} ${venueState.shiftWindowLabel || ""} ${venueState.shiftStageLabel} 출근이라고 메모가 붙어 있다.`.trim();
+    case "shift-waiting":
+      return `${venueState.shiftStageLabel} 출근 시간은 ${venueState.shiftWindowLabel || "오늘 근무 시간"}이다. 아직 조금 이르다.`;
+    case "shift-active":
+      return `지금은 ${venueState.shiftStageLabel} 근무 시간이라 바로 라인에 들어갈 수 있다.`;
+    case "shift-missed":
+      return `오늘 ${venueState.shiftStageLabel} 근무 시간은 이미 지나서 결근 처리만 남았다.`;
+    default:
+      return venueState.locationRole === "counter"
+        ? "손님 모드라 키오스크 주문과 잠깐 쉬는 행동부터 할 수 있다."
+        : "";
+  }
+}
+
+function applyMcDonaldsVenueSceneState(resolvedScene, locationId = "", targetState = state) {
+  if (!resolvedScene || !locationId || typeof getMcDonaldsVenueState !== "function" || !isMcDonaldsLocationId(locationId)) {
+    return resolvedScene;
+  }
+
+  const venueState = getMcDonaldsVenueState(targetState);
+  if (!venueState) {
+    return resolvedScene;
+  }
+
+  const statusLine = buildMcDonaldsVenueStatusLine(venueState);
+  if (statusLine) {
+    const leadLine = resolvedScene.lines[0] || "";
+    resolvedScene.lines = [leadLine, statusLine].filter(Boolean);
+  }
+
+  if (!resolvedScene.tags.includes("알바")) {
+    resolvedScene.tags.push("알바");
+  }
+  if (venueState.phase === "customer" && venueState.locationRole === "counter" && !resolvedScene.tags.includes("손님 모드")) {
+    resolvedScene.tags.push("손님 모드");
+  }
+
+  if (locationId === "mcdonalds") {
+    if (venueState.scheduledShift || venueState.interviewResult) {
+      prependSceneOption(resolvedScene.options, {
+        title: "매니저에게 근무 시간을 확인한다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    if (venueState.canApplyHere && venueState.hasCounterOffer && venueState.offerByJobId["mcd-counter"]) {
+      prependSceneOption(resolvedScene.options, {
+        title: "카운터 알바를 물어본다",
+        action: "mcd-apply-job",
+        jobId: "mcd-counter",
+      });
+    }
+
+    if (venueState.canApplyHere && venueState.hasKitchenOffer && venueState.offerByJobId["mcd-kitchen"]) {
+      prependSceneOption(resolvedScene.options, {
+        title: "주방 알바를 물어본다",
+        action: "mcd-apply-job",
+        jobId: "mcd-kitchen",
+      });
+    }
+
+    return resolvedScene;
+  }
+
+  if (locationId === "mcdonalds-counter") {
+    if (!venueState.shouldUseKiosk) {
+      resolvedScene.options = resolvedScene.options.filter((option) =>
+        !["eat-mcdonalds-set", "buy-mcdonalds-coffee"].includes(option.action)
+      );
+    }
+
+    if (venueState.canEnterKitchen) {
+      prependSceneOption(resolvedScene.options, {
+        title: "주방으로 들어간다",
+        action: "move",
+        targetLocation: "mcdonalds-kitchen",
+        travelMinutes: 2,
+        keepVisible: true,
+      });
+    }
+
+    if (venueState.shiftUi?.phase === "waiting" && venueState.shiftUi.isAtWorkplace && venueState.shiftJobId === "mcd-counter") {
+      prependSceneOption(resolvedScene.options, {
+        title: "카운터 출근 시간까지 기다린다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    if (venueState.shiftUi?.phase === "active" && venueState.shiftUi.isAtWorkplace && venueState.shiftJobId === "mcd-counter") {
+      prependSceneOption(resolvedScene.options, {
+        title: "카운터 근무를 시작한다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    if ((venueState.scheduledShift || venueState.interviewResult) && !(venueState.shiftUi?.phase === "active" && venueState.shiftUi.isAtWorkplace && venueState.shiftJobId === "mcd-counter")) {
+      prependSceneOption(resolvedScene.options, {
+        title: "매니저에게 근무 시간을 확인한다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    if (venueState.canApplyHere && venueState.hasCounterOffer && venueState.offerByJobId["mcd-counter"]) {
+      prependSceneOption(resolvedScene.options, {
+        title: "카운터 알바를 물어본다",
+        action: "mcd-apply-job",
+        jobId: "mcd-counter",
+      });
+    }
+
+    if (venueState.canApplyHere && venueState.hasKitchenOffer && venueState.offerByJobId["mcd-kitchen"]) {
+      prependSceneOption(resolvedScene.options, {
+        title: "주방 알바를 물어본다",
+        action: "mcd-apply-job",
+        jobId: "mcd-kitchen",
+      });
+    }
+
+    return resolvedScene;
+  }
+
+  if (locationId === "mcdonalds-kitchen") {
+    if (venueState.shiftUi?.phase === "waiting" && venueState.shiftUi.isAtWorkplace && venueState.shiftJobId === "mcd-kitchen") {
+      prependSceneOption(resolvedScene.options, {
+        title: "주방 출근 시간까지 기다린다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    if (venueState.shiftUi?.phase === "active" && venueState.shiftUi.isAtWorkplace && venueState.shiftJobId === "mcd-kitchen") {
+      prependSceneOption(resolvedScene.options, {
+        title: "주방 근무를 시작한다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    if ((venueState.scheduledShift || venueState.interviewResult)
+      && !(venueState.shiftUi?.phase === "active" && venueState.shiftUi.isAtWorkplace && venueState.shiftJobId === "mcd-kitchen")) {
+      prependSceneOption(resolvedScene.options, {
+        title: "매니저에게 근무 시간을 확인한다",
+        action: "mcd-check-shift",
+      });
+    }
+
+    appendSceneOption(resolvedScene.options, {
+      title: "카운터로 나온다",
+      action: "move",
+      targetLocation: "mcdonalds-counter",
+      travelMinutes: 2,
+      keepVisible: true,
+    });
+  }
+
+  return resolvedScene;
 }
 
 const SAVE_STATE_KEY = "mammon-city-save-v1";
@@ -195,6 +440,364 @@ const JOB_SHIFT_RULES = {
   line_inspector: { startSlotChoices: [17, 21], durationSlots: 12 },
   closing_checker: { startSlotChoices: [30, 34], durationSlots: 8 },
 };
+const INPUT_GATE_COOLDOWN_MS = 90;
+const INPUT_GATE_STALE_MS = 2500;
+const INPUT_GATE_FEEDBACK_COOLDOWN_MS = 900;
+const INPUT_GATE_BUSY_FEEDBACK_DELAY_MS = 450;
+const INPUT_GATE_DEBUG_LOG_LIMIT = 24;
+const RENDER_SAVE_DEBOUNCE_MS = 240;
+
+function createDefaultInputGateState() {
+  return {
+    active: false,
+    actionId: "",
+    source: "",
+    mode: "normal",
+    lockStartedAt: 0,
+    lockUntil: 0,
+    blockedCount: 0,
+    recoveryCount: 0,
+    lastBlockedReason: "",
+    lastBlockedAt: 0,
+    debugLog: [],
+  };
+}
+
+function syncInputGateState(targetState = state) {
+  const defaults = createDefaultInputGateState();
+  if (!targetState || typeof targetState !== "object") {
+    return defaults;
+  }
+
+  const gateState = targetState.inputGate && typeof targetState.inputGate === "object"
+    ? targetState.inputGate
+    : {};
+
+  gateState.active = Boolean(gateState.active);
+  gateState.actionId = typeof gateState.actionId === "string" ? gateState.actionId : "";
+  gateState.source = typeof gateState.source === "string" ? gateState.source : "";
+  gateState.mode = typeof gateState.mode === "string" && gateState.mode
+    ? gateState.mode
+    : defaults.mode;
+  gateState.lockStartedAt = Math.max(0, Math.round(Number(gateState.lockStartedAt) || 0));
+  gateState.lockUntil = Math.max(0, Math.round(Number(gateState.lockUntil) || 0));
+  gateState.blockedCount = Math.max(0, Math.round(Number(gateState.blockedCount) || 0));
+  gateState.recoveryCount = Math.max(0, Math.round(Number(gateState.recoveryCount) || 0));
+  gateState.lastBlockedReason = typeof gateState.lastBlockedReason === "string" ? gateState.lastBlockedReason : "";
+  gateState.lastBlockedAt = Math.max(0, Math.round(Number(gateState.lastBlockedAt) || 0));
+  gateState.debugLog = Array.isArray(gateState.debugLog)
+    ? gateState.debugLog
+      .map((entry) => ({
+        type: String(entry?.type || "").trim(),
+        reason: String(entry?.reason || "").trim(),
+        source: String(entry?.source || "").trim(),
+        actionId: String(entry?.actionId || "").trim(),
+        mode: String(entry?.mode || "").trim(),
+        at: Math.max(0, Math.round(Number(entry?.at) || 0)),
+      }))
+      .filter((entry) => entry.type)
+      .slice(-INPUT_GATE_DEBUG_LOG_LIMIT)
+    : [];
+
+  targetState.inputGate = gateState;
+  return gateState;
+}
+
+function isPhoneInteractionFocusActive(targetState = state) {
+  if (!targetState?.hasPhone || targetState.phoneMinimized) {
+    return false;
+  }
+
+  const route = typeof normalizePhoneRoute === "function"
+    ? normalizePhoneRoute(targetState.phoneView || "home")
+    : String(targetState.phoneView || "home");
+  const onHomeRoute = typeof isPhoneHomeRoute === "function"
+    ? isPhoneHomeRoute(route)
+    : route === "home";
+
+  return Boolean(targetState.phoneStageExpanded || !onHomeRoute);
+}
+
+function getCurrentInputGateMode(targetState = state) {
+  if (!targetState || typeof targetState !== "object") {
+    return "normal";
+  }
+
+  if (
+    (targetState.scene === "cleanup" && targetState.cleaningGame)
+    || (targetState.scene === "job-minigame" && targetState.jobMiniGame)
+  ) {
+    return "minigame";
+  }
+
+  if (targetState.scene === "dialogue" || targetState.dialogue?.active) {
+    return "dialogue";
+  }
+
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : String(targetState.world?.currentLocation || "");
+  if (
+    targetState.scene === "home-transition"
+    || (targetState.scene === "outside"
+      && (typeof isTravelSceneLocationId === "function"
+        ? isTravelSceneLocationId(currentLocationId)
+        : ["walk-travel", "bus-ride"].includes(currentLocationId)))
+  ) {
+    return "moving";
+  }
+
+  if ([
+    "incident",
+    "clockout",
+    "result",
+    "lecture",
+    "turn-briefing",
+    "romance",
+    "romance-call",
+    "lotto-result",
+  ].includes(String(targetState.scene || ""))) {
+    return "event";
+  }
+
+  if (isPhoneInteractionFocusActive(targetState)) {
+    return "phone";
+  }
+
+  return "normal";
+}
+
+function pushInputGateDebugEntry(type, details = {}, targetState = state) {
+  const gateState = syncInputGateState(targetState);
+  const entry = {
+    type: String(type || "info").trim() || "info",
+    reason: String(details.reason || "").trim(),
+    source: String(details.source || "").trim(),
+    actionId: String(details.actionId || "").trim(),
+    mode: String(details.mode || gateState.mode || "").trim(),
+    at: Date.now(),
+  };
+
+  gateState.debugLog = [...gateState.debugLog, entry].slice(-INPUT_GATE_DEBUG_LOG_LIMIT);
+
+  const debugLine = [entry.type, entry.mode, entry.source, entry.actionId, entry.reason]
+    .filter(Boolean)
+    .join(" | ");
+  const debugEnabled = Boolean(window.__MAMMON_INPUT_GATE_DEBUG__);
+  if (debugEnabled || ["blocked", "recover"].includes(entry.type)) {
+    console.debug("[input-gate]", debugLine);
+  }
+  return entry;
+}
+
+function recoverStaleInputGate(targetState = state, { force = false, reason = "" } = {}) {
+  const gateState = syncInputGateState(targetState);
+  const now = Date.now();
+  const shouldRecover = force
+    ? (gateState.active || gateState.lockUntil > now)
+    : (gateState.active && gateState.lockStartedAt && (now - gateState.lockStartedAt) >= INPUT_GATE_STALE_MS);
+
+  if (!shouldRecover) {
+    gateState.mode = getCurrentInputGateMode(targetState);
+    return false;
+  }
+
+  gateState.active = false;
+  gateState.actionId = "";
+  gateState.source = "";
+  gateState.lockStartedAt = 0;
+  gateState.lockUntil = 0;
+  gateState.mode = getCurrentInputGateMode(targetState);
+  gateState.recoveryCount += 1;
+  if (reason) {
+    gateState.lastBlockedReason = reason;
+  }
+
+  pushInputGateDebugEntry("recover", {
+    reason: reason || "stale-lock",
+    mode: gateState.mode,
+  }, targetState);
+  return true;
+}
+
+function getInputGatePolicyForSource(source = "general") {
+  switch (String(source || "").trim()) {
+    case "phone-action":
+    case "phone-toggle":
+      return ["normal", "phone"];
+    case "overlay-toggle":
+    case "overlay-action":
+      return ["normal"];
+    case "minigame-action":
+      return ["minigame"];
+    case "scene-choice":
+    case "textbox-advance":
+      return ["normal", "moving", "event", "dialogue", "minigame"];
+    default:
+      return [];
+  }
+}
+
+function getInputGateModeBlockMessage(mode = "normal") {
+  switch (mode) {
+    case "moving":
+      return "이동 중에는 다른 행동을 할 수 없다.";
+    case "event":
+      return "이 장면을 먼저 마무리해야 한다.";
+    case "dialogue":
+      return "대화가 끝난 뒤에 다른 행동을 할 수 있다.";
+    case "minigame":
+      return "미니게임을 먼저 끝내야 한다.";
+    case "phone":
+      return "폰을 접고 화면으로 돌아가야 한다.";
+    default:
+      return "지금은 그 행동을 할 수 없다.";
+  }
+}
+
+function maybeShowInputGateFeedback(reason = "", targetState = state) {
+  const gateState = syncInputGateState(targetState);
+  const now = Date.now();
+  if ((now - gateState.lastBlockedAt) < INPUT_GATE_FEEDBACK_COOLDOWN_MS) {
+    return;
+  }
+
+  gateState.lastBlockedAt = now;
+  const message = String(reason || "").trim();
+  if (!message) {
+    return;
+  }
+
+  if (typeof queueGameplayFeedback === "function") {
+    queueGameplayFeedback({
+      title: "입력 잠금",
+      tone: "warning",
+      chips: [{ label: message, tone: "warning" }],
+    }, targetState);
+    return;
+  }
+
+  if (targetState?.headline) {
+    targetState.headline = {
+      badge: "입력 잠금",
+      text: message,
+    };
+  }
+}
+
+function canRunGuardedUiAction({
+  source = "general",
+  actionId = "",
+  allowedModes = null,
+  targetState = state,
+  suppressFeedback = false,
+} = {}) {
+  const gateState = syncInputGateState(targetState);
+  recoverStaleInputGate(targetState);
+  const now = Date.now();
+  gateState.mode = getCurrentInputGateMode(targetState);
+
+  if (gateState.active || gateState.lockUntil > now) {
+    gateState.blockedCount += 1;
+    gateState.lastBlockedReason = "busy";
+    pushInputGateDebugEntry("blocked", {
+      reason: "busy",
+      source,
+      actionId,
+      mode: gateState.mode,
+    }, targetState);
+    const shouldExplainBusy = gateState.active
+      && gateState.lockStartedAt
+      && (now - gateState.lockStartedAt) >= INPUT_GATE_BUSY_FEEDBACK_DELAY_MS;
+    if (!suppressFeedback && shouldExplainBusy) {
+      maybeShowInputGateFeedback("입력이 아직 정리되는 중이다.", targetState);
+    }
+    return false;
+  }
+
+  const resolvedAllowedModes = Array.isArray(allowedModes)
+    ? allowedModes.filter(Boolean)
+    : getInputGatePolicyForSource(source);
+
+  if (resolvedAllowedModes.length && !resolvedAllowedModes.includes(gateState.mode)) {
+    gateState.blockedCount += 1;
+    gateState.lastBlockedReason = `mode:${gateState.mode}`;
+    pushInputGateDebugEntry("blocked", {
+      reason: gateState.lastBlockedReason,
+      source,
+      actionId,
+      mode: gateState.mode,
+    }, targetState);
+    if (!suppressFeedback) {
+      maybeShowInputGateFeedback(getInputGateModeBlockMessage(gateState.mode), targetState);
+    }
+    return false;
+  }
+
+  return true;
+}
+
+function runGuardedUiAction(callback, {
+  source = "general",
+  actionId = "",
+  allowedModes = null,
+  cooldownMs = INPUT_GATE_COOLDOWN_MS,
+  targetState = state,
+  suppressFeedback = false,
+} = {}) {
+  if (typeof callback !== "function") {
+    return false;
+  }
+
+  if (!canRunGuardedUiAction({
+    source,
+    actionId,
+    allowedModes,
+    targetState,
+    suppressFeedback,
+  })) {
+    return false;
+  }
+
+  const gateState = syncInputGateState(targetState);
+  const startedAt = Date.now();
+  const resolvedCooldownMs = Math.max(0, Math.round(Number(cooldownMs) || INPUT_GATE_COOLDOWN_MS));
+  gateState.active = true;
+  gateState.actionId = String(actionId || source || "action").trim();
+  gateState.source = String(source || "general").trim() || "general";
+  gateState.mode = getCurrentInputGateMode(targetState);
+  gateState.lockStartedAt = startedAt;
+  gateState.lockUntil = startedAt + resolvedCooldownMs;
+  pushInputGateDebugEntry("start", {
+    source: gateState.source,
+    actionId: gateState.actionId,
+    mode: gateState.mode,
+  }, targetState);
+
+  try {
+    return callback();
+  } catch (error) {
+    recoverStaleInputGate(targetState, {
+      force: true,
+      reason: `${gateState.source}:${gateState.actionId}:error`,
+    });
+    console.error("[input-gate] action failed", error);
+    throw error;
+  } finally {
+    const finishedAt = Date.now();
+    gateState.active = false;
+    gateState.actionId = "";
+    gateState.source = "";
+    gateState.lockStartedAt = 0;
+    gateState.lockUntil = finishedAt + resolvedCooldownMs;
+    gateState.mode = getCurrentInputGateMode(targetState);
+    pushInputGateDebugEntry("finish", {
+      source,
+      actionId,
+      mode: gateState.mode,
+    }, targetState);
+  }
+}
 
 var activeGameplayFeedback = null;
 var gameplayFeedbackTimerId = 0;
@@ -331,6 +934,10 @@ function applyPlayerNeedDelta({
       targetState.lastHungerWarningKey = "";
     }
     chips.push(buildGameplayFeedbackDeltaChip("배고픔", hungerDelta));
+  }
+
+  if ((staminaDelta !== 0 || hungerDelta !== 0) && typeof syncCriticalResourceWarnings === "function") {
+    syncCriticalResourceWarnings(targetState);
   }
 
   return chips.filter(Boolean);
@@ -594,176 +1201,6 @@ function applyStatePatch(targetState = state, patch = {}) {
   });
 }
 
-// Legacy briefing helpers kept only for reference while the canonical flow lives in
-// js/systems/progression/turn-briefing-service.js.
-function unusedLegacyNormalizeTurnBriefingEntry(entry = {}, fallbackDay = 1, fallbackIndex = 0) {
-  const day = Math.max(1, Math.round(Number(entry?.day) || fallbackDay || 1));
-  const id = String(entry?.id || `turn-event-${day}-${fallbackIndex + 1}`).trim()
-    || `turn-event-${day}-${fallbackIndex + 1}`;
-  const title = String(entry?.title || "").trim();
-  const badge = String(entry?.badge || "").trim();
-  const speaker = String(entry?.speaker || "다음날 요약").trim() || "다음날 요약";
-  const tone = String(entry?.tone || "info").trim() || "info";
-  const tags = Array.isArray(entry?.tags)
-    ? entry.tags.map((tag) => String(tag || "").trim()).filter(Boolean)
-    : [];
-  const lines = Array.isArray(entry?.lines)
-    ? entry.lines.map((line) => String(line || "").trim()).filter(Boolean)
-    : [];
-  const normalizedLines = lines.length
-    ? lines
-    : (title ? [title] : []);
-
-  return {
-    id,
-    day,
-    badge,
-    title: title || badge || "다음날 소식",
-    speaker,
-    tone,
-    tags,
-    lines: normalizedLines,
-  };
-}
-
-function unusedLegacySyncPendingTurnEvents(targetState = state) {
-  if (!targetState || typeof targetState !== "object") {
-    return [];
-  }
-
-  targetState.pendingTurnEvents = Array.isArray(targetState.pendingTurnEvents)
-    ? targetState.pendingTurnEvents.map((entry, index) =>
-        normalizeTurnBriefingEntry(entry, Number(entry?.day) || Number(targetState.day) || 1, index)
-      )
-    : [];
-
-  return targetState.pendingTurnEvents;
-}
-
-function unusedLegacySyncTurnBriefingState(targetState = state) {
-  if (!targetState || typeof targetState !== "object") {
-    return null;
-  }
-
-  if (!targetState.turnBriefing || typeof targetState.turnBriefing !== "object") {
-    targetState.turnBriefing = null;
-    return null;
-  }
-
-  const day = Math.max(1, Math.round(Number(targetState.turnBriefing.day) || Number(targetState.day) || 1));
-  const entries = Array.isArray(targetState.turnBriefing.entries)
-    ? targetState.turnBriefing.entries.map((entry, index) => normalizeTurnBriefingEntry(entry, day, index))
-    : [];
-
-  if (!entries.length) {
-    targetState.turnBriefing = null;
-    return null;
-  }
-
-  targetState.turnBriefing = {
-    day,
-    currentIndex: Math.max(0, Math.min(entries.length - 1, Math.round(Number(targetState.turnBriefing.currentIndex) || 0))),
-    entries,
-  };
-
-  return targetState.turnBriefing;
-}
-
-function unusedLegacyQueueNextTurnEvent(entry = {}, targetState = state, { dayOffset = 1, absoluteDay = null } = {}) {
-  if (!targetState || typeof targetState !== "object") {
-    return null;
-  }
-
-  const queue = syncPendingTurnEvents(targetState);
-  const scheduledDay = absoluteDay != null
-    ? Math.max(1, Math.round(Number(absoluteDay) || Math.max(1, Number(targetState.day) || 1)))
-    : Math.max(1, Math.round(Number(targetState.day) || 1) + Math.max(0, Math.round(Number(dayOffset) || 0)));
-  const normalized = normalizeTurnBriefingEntry({ ...entry, day: scheduledDay }, scheduledDay, queue.length);
-  queue.push(normalized);
-  return normalized;
-}
-
-function unusedLegacyCollectDueTurnEvents(targetState = state) {
-  const queue = syncPendingTurnEvents(targetState);
-  const currentDay = Math.max(1, Math.round(Number(targetState?.day) || 1));
-  const dueEntries = [];
-  const futureEntries = [];
-
-  queue.forEach((entry) => {
-    if (entry.day <= currentDay) {
-      dueEntries.push(entry);
-      return;
-    }
-    futureEntries.push(entry);
-  });
-
-  targetState.pendingTurnEvents = futureEntries;
-  return dueEntries;
-}
-
-function unusedLegacyStartTurnBriefing(entries = [], targetState = state) {
-  const normalizedEntries = Array.isArray(entries)
-    ? entries.map((entry, index) => normalizeTurnBriefingEntry(entry, Number(targetState?.day) || 1, index))
-      .filter((entry) => entry.title || entry.lines.length)
-    : [];
-
-  if (!normalizedEntries.length) {
-    targetState.turnBriefing = null;
-    return false;
-  }
-
-  targetState.turnBriefing = {
-    day: Math.max(1, Math.round(Number(targetState?.day) || 1)),
-    currentIndex: 0,
-    entries: normalizedEntries,
-  };
-  targetState.scene = "turn-briefing";
-  targetState.headline = {
-    badge: "",
-    text: "",
-  };
-  return true;
-}
-
-function unusedLegacyGetActiveTurnBriefingEntry(targetState = state) {
-  const briefing = syncTurnBriefingState(targetState);
-  if (!briefing) {
-    return null;
-  }
-
-  return briefing.entries[briefing.currentIndex] || briefing.entries[0] || null;
-}
-
-function unusedLegacyAdvanceTurnBriefing(targetState = state) {
-  const briefing = syncTurnBriefingState(targetState);
-  if (!briefing) {
-    targetState.scene = "room";
-    renderGame();
-    return false;
-  }
-
-  if (briefing.currentIndex < briefing.entries.length - 1) {
-    briefing.currentIndex += 1;
-    renderGame();
-    return true;
-  }
-
-  const lastEntry = briefing.entries[briefing.entries.length - 1] || null;
-  targetState.turnBriefing = null;
-  targetState.scene = "room";
-  targetState.headline = lastEntry
-    ? {
-        badge: lastEntry.badge || "다음날 소식",
-        text: lastEntry.lines[lastEntry.lines.length - 1] || lastEntry.title || "",
-      }
-    : {
-        badge: "",
-        text: "",
-      };
-  renderGame();
-  return true;
-}
-
 function applyEventStatePatch(patch = {}) {
   applyStatePatch(state, patch);
 }
@@ -826,7 +1263,6 @@ function finishRegisteredCleanupEvent() {
     }
     showMoneyEffect(cleanup.reward);
   }
-
   recordActionMemory(
     "방청소를 마쳤다",
     onComplete.rewardFromData && cleanup.reward
@@ -1048,6 +1484,15 @@ function createInitialState() {
         dailyDecay: 5,
         lastModifiedDay: 1,
       };
+  const ambientRomanceDefaults = typeof createDefaultAmbientRomanceState === "function"
+    ? createDefaultAmbientRomanceState()
+    : {
+        seenEventIds: [],
+        cooldownUntilDayByNpcId: {},
+        followUpStateByNpcId: {},
+        lastTriggerId: "",
+        activeEventId: "",
+      };
 
   return {
     playerName: "이름 없음",
@@ -1175,6 +1620,7 @@ function createInitialState() {
     },
     phonePreview: createPhoneHomePreview(1),
     phoneAppStatus: {},
+    inputGate: createDefaultInputGateState(),
     casino: typeof createDefaultCasinoState === "function"
       ? createDefaultCasinoState()
       : null,
@@ -1202,6 +1648,12 @@ function createInitialState() {
           callScene: null,
           girlfriendContactIds: [],
         },
+    ambientRomance: {
+      ...ambientRomanceDefaults,
+      seenEventIds: [...(ambientRomanceDefaults.seenEventIds || [])],
+      cooldownUntilDayByNpcId: { ...(ambientRomanceDefaults.cooldownUntilDayByNpcId || {}) },
+      followUpStateByNpcId: { ...(ambientRomanceDefaults.followUpStateByNpcId || {}) },
+    },
     romanceScene: null,
     lottoRetailer: createDefaultLottoRetailerState(),
     pendingTurnEvents: [],
@@ -1245,24 +1697,219 @@ function advanceStoryStep() {
   state.storyStep = Math.min(state.storyStep + 1, getActiveStorySteps().length - 1);
 }
 
-function serializeState(currentState = state) {
+function buildWorldLocationPersistencePatch(targetState = state, locationId = "") {
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    return {};
+  }
+
+  const day = targetState?.day || getCurrentDayNumber();
+  const locationMap = typeof getDayWorldLocationMap === "function"
+    ? getDayWorldLocationMap(day) || {}
+    : {};
+  if (!locationMap?.[normalizedLocationId]) {
+    return {};
+  }
+
+  return {
+    currentLocation: normalizedLocationId,
+    currentDistrict: typeof getWorldLocationDistrictId === "function"
+      ? getWorldLocationDistrictId(normalizedLocationId, day)
+      : String(targetState?.world?.currentDistrict || ""),
+  };
+}
+
+function buildPersistenceSceneFrame(targetState = state) {
+  const phoneState = typeof syncPhoneSessionState === "function"
+    ? syncPhoneSessionState(targetState)
+    : {
+        minimized: typeof targetState?.phoneMinimized === "boolean" ? targetState.phoneMinimized : true,
+        stageExpanded: typeof targetState?.phoneStageExpanded === "boolean" ? targetState.phoneStageExpanded : false,
+        route: String(targetState?.phoneView || "home"),
+      };
+  const normalizedPhoneView = typeof normalizePhoneRoute === "function"
+    ? normalizePhoneRoute(phoneState?.route || targetState?.phoneView || "home")
+    : String(phoneState?.route || targetState?.phoneView || "home");
+  const frame = {
+    scene: String(targetState?.scene || "room"),
+    phoneMinimized: Boolean(phoneState?.minimized),
+    phoneStageExpanded: Boolean(phoneState?.stageExpanded),
+    phoneView: normalizedPhoneView || "home",
+    worldPatch: {},
+    dialogue: targetState?.dialogue && typeof targetState.dialogue === "object"
+      ? { ...(targetState.dialogue || {}) }
+      : null,
+    homeTransition: targetState?.homeTransition || null,
+    currentOffer: targetState?.currentOffer || null,
+    currentIncident: targetState?.currentIncident || null,
+    jobMiniGame: targetState?.jobMiniGame || null,
+    clockOutSummary: targetState?.clockOutSummary || null,
+  };
+  const collapsePhone = () => {
+    frame.phoneMinimized = true;
+    frame.phoneStageExpanded = false;
+    frame.phoneView = "home";
+  };
+
+  if (frame.scene === "home-transition") {
+    frame.scene = "room";
+    frame.homeTransition = null;
+    collapsePhone();
+    return frame;
+  }
+
+  if (frame.scene === "dialogue") {
+    const returnScene = String(frame.dialogue?.returnScene || "").trim();
+    frame.scene = returnScene || "outside";
+    frame.dialogue = frame.dialogue
+      ? {
+          ...frame.dialogue,
+          active: false,
+        }
+      : null;
+    frame.worldPatch = buildWorldLocationPersistencePatch(targetState, frame.dialogue?.returnLocationId);
+    collapsePhone();
+    return frame;
+  }
+
+  if (frame.scene === "job-minigame") {
+    const restoreLocationId = resolveJobMiniGameRestoreLocationId(targetState, frame.jobMiniGame);
+    frame.worldPatch = buildWorldLocationPersistencePatch(targetState, restoreLocationId);
+    frame.jobMiniGame = null;
+    frame.scene = frame.currentIncident
+      ? "incident"
+      : (frame.clockOutSummary
+        ? "clockout"
+        : (restoreLocationId ? "outside" : "room"));
+    collapsePhone();
+    return frame;
+  }
+
+  if (frame.scene === "ranking") {
+    frame.scene = targetState?.endingSummary ? "ending" : "room";
+    frame.currentOffer = null;
+    frame.currentIncident = null;
+    frame.jobMiniGame = null;
+    frame.homeTransition = null;
+    collapsePhone();
+    return frame;
+  }
+
+  if (frame.scene === "ending") {
+    collapsePhone();
+  }
+
+  return frame;
+}
+
+function applyPersistenceSceneFrame(targetState = state, frame = buildPersistenceSceneFrame(targetState)) {
+  if (!targetState || typeof targetState !== "object" || !frame || typeof frame !== "object") {
+    return targetState;
+  }
+
+  const devices = targetState.devices && typeof targetState.devices === "object"
+    ? targetState.devices
+    : {};
+  const phone = devices.phone && typeof devices.phone === "object"
+    ? devices.phone
+    : {};
+
+  targetState.scene = String(frame.scene || targetState.scene || "room");
+  targetState.currentOffer = frame.currentOffer ?? null;
+  targetState.currentIncident = frame.currentIncident ?? null;
+  targetState.jobMiniGame = frame.jobMiniGame ?? null;
+  targetState.clockOutSummary = frame.clockOutSummary ?? null;
+  targetState.homeTransition = frame.homeTransition ?? null;
+  targetState.phoneMinimized = Boolean(frame.phoneMinimized);
+  targetState.phoneStageExpanded = Boolean(frame.phoneStageExpanded);
+  targetState.phoneView = String(frame.phoneView || "home");
+  targetState.devices = {
+    ...devices,
+    phone: {
+      ...phone,
+      minimized: targetState.phoneMinimized,
+      stageExpanded: targetState.phoneStageExpanded,
+      route: targetState.phoneView,
+    },
+  };
+  targetState.world = {
+    ...(targetState.world && typeof targetState.world === "object" ? targetState.world : {}),
+    ...(frame.worldPatch && typeof frame.worldPatch === "object" ? frame.worldPatch : {}),
+  };
+
+  if (targetState.dialogue || frame.dialogue) {
+    const currentDialogue = targetState.dialogue && typeof targetState.dialogue === "object"
+      ? targetState.dialogue
+      : {};
+    const nextDialogue = frame.dialogue && typeof frame.dialogue === "object"
+      ? frame.dialogue
+      : {};
+    targetState.dialogue = {
+      ...currentDialogue,
+      ...nextDialogue,
+      active: targetState.scene === "dialogue",
+    };
+  }
+
+  return targetState;
+}
+
+function stabilizeRestoredStateForPlay(targetState = state) {
+  if (!targetState || typeof targetState !== "object") {
+    return targetState;
+  }
+
+  applyPersistenceSceneFrame(targetState, buildPersistenceSceneFrame(targetState));
+
+  if (targetState.scene === "incident" && !targetState.currentIncident) {
+    targetState.scene = targetState.clockOutSummary ? "clockout" : "outside";
+  }
+
+  if (targetState.scene === "clockout" && !targetState.clockOutSummary) {
+    targetState.scene = targetState.currentIncident ? "incident" : "room";
+  }
+
+  targetState.inputGate = createDefaultInputGateState();
+  return targetState;
+}
+
+function serializeState(currentState = state, { reason = "render" } = {}) {
+  const persistenceFrame = buildPersistenceSceneFrame(currentState);
+  const currentWorldState = typeof syncWorldState === "function"
+    ? syncWorldState(currentState)
+    : (currentState.world || {});
   const {
     dayOffers,
     nextDayShift,
     interviewResult,
     jobApplicationDoneToday,
+    inputGate,
     ...serializableState
   } = currentState;
+  applyPersistenceSceneFrame(serializableState, persistenceFrame);
   const jobsState = typeof syncJobsDomainState === "function"
     ? syncJobsDomainState(currentState)
     : (currentState.jobs || {});
   const happinessState = typeof syncHappinessState === "function"
     ? syncHappinessState(currentState)
     : (currentState.happiness || {});
+  const saveLocationId = String(
+    persistenceFrame.worldPatch?.currentLocation
+    || currentWorldState?.currentLocation
+    || serializableState.world?.currentLocation
+    || ""
+  );
 
   return {
     version: SAVE_STATE_VERSION,
     savedAt: Date.now(),
+    meta: {
+      reason: String(reason || "render"),
+      day: Math.max(1, Math.round(Number(currentState?.day) || 1)),
+      scene: String(persistenceFrame.scene || serializableState.scene || "room"),
+      locationId: saveLocationId,
+      phoneView: String(persistenceFrame.phoneView || serializableState.phoneView || "home"),
+    },
     state: {
       ...serializableState,
       jobs: {
@@ -1482,14 +2129,25 @@ function hydrateState(rawState = {}) {
     : null;
   mergedState.lectureGigDay = Math.max(0, Math.round(Number(rawState.lectureGigDay) || 0));
   mergedState.romanceScene = rawState.romanceScene && typeof rawState.romanceScene === "object"
-    ? {
-        ...rawState.romanceScene,
-        tags: [...(rawState.romanceScene.tags || [])],
-        introLines: [...(rawState.romanceScene.introLines || [])],
-        backgroundConfig: rawState.romanceScene.backgroundConfig && typeof rawState.romanceScene.backgroundConfig === "object"
-          ? { ...rawState.romanceScene.backgroundConfig }
-          : null,
-      }
+    ? (typeof cloneRomanceSceneSnapshot === "function"
+      ? cloneRomanceSceneSnapshot(rawState.romanceScene)
+      : {
+          ...rawState.romanceScene,
+          tags: [...(rawState.romanceScene.tags || [])],
+          introLines: [...(rawState.romanceScene.introLines || [])],
+          choices: Array.isArray(rawState.romanceScene.choices)
+            ? rawState.romanceScene.choices.map((choice) => ({ ...(choice || {}) }))
+            : [],
+          backgroundConfig: rawState.romanceScene.backgroundConfig && typeof rawState.romanceScene.backgroundConfig === "object"
+            ? { ...rawState.romanceScene.backgroundConfig }
+            : null,
+          playerActor: rawState.romanceScene.playerActor && typeof rawState.romanceScene.playerActor === "object"
+            ? { ...rawState.romanceScene.playerActor }
+            : null,
+          npcActor: rawState.romanceScene.npcActor && typeof rawState.romanceScene.npcActor === "object"
+            ? { ...rawState.romanceScene.npcActor }
+            : null,
+        })
     : null;
   mergedState.romance = rawState.romance && typeof rawState.romance === "object"
     ? {
@@ -1497,40 +2155,89 @@ function hydrateState(rawState = {}) {
           ? normalizeRomancePlanSnapshot(rawState.romance.activePlan)
           : rawState.romance.activePlan || null,
         activeScene: rawState.romance.activeScene && typeof rawState.romance.activeScene === "object"
-          ? {
-              ...rawState.romance.activeScene,
-              tags: [...(rawState.romance.activeScene.tags || [])],
-              introLines: [...(rawState.romance.activeScene.introLines || [])],
-              backgroundConfig: rawState.romance.activeScene.backgroundConfig && typeof rawState.romance.activeScene.backgroundConfig === "object"
-                ? { ...rawState.romance.activeScene.backgroundConfig }
-                : null,
-            }
-          : (mergedState.romanceScene ? { ...mergedState.romanceScene } : null),
+          ? (typeof cloneRomanceSceneSnapshot === "function"
+            ? cloneRomanceSceneSnapshot(rawState.romance.activeScene)
+            : {
+                ...rawState.romance.activeScene,
+                tags: [...(rawState.romance.activeScene.tags || [])],
+                introLines: [...(rawState.romance.activeScene.introLines || [])],
+                choices: Array.isArray(rawState.romance.activeScene.choices)
+                  ? rawState.romance.activeScene.choices.map((choice) => ({ ...(choice || {}) }))
+                  : [],
+                backgroundConfig: rawState.romance.activeScene.backgroundConfig && typeof rawState.romance.activeScene.backgroundConfig === "object"
+                  ? { ...rawState.romance.activeScene.backgroundConfig }
+                  : null,
+                playerActor: rawState.romance.activeScene.playerActor && typeof rawState.romance.activeScene.playerActor === "object"
+                  ? { ...rawState.romance.activeScene.playerActor }
+                  : null,
+                npcActor: rawState.romance.activeScene.npcActor && typeof rawState.romance.activeScene.npcActor === "object"
+                  ? { ...rawState.romance.activeScene.npcActor }
+                  : null,
+              })
+          : (mergedState.romanceScene
+            ? (typeof cloneRomanceSceneSnapshot === "function"
+              ? cloneRomanceSceneSnapshot(mergedState.romanceScene)
+              : { ...mergedState.romanceScene })
+            : null),
         lastOutcome: rawState.romance.lastOutcome && typeof rawState.romance.lastOutcome === "object"
           ? { ...rawState.romance.lastOutcome }
           : null,
-        callScene: rawState.romance.callScene && typeof rawState.romance.callScene === "object"
-          ? {
-              ...rawState.romance.callScene,
-              lines: [...(rawState.romance.callScene.lines || [])],
-              tags: [...(rawState.romance.callScene.tags || [])],
-            }
+      callScene: rawState.romance.callScene && typeof rawState.romance.callScene === "object"
+          ? (typeof cloneRomanceCallSceneSnapshot === "function"
+            ? cloneRomanceCallSceneSnapshot(rawState.romance.callScene)
+            : {
+                ...rawState.romance.callScene,
+                lines: [...(rawState.romance.callScene.lines || [])],
+                tags: [...(rawState.romance.callScene.tags || [])],
+                choices: Array.isArray(rawState.romance.callScene.choices)
+                  ? rawState.romance.callScene.choices.map((choice) => ({ ...(choice || {}) }))
+                  : [],
+              })
           : null,
         girlfriendContactIds: Array.isArray(rawState.romance.girlfriendContactIds)
           ? rawState.romance.girlfriendContactIds.map((id) => String(id || "").trim()).filter(Boolean)
           : [],
       }
-    : (typeof createDefaultRomanceDomainState === "function"
+      : (typeof createDefaultRomanceDomainState === "function"
       ? createDefaultRomanceDomainState()
       : {
           activePlan: null,
-          activeScene: mergedState.romanceScene ? { ...mergedState.romanceScene } : null,
+          activeScene: mergedState.romanceScene
+            ? (typeof cloneRomanceSceneSnapshot === "function"
+              ? cloneRomanceSceneSnapshot(mergedState.romanceScene)
+              : { ...mergedState.romanceScene })
+            : null,
           lastOutcome: null,
           callScene: null,
           girlfriendContactIds: [],
         });
   if (typeof syncRomanceDomainState === "function") {
     syncRomanceDomainState(mergedState);
+  }
+  mergedState.ambientRomance = rawState.ambientRomance && typeof rawState.ambientRomance === "object"
+    ? {
+        ...rawState.ambientRomance,
+        seenEventIds: Array.isArray(rawState.ambientRomance.seenEventIds)
+          ? rawState.ambientRomance.seenEventIds.map((id) => String(id || "").trim()).filter(Boolean)
+          : [],
+        cooldownUntilDayByNpcId: rawState.ambientRomance.cooldownUntilDayByNpcId && typeof rawState.ambientRomance.cooldownUntilDayByNpcId === "object"
+          ? { ...rawState.ambientRomance.cooldownUntilDayByNpcId }
+          : {},
+        followUpStateByNpcId: rawState.ambientRomance.followUpStateByNpcId && typeof rawState.ambientRomance.followUpStateByNpcId === "object"
+          ? { ...rawState.ambientRomance.followUpStateByNpcId }
+          : {},
+      }
+    : (typeof createDefaultAmbientRomanceState === "function"
+      ? createDefaultAmbientRomanceState()
+      : {
+          seenEventIds: [],
+          cooldownUntilDayByNpcId: {},
+          followUpStateByNpcId: {},
+          lastTriggerId: "",
+          activeEventId: "",
+        });
+  if (typeof syncAmbientRomanceState === "function") {
+    syncAmbientRomanceState(mergedState);
   }
   mergedState.lottoRetailer = rawState.lottoRetailer && typeof rawState.lottoRetailer === "object"
     ? {
@@ -1791,8 +2498,11 @@ function hydrateState(rawState = {}) {
     syncNpcState(mergedState);
   }
 
+  stabilizeRestoredStateForPlay(mergedState);
   syncWorldState(mergedState);
   syncPrologueIntroState(mergedState);
+  syncInputGateState(mergedState);
+  recoverStaleInputGate(mergedState, { force: true, reason: "hydrate-reset" });
 
   return mergedState;
 }
@@ -1943,7 +2653,7 @@ function createGameplayObjectiveSnapshot(targetState = null) {
       appId: "jobs",
       prompt: "면접 결과 기다리기",
       title: `${typeof formatTurnLabel === "function" ? formatTurnLabel(career.resultDay) : `${career.resultDay}턴`} 결과 대기`,
-      body: "결과가 나올 때까지는 알바, 소비, 준비도를 굴리며 다음 턴을 버티자.",
+      body: "결과가 나올 때까지는 알바로 돈을 벌고 필요한 조건을 더 챙기며 다음 턴을 준비하자.",
       tone: "WAIT",
     });
   }
@@ -1987,9 +2697,9 @@ function createGameplayObjectiveSnapshot(targetState = null) {
   if (liquidFunds < 50000) {
     return buildObjective({
       appId: "jobs",
-      prompt: "오늘 알바 보기",
-      title: "오늘 수입 만들기",
-      body: "지금은 스펙보다 현금이 급하다. 알바 탭에서 이번 턴 수입부터 만들자.",
+      prompt: "오늘 돈 벌기",
+      title: "이번 턴 생활비 만들기",
+      body: "지금은 스펙보다 현금이 급하다. 공고 앱에서 알바를 잡아 오늘 쓸 돈부터 마련하자.",
       tone: "CASH",
     });
   }
@@ -1998,18 +2708,18 @@ function createGameplayObjectiveSnapshot(targetState = null) {
     if ((prepState.academic || 0) < 2) {
       return buildObjective({
         appId: "jobs",
-        prompt: "대학가에서 연구 준비 쌓기",
-        title: "졸업 심사 전 준비도 올리기",
-        body: "대학가에서 연구 준비도를 2 이상 만든 뒤 졸업 심사를 받아 직장 면접 자격을 열자.",
+        prompt: "대학가에서 공부하기",
+        title: "졸업 심사 준비하기",
+        body: "도서관이나 캠퍼스에서 공부를 쌓아 학업 준비 2를 만든 뒤 졸업 심사를 받자.",
         tone: "PREP",
       });
     }
 
     return buildObjective({
       appId: "jobs",
-      prompt: "대학가에서 졸업 심사",
-      title: "대학 졸업장 확보",
-      body: "졸업장을 따야 생산직, 사무직, 연구직 면접 루트가 열린다.",
+      prompt: "대학가에서 졸업 심사 받기",
+      title: "대학 졸업장 챙기기",
+      body: "졸업장을 따야 사무직과 연구직 지원 루트가 더 안정적으로 열린다.",
       tone: "PREP",
     });
   }
@@ -2017,9 +2727,9 @@ function createGameplayObjectiveSnapshot(targetState = null) {
   if (!certifications.computerCert && Math.max(prepState.office || 0, prepState.academic || 0) >= 1) {
     return buildObjective({
       appId: "jobs",
-      prompt: "시험장에서 컴퓨터 자격 따기",
-      title: "사무직·연구직 준비",
-      body: "컴퓨터 자격이 있어야 상위 직장 면접 조건을 채우기 쉬워진다.",
+      prompt: "시험장에서 컴퓨터 자격증 보기",
+      title: "컴퓨터 자격증 챙기기",
+      body: "사무직과 연구직 지원 전에 컴퓨터 자격을 따두면 조건을 맞추기 쉬워진다.",
       tone: "PREP",
     });
   }
@@ -2027,9 +2737,9 @@ function createGameplayObjectiveSnapshot(targetState = null) {
   if (!hasSuit && Math.max(prepState.office || 0, prepState.academic || 0) >= 2) {
     return buildObjective({
       appId: "market",
-      prompt: "호박마켓에서 정장 찾기",
-      title: "면접 복장 마련",
-      body: "정장 세트를 챙겨두면 사무직과 연구직 조건을 맞추고 면접 확률도 끌어올릴 수 있다.",
+      prompt: "호박마켓에서 정장 사기",
+      title: "면접 복장 준비하기",
+      body: "정장 세트를 챙겨두면 사무직과 연구직 면접 조건을 맞추고 합격 확률도 올릴 수 있다.",
       tone: "GEAR",
     });
   }
@@ -2050,9 +2760,9 @@ function createGameplayObjectiveSnapshot(targetState = null) {
   if (!jobsState?.careerApplicationDoneToday && availableCareerOffer) {
     return buildObjective({
       appId: "jobs",
-      prompt: `공고 앱에서 ${availableCareerOffer.title} 지원`,
-      title: "직장 면접 넣기",
-      body: `${availableCareerOffer.title} 지원 조건이 갖춰졌다. 이번 턴에 면접을 넣고 다음 턴 결과를 보자.`,
+      prompt: `공고 앱에서 ${availableCareerOffer.title} 지원하기`,
+      title: "직장 지원 넣기",
+      body: `${availableCareerOffer.title} 지원 조건이 갖춰졌다. 이번 턴에 바로 지원하고 다음 턴 결과를 기다리자.`,
       tone: "CAREER",
     });
   }
@@ -2061,21 +2771,21 @@ function createGameplayObjectiveSnapshot(targetState = null) {
     const blockedOffer = sortedCareerOffers[0];
     const firstGate = blockedOffer.unmetRequirements?.[0]
       || blockedOffer.requirementTags?.[0]
-      || "준비도";
+      || "준비";
     return buildObjective({
       appId: "jobs",
-      prompt: "직장 조건부터 채우기",
-      title: `${blockedOffer.title} 목표`,
-      body: `${blockedOffer.title} 조건이 아직 모자라다. 먼저 ${firstGate}부터 맞추자.`,
+      prompt: "부족한 조건 채우기",
+      title: `${blockedOffer.title} 준비하기`,
+      body: `${blockedOffer.title}에 가려면 먼저 ${firstGate}부터 챙겨야 한다.`,
       tone: "PREP",
     });
   }
 
   return buildObjective({
     appId: "jobs",
-    prompt: "이번 턴 수입과 다음 턴 준비 같이 챙기기",
-    title: "알바, 준비, 자산을 같이 굴리기",
-    body: "공고 앱으로 돈을 만들고, 대학가와 시험장으로 상위 직장 루트까지 같이 열어두자.",
+    prompt: "돈 벌고 다음 준비 하기",
+    title: "알바와 준비를 함께 굴리기",
+    body: "알바로 현금을 만들고, 대학가와 시험장에서 다음 직장 조건도 같이 채워두자.",
     tone: "NOW",
   });
 }
@@ -2218,7 +2928,7 @@ function getShortTermOfferBlockedMessage(offer = null, targetState = state) {
   const eligibility = getShortTermOfferEligibility(offer, targetState);
   return eligibility.eligible
     ? ""
-    : (eligibility.unmetRequirements[0] || "조건 부족");
+    : (eligibility.unmetRequirements[0] || "지원 조건");
 }
 
 function getScheduledShiftForToday(targetState = state) {
@@ -2562,7 +3272,7 @@ function completeHomeLectureGig(targetState = state) {
   };
 
   if (typeof showMoneyEffect === "function" && pay > 0) {
-    showMoneyEffect(pay);
+    showMoneyEffect(pay, { destination: "bank" });
   }
 
   if (typeof recordActionMemory === "function") {
@@ -2954,8 +3664,8 @@ function resolveCareerProgressForState(targetState = state) {
     : [
         `${posting?.title || "직장"} 면접 결과가 도착했다.`,
         chance <= 0
-          ? `${eligibility.unmetRequirements?.[0] || "스펙"}이 부족해 이번에도 떨어졌다. 대학 졸업과 준비도를 더 갖춰야 한다.`
-          : "이번에는 연결되지 않았다. 준비도를 더 쌓고 다시 면접을 볼 수 있다.",
+          ? `${eligibility.unmetRequirements?.[0] || "지원 조건"} 쪽 준비가 아직 부족해 이번에는 떨어졌다. 조건을 더 채우고 다시 지원하자.`
+          : "이번에는 연결되지 않았다. 필요한 조건을 더 챙기고 다시 면접을 보자.",
       ];
 
   patchJobsDomainState(targetState, {
@@ -2998,7 +3708,7 @@ function resolveCareerProgressForState(targetState = state) {
 }
 
 function gainCareerPrep(prepKey, {
-  badge = "준비도 상승",
+  badge = "준비 상승",
   text = "",
   memoryTitle = "",
   memoryBody = "",
@@ -3007,6 +3717,8 @@ function gainCareerPrep(prepKey, {
   happinessDelta = 0,
   slots = 1,
   tags = [],
+  ambientRomanceTrigger = "",
+  ambientRomanceContext = null,
   targetState = state,
 } = {}) {
   const prepState = getCareerPrepSnapshotForState(targetState);
@@ -3058,6 +3770,22 @@ function gainCareerPrep(prepKey, {
 
   if (spendTimeSlots(slots)) {
     advanceDayOrFinish();
+    return;
+  }
+
+  if (
+    ambientRomanceTrigger
+    && typeof tryStartAmbientRomanceEvent === "function"
+    && tryStartAmbientRomanceEvent(
+      ambientRomanceTrigger,
+      ambientRomanceContext || {
+        locationId: typeof getCurrentLocationId === "function" ? getCurrentLocationId(targetState) : "",
+        locationLabel: typeof getCurrentLocationLabel === "function" ? getCurrentLocationLabel(targetState) : "",
+      },
+      targetState,
+    )
+  ) {
+    renderGame();
     return;
   }
 
@@ -3241,6 +3969,120 @@ function getJobMiniGameDefinition(jobId = "") {
   return JOB_LOOKUP?.[jobId]?.minigame || null;
 }
 
+const JOB_MINIGAME_DEBUG_LOG_LIMIT = 60;
+const jobMiniGameDebugLog = [];
+
+function getOfferMiniGameKey(offerSnapshot = null) {
+  if (typeof getOfferKey === "function") {
+    return getOfferKey(offerSnapshot);
+  }
+
+  if (!offerSnapshot) {
+    return "";
+  }
+
+  return String(offerSnapshot.careerPostingId || offerSnapshot.jobId || "").trim();
+}
+
+function logJobMiniGameDiagnostic(type = "", details = {}, targetState = state) {
+  const entry = {
+    type: String(type || "").trim() || "unknown",
+    day: Number(targetState?.day || 0),
+    timeSlot: Number(targetState?.timeSlot || 0),
+    scene: String(targetState?.scene || ""),
+    locationId: typeof getCurrentLocationId === "function"
+      ? getCurrentLocationId(targetState)
+      : "",
+    ...(details && typeof details === "object" ? details : {}),
+  };
+
+  jobMiniGameDebugLog.push(entry);
+  if (jobMiniGameDebugLog.length > JOB_MINIGAME_DEBUG_LOG_LIMIT) {
+    jobMiniGameDebugLog.shift();
+  }
+
+  try {
+    console.info("[job-minigame]", entry.type, entry);
+  } catch (error) {
+    // Ignore console access failures in embedded runtimes.
+  }
+
+  return entry;
+}
+
+function getJobMiniGameDebugLog() {
+  return jobMiniGameDebugLog.map((entry) => ({ ...entry }));
+}
+
+function getOfferMiniGameShiftPhase(offerSnapshot = null, targetState = state) {
+  const shiftStatus = typeof getScheduledShiftStatus === "function"
+    ? getScheduledShiftStatus(targetState)
+    : null;
+  if (!shiftStatus?.scheduledShift?.offer) {
+    return "";
+  }
+
+  const scheduledOfferKey = getOfferMiniGameKey(shiftStatus.scheduledShift.offer);
+  const offerKey = getOfferMiniGameKey(offerSnapshot);
+  if (offerKey && scheduledOfferKey && offerKey !== scheduledOfferKey) {
+    return "";
+  }
+
+  if (shiftStatus.active) {
+    return "active";
+  }
+  if (shiftStatus.waiting) {
+    return "waiting";
+  }
+  if (shiftStatus.missed) {
+    return "missed";
+  }
+
+  return "";
+}
+
+function resolveJobMiniGameRestoreLocationId(targetState = state, gameSnapshot = null) {
+  const game = gameSnapshot || targetState?.jobMiniGame || null;
+  const offer = game?.offer || targetState?.currentOffer || null;
+  const workplace = typeof getOfferWorkplaceSummary === "function"
+    ? getOfferWorkplaceSummary(offer, targetState)
+    : null;
+  const day = targetState?.day || getCurrentDayNumber();
+  const locationMap = typeof getDayWorldLocationMap === "function"
+    ? getDayWorldLocationMap(day) || {}
+    : {};
+  const candidateLocationIds = [
+    game?.originLocationId,
+    game?.workplaceLocationId,
+    workplace?.locationId,
+    typeof getCurrentLocationId === "function" ? getCurrentLocationId(targetState) : "",
+  ]
+    .map((locationId) => String(locationId || "").trim())
+    .filter(Boolean);
+
+  return candidateLocationIds.find((locationId) => Boolean(locationMap?.[locationId])) || "";
+}
+
+function restoreJobMiniGameOrigin(targetState = state, gameSnapshot = null) {
+  if (typeof syncWorldState !== "function") {
+    return "";
+  }
+
+  const restoreLocationId = resolveJobMiniGameRestoreLocationId(targetState, gameSnapshot);
+
+  if (!restoreLocationId) {
+    return "";
+  }
+
+  const worldState = syncWorldState(targetState);
+  worldState.currentLocation = restoreLocationId;
+  if (typeof getWorldLocationDistrictId === "function") {
+    worldState.currentDistrict = getWorldLocationDistrictId(restoreLocationId, day);
+  }
+
+  return restoreLocationId;
+}
+
 function createKitchenMiniGameSession() {
   if (typeof MCD_KITCHEN_RECIPES === "undefined" || typeof MCD_KITCHEN_INGREDIENT_POOL === "undefined") {
     return null;
@@ -3341,6 +4183,10 @@ function buildJobMiniGameSummary(result = null) {
     return "";
   }
 
+  if (result.cancelled || result.skipped) {
+    return "준비를 중단해 추가 수당 없이 다음 단계로 넘어갔다.";
+  }
+
   const definition = getJobMiniGameDefinition(result.jobId);
   const performanceLabels = definition?.performanceLabels || {};
 
@@ -3356,36 +4202,72 @@ function buildJobMiniGameSummary(result = null) {
 
 function startWorkSceneForOffer(offerSnapshot, {
   clearScheduledShift = false,
+  targetState = state,
 } = {}) {
-  const offer = cloneOfferSnapshot(offerSnapshot);
-  const job = JOB_LOOKUP[offer.jobId];
+  const offer = typeof cloneOfferSnapshot === "function"
+    ? cloneOfferSnapshot(offerSnapshot)
+    : (offerSnapshot ? { ...offerSnapshot } : null);
+  const job = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : JOB_LOOKUP?.[offer?.jobId];
+  if (!offer || !job) {
+    return false;
+  }
   const workplace = typeof getOfferWorkplaceSummary === "function"
-    ? getOfferWorkplaceSummary(offer, state)
+    ? getOfferWorkplaceSummary(offer, targetState)
     : null;
-  const miniGameSession = createJobMiniGameSession(offer.jobId);
+  const evaluation = evaluateOfferMiniGameStart(offer, targetState, {
+    source: "legacy-start-work-scene",
+    shiftPhaseOverride: "active",
+  });
+  if (!evaluation.ok && evaluation.shouldBlockWorkLoop) {
+    return false;
+  }
+  const offerKey = getOfferMiniGameKey(offer);
+  const visitKey = offerKey || offer.jobId || job.id || "work";
+  const nextVisitCount = (targetState.jobVisits[visitKey] || 0) + 1;
+  const miniGameSession = evaluation.ok ? evaluation.session : null;
+  const incident = offer.jobId ? pickIncident(offer.jobId, nextVisitCount, targetState) : null;
 
-  state.currentOffer = offer;
-  state.lastWorkedJobId = offer.jobId;
-  state.jobVisits[offer.jobId] = (state.jobVisits[offer.jobId] || 0) + 1;
-  state.currentIncident = pickIncident(offer.jobId, state.jobVisits[offer.jobId]);
-  state.jobMiniGame = miniGameSession;
-  state.jobMiniGameResult = null;
-  state.scene = miniGameSession ? "job-minigame" : "incident";
+  targetState.currentOffer = offer;
+  targetState.lastWorkedJobId = offer.jobId || targetState.lastWorkedJobId;
+  targetState.jobVisits[visitKey] = nextVisitCount;
+  targetState.currentIncident = incident;
+  targetState.jobMiniGame = miniGameSession;
+  targetState.jobMiniGameResult = null;
+  targetState.clockOutSummary = null;
 
   if (clearScheduledShift) {
     if (typeof patchJobsDomainState === "function") {
-      patchJobsDomainState(state, {
+      patchJobsDomainState(targetState, {
         scheduledShift: null,
         interviewResult: null,
       });
     } else {
-      state.nextDayShift = null;
-      state.interviewResult = null;
+      targetState.nextDayShift = null;
+      targetState.interviewResult = null;
     }
   }
 
-  state.phoneView = "home";
-  state.headline = {
+  if (!miniGameSession && !incident) {
+    return queueWorkClockOutSummary(buildWorkClockOutSummary({
+      offerSnapshot: offer,
+      pay: Math.max(0, Number(offer.pay) || 0),
+      sceneTitle: "근무 종료",
+      sceneLines: [
+        `${workplace?.workplaceName || job.title}에서 오늘 업무를 마쳤다.`,
+        "추가 이벤트 없이 정산만 받고 나온다.",
+      ],
+      resultLines: [`${workplace?.workplaceName || job.title}에서 오늘 업무를 마쳤다.`],
+      headlineBadge: "근무 종료",
+      headlineText: `${job.title} 일을 마치고 현장을 나온다.`,
+      memoryTags: [offerKey].filter(Boolean),
+    }, targetState), targetState);
+  }
+
+  targetState.scene = miniGameSession ? "job-minigame" : "incident";
+  targetState.phoneView = "home";
+  targetState.headline = {
     badge: miniGameSession ? "근무 준비" : "출근 시작",
     text: miniGameSession
       ? `${job.title} 시작 전 ${workplace?.workplaceName || "근무지"} 핵심 업무부터 빠르게 정리한다.`
@@ -3396,8 +4278,15 @@ function startWorkSceneForOffer(offerSnapshot, {
     source: workplace?.workplaceName || job.title,
     tags: ["알바", "출근", offer.jobId, workplace?.districtId || "", miniGameSession ? "미니게임" : ""].filter(Boolean),
   });
-  refreshPhoneHomePreview();
-  renderGame();
+  if (typeof refreshPhoneHomePreviewForState === "function") {
+    refreshPhoneHomePreviewForState(targetState);
+  } else if (typeof refreshPhoneHomePreview === "function") {
+    refreshPhoneHomePreview();
+  }
+  if (targetState === state) {
+    renderGame();
+  }
+  return true;
 }
 
 function completeCareerShiftOffer(offerSnapshot, targetState = state) {
@@ -3473,7 +4362,7 @@ function completeCareerShiftOffer(offerSnapshot, targetState = state) {
   };
 
   if (typeof showMoneyEffect === "function" && pay > 0) {
-    showMoneyEffect(pay);
+    showMoneyEffect(pay, { destination: "bank" });
   }
 
   if (typeof recordActionMemory === "function") {
@@ -3493,7 +4382,272 @@ function completeCareerShiftOffer(offerSnapshot, targetState = state) {
   }
 }
 
+function createOfferMiniGameRuntimeSession(offerSnapshot, targetState = state, triggerRule = null) {
+  const offer = typeof cloneOfferSnapshot === "function"
+    ? cloneOfferSnapshot(offerSnapshot)
+    : (offerSnapshot ? { ...offerSnapshot } : null);
+  if (!offer) {
+    return null;
+  }
+
+  const rule = triggerRule || (typeof getOfferMiniGameTriggerRule === "function"
+    ? getOfferMiniGameTriggerRule(offer, targetState)
+    : null);
+  const runtimeDefinition = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : (JOB_LOOKUP?.[offer.jobId] || null);
+  const workplace = typeof getOfferWorkplaceSummary === "function"
+    ? getOfferWorkplaceSummary(offer, targetState)
+    : null;
+
+  let baseSession = null;
+  if (rule?.sessionType === "dynamic-kitchen") {
+    baseSession = createKitchenMiniGameSession();
+  } else {
+    const definition = typeof getOfferMiniGameDefinition === "function"
+      ? getOfferMiniGameDefinition(offer)
+      : (JOB_LOOKUP?.[offer.jobId]?.minigame || null);
+    if (!definition || !Array.isArray(definition.items) || !definition.items.length) {
+      return null;
+    }
+
+    baseSession = {
+      id: definition.id || `${offer.jobId || offer.careerPostingId || "work"}-minigame`,
+      title: definition.title || `${runtimeDefinition?.title || "근무"} 준비`,
+      intro: definition.intro || "",
+      note: definition.note || "",
+      baseBonus: Number.isFinite(definition.baseBonus) ? Number(definition.baseBonus) : 0,
+      penaltyPerMistake: Number.isFinite(definition.penaltyPerMistake) ? Number(definition.penaltyPerMistake) : 0,
+      perfectBonus: Number.isFinite(definition.perfectBonus) ? Number(definition.perfectBonus) : 0,
+      performanceLabels: definition.performanceLabels && typeof definition.performanceLabels === "object"
+        ? { ...definition.performanceLabels }
+        : {},
+      items: definition.items.map((item, index) => ({
+        ...item,
+        id: item.id || `${offer.jobId || offer.careerPostingId || "work"}-task-${index + 1}`,
+        target: item.target !== false,
+        resolved: false,
+      })),
+      clearedTargets: 0,
+      mistakes: 0,
+    };
+  }
+
+  if (!baseSession) {
+    return null;
+  }
+
+  const items = Array.isArray(baseSession.items)
+    ? baseSession.items.map((item, index) => ({
+        ...item,
+        id: item.id || `${offer.jobId || offer.careerPostingId || "work"}-task-${index + 1}`,
+        target: item.target !== false,
+        resolved: Boolean(item.resolved),
+      }))
+    : [];
+  const totalTargets = Number.isFinite(baseSession.totalTargets)
+    ? Number(baseSession.totalTargets)
+    : items.filter((item) => item.target !== false).length;
+
+  return {
+    ...baseSession,
+    id: baseSession.id || `${offer.jobId || offer.careerPostingId || "work"}-minigame`,
+    offer,
+    offerKey: getOfferMiniGameKey(offer),
+    jobId: offer.jobId || baseSession.jobId || offer.careerPostingId || "",
+    title: baseSession.title || `${runtimeDefinition?.title || "근무"} 준비`,
+    intro: baseSession.intro || "",
+    note: baseSession.note || "",
+    baseBonus: Number.isFinite(baseSession.baseBonus) ? Number(baseSession.baseBonus) : 0,
+    penaltyPerMistake: Number.isFinite(baseSession.penaltyPerMistake) ? Number(baseSession.penaltyPerMistake) : 0,
+    perfectBonus: Number.isFinite(baseSession.perfectBonus) ? Number(baseSession.perfectBonus) : 0,
+    performanceLabels: baseSession.performanceLabels && typeof baseSession.performanceLabels === "object"
+      ? { ...baseSession.performanceLabels }
+      : {},
+    triggerRuleKey: rule?.key || "",
+    triggerRuleLabel: rule?.label || "",
+    requiredShiftPhase: rule?.requiredShiftPhase || "",
+    originLocationId: typeof getCurrentLocationId === "function"
+      ? getCurrentLocationId(targetState)
+      : "",
+    workplaceLocationId: workplace?.locationId || "",
+    totalTargets,
+    clearedTargets: Number(baseSession.clearedTargets || 0),
+    mistakes: Number(baseSession.mistakes || 0),
+    items,
+  };
+}
+
+function evaluateOfferMiniGameStart(offerSnapshot, targetState = state, {
+  source = "work-loop",
+  shiftPhaseOverride = "",
+} = {}) {
+  const offer = typeof cloneOfferSnapshot === "function"
+    ? cloneOfferSnapshot(offerSnapshot)
+    : (offerSnapshot ? { ...offerSnapshot } : null);
+  if (!offer) {
+    logJobMiniGameDiagnostic("start-missing-offer", { source }, targetState);
+    return {
+      ok: false,
+      code: "offer-missing",
+      shouldBlockWorkLoop: true,
+    };
+  }
+
+  const offerKey = getOfferMiniGameKey(offer);
+  const runtimeDefinition = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : (JOB_LOOKUP?.[offer.jobId] || null);
+  if (!runtimeDefinition) {
+    logJobMiniGameDiagnostic("start-missing-job", {
+      source,
+      offerKey,
+      jobId: offer.jobId || "",
+    }, targetState);
+    return {
+      ok: false,
+      code: "job-missing",
+      shouldBlockWorkLoop: true,
+    };
+  }
+
+  const activeGame = targetState.jobMiniGame || null;
+  if (activeGame || targetState.scene === "job-minigame") {
+    const activeOfferKey = activeGame?.offerKey || getOfferMiniGameKey(activeGame?.offer);
+    const code = activeOfferKey && activeOfferKey === offerKey
+      ? "duplicate-entry"
+      : "minigame-already-active";
+    logJobMiniGameDiagnostic(code, {
+      source,
+      offerKey,
+      activeOfferKey,
+      activeScene: targetState.scene,
+    }, targetState);
+    return {
+      ok: false,
+      code,
+      shouldBlockWorkLoop: true,
+    };
+  }
+
+  const rule = typeof getOfferMiniGameTriggerRule === "function"
+    ? getOfferMiniGameTriggerRule(offer, targetState)
+    : null;
+  if (!rule) {
+    logJobMiniGameDiagnostic("trigger-rule-missing", {
+      source,
+      offerKey,
+      jobId: runtimeDefinition.id || offer.jobId || "",
+    }, targetState);
+    return {
+      ok: false,
+      code: "trigger-rule-missing",
+      shouldBlockWorkLoop: false,
+    };
+  }
+
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+  if (!rule.locationIds?.length || !rule.locationIds.includes(currentLocationId)) {
+    logJobMiniGameDiagnostic("location-mismatch", {
+      source,
+      offerKey,
+      expectedLocations: [...(rule.locationIds || [])],
+      currentLocationId,
+    }, targetState);
+    return {
+      ok: false,
+      code: "location-mismatch",
+      shouldBlockWorkLoop: true,
+    };
+  }
+
+  if (rule.requiredShiftPhase) {
+    const currentShiftPhase = shiftPhaseOverride || getOfferMiniGameShiftPhase(offer, targetState);
+    if (currentShiftPhase !== rule.requiredShiftPhase) {
+      logJobMiniGameDiagnostic("shift-phase-mismatch", {
+        source,
+        offerKey,
+        requiredShiftPhase: rule.requiredShiftPhase,
+        currentShiftPhase,
+      }, targetState);
+      return {
+        ok: false,
+        code: "shift-phase-mismatch",
+        shouldBlockWorkLoop: true,
+      };
+    }
+  }
+
+  if (rule.sessionType !== "dynamic-kitchen") {
+    const definition = typeof getOfferMiniGameDefinition === "function"
+      ? getOfferMiniGameDefinition(offer)
+      : null;
+    if (!definition) {
+      logJobMiniGameDiagnostic("definition-missing", {
+        source,
+        offerKey,
+        ruleKey: rule.key || "",
+      }, targetState);
+      return {
+        ok: false,
+        code: "definition-missing",
+        shouldBlockWorkLoop: false,
+      };
+    }
+    if (!Array.isArray(definition.items) || !definition.items.length) {
+      logJobMiniGameDiagnostic("definition-items-empty", {
+        source,
+        offerKey,
+        ruleKey: rule.key || "",
+      }, targetState);
+      return {
+        ok: false,
+        code: "definition-items-empty",
+        shouldBlockWorkLoop: false,
+      };
+    }
+  }
+
+  const session = createOfferMiniGameRuntimeSession(offer, targetState, rule);
+  if (!session) {
+    logJobMiniGameDiagnostic("session-create-failed", {
+      source,
+      offerKey,
+      ruleKey: rule.key || "",
+      sessionType: rule.sessionType || "",
+    }, targetState);
+    return {
+      ok: false,
+      code: "session-create-failed",
+      shouldBlockWorkLoop: false,
+    };
+  }
+
+  logJobMiniGameDiagnostic("start-ready", {
+    source,
+    offerKey,
+    ruleKey: rule.key || "",
+    sessionId: session.id || "",
+    sessionType: rule.sessionType || "static",
+  }, targetState);
+  return {
+    ok: true,
+    code: "ok",
+    shouldBlockWorkLoop: false,
+    offer,
+    rule,
+    session,
+  };
+}
+
 function createOfferMiniGameSession(offerSnapshot, targetState = state) {
+  const evaluation = evaluateOfferMiniGameStart(offerSnapshot, targetState, {
+    source: "create-offer-minigame-session",
+  });
+  return evaluation.ok ? evaluation.session : null;
+
   const offer = typeof cloneOfferSnapshot === "function"
     ? cloneOfferSnapshot(offerSnapshot)
     : (offerSnapshot ? { ...offerSnapshot } : null);
@@ -3542,9 +4696,133 @@ function createOfferMiniGameSession(offerSnapshot, targetState = state) {
   };
 }
 
+function recoverBrokenJobMiniGameState(reason = "broken-state", targetState = state) {
+  const game = targetState.jobMiniGame || null;
+  const offer = game?.offer && typeof cloneOfferSnapshot === "function"
+    ? cloneOfferSnapshot(game.offer)
+    : (targetState.currentOffer && typeof cloneOfferSnapshot === "function"
+      ? cloneOfferSnapshot(targetState.currentOffer)
+      : targetState.currentOffer || null);
+  const job = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : (JOB_LOOKUP?.[game?.jobId] || null);
+  const restoredLocationId = restoreJobMiniGameOrigin(targetState, game);
+
+  logJobMiniGameDiagnostic("recover", {
+    reason,
+    offerKey: getOfferMiniGameKey(offer),
+    jobId: offer?.jobId || game?.jobId || "",
+    restoredLocationId,
+  }, targetState);
+
+  targetState.jobMiniGame = null;
+
+  if (targetState.currentIncident && offer && job) {
+    targetState.scene = "incident";
+    targetState.headline = {
+      badge: "근무 복구",
+      text: `${job.title || "근무"} 준비 화면이 꼬여 다음 단계로 넘긴다.`,
+    };
+  } else if (targetState.clockOutSummary) {
+    targetState.scene = "clockout";
+  } else if (offer && job) {
+    targetState.scene = "outside";
+    targetState.headline = {
+      badge: "근무 복구",
+      text: `${job.title || "근무"} 준비 화면이 꼬여 현장으로 돌아간다.`,
+    };
+  } else {
+    targetState.scene = "room";
+  }
+
+  if (targetState === state) {
+    renderGame();
+  }
+  return true;
+}
+
+function cancelJobMiniGame(reason = "cancelled", targetState = state) {
+  const game = targetState.jobMiniGame;
+  if (!game) {
+    logJobMiniGameDiagnostic("cancel-missing-game", { reason }, targetState);
+    return false;
+  }
+
+  const offer = game.offer && typeof cloneOfferSnapshot === "function"
+    ? cloneOfferSnapshot(game.offer)
+    : (targetState.currentOffer && typeof cloneOfferSnapshot === "function"
+      ? cloneOfferSnapshot(targetState.currentOffer)
+      : targetState.currentOffer || null);
+  const job = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : (JOB_LOOKUP?.[game.jobId] || null);
+  if (!offer || !job) {
+    return recoverBrokenJobMiniGameState(`cancel-missing-context:${reason}`, targetState);
+  }
+
+  const offerKey = game.offerKey || getOfferMiniGameKey(offer);
+  const restoredLocationId = restoreJobMiniGameOrigin(targetState, game);
+  const summaryLine = "준비를 중단해 추가 보너스 없이 다음 단계로 넘어간다.";
+
+  targetState.jobMiniGameResult = {
+    jobId: offer.jobId || game.jobId || "",
+    offer,
+    offerKey,
+    bonus: 0,
+    mistakes: Number(game.mistakes || 0),
+    perfect: false,
+    skipped: true,
+    cancelled: true,
+    cancelReason: reason,
+  };
+  targetState.jobMiniGame = null;
+
+  logJobMiniGameDiagnostic("cancel", {
+    reason,
+    offerKey,
+    jobId: offer.jobId || game.jobId || "",
+    restoredLocationId,
+  }, targetState);
+
+  targetState.headline = {
+    badge: "준비 중단",
+    text: summaryLine,
+  };
+
+  if (targetState.currentIncident) {
+    targetState.scene = "incident";
+    if (targetState === state) {
+      renderGame();
+    }
+    return true;
+  }
+
+  const workplace = typeof getOfferWorkplaceSummary === "function"
+    ? getOfferWorkplaceSummary(offer, targetState)
+    : null;
+  return queueWorkClockOutSummary(buildWorkClockOutSummary({
+    offerSnapshot: offer,
+    pay: Number(offer.pay) || 0,
+    sceneTitle: "근무 종료",
+    sceneLines: [
+      summaryLine,
+      `${workplace?.workplaceName || job.title || "근무지"}에서 기본 정산만 받고 나온다.`,
+    ],
+    resultLines: [summaryLine],
+    headlineBadge: "근무 종료",
+    headlineText: `${job.title || "근무"} 준비를 중단하고 기본 정산만 받았다.`,
+    memoryTags: [offerKey].filter(Boolean),
+    nextLocationId: game.workplaceLocationId || restoredLocationId,
+  }, targetState), targetState);
+}
+
 function buildOfferMiniGameSummary(result = null) {
   if (!result) {
     return "";
+  }
+
+  if (result.cancelled || result.skipped) {
+    return "준비를 중단해 추가 보너스 없이 다음 단계로 넘어갔다.";
   }
 
   if (!result.offer || typeof getOfferMiniGameDefinition !== "function") {
@@ -3574,6 +4852,7 @@ function buildWorkClockOutSummary({
   headlineText = "",
   changes = null,
   memoryTags = [],
+  nextLocationId = "",
 } = {}, targetState = state) {
   const offer = typeof cloneOfferSnapshot === "function"
     ? cloneOfferSnapshot(offerSnapshot)
@@ -3587,6 +4866,10 @@ function buildWorkClockOutSummary({
   const title = offer?.title || job?.title || "근무";
   const workplaceLabel = workplace?.workplaceName || workplace?.locationLabel || title;
   const resolvedPay = roundToHundred(Math.max(0, Number(pay) || 0));
+  const resolvedNextLocationId = nextLocationId
+    || (offer?.jobId === "mcd-kitchen"
+      ? "mcdonalds-counter"
+      : (offer?.jobId === "mcd-counter" ? "mcdonalds-counter" : ""));
 
   return {
     offer,
@@ -3612,6 +4895,7 @@ function buildWorkClockOutSummary({
       "퇴근",
       ...(memoryTags || []),
     ].filter(Boolean),
+    nextLocationId: resolvedNextLocationId,
     changes: changes
       ? {
           ...changes,
@@ -3635,6 +4919,7 @@ function queueWorkClockOutSummary(summary, targetState = state) {
     sceneLines: [...(summary.sceneLines || [])],
     resultLines: [...(summary.resultLines || [])],
     memoryTags: [...(summary.memoryTags || [])],
+    nextLocationId: String(summary.nextLocationId || ""),
     changes: summary.changes
       ? {
           ...summary.changes,
@@ -3717,6 +5002,15 @@ function completeWorkClockOut(targetState = state) {
       ...(summary.resultLines || []),
     ],
   };
+
+  if (summary.nextLocationId && typeof syncWorldState === "function") {
+    const worldState = syncWorldState(targetState);
+    worldState.currentLocation = summary.nextLocationId;
+    if (typeof getWorldLocationDistrictId === "function") {
+      worldState.currentDistrict = getWorldLocationDistrictId(summary.nextLocationId, targetState.day);
+    }
+  }
+
   targetState.clockOutSummary = null;
   targetState.jobMiniGameResult = null;
   targetState.scene = "result";
@@ -3727,7 +5021,7 @@ function completeWorkClockOut(targetState = state) {
   };
 
   if (typeof showMoneyEffect === "function" && pay > 0) {
-    showMoneyEffect(pay);
+    showMoneyEffect(pay, { destination: "bank" });
   }
 
   if (typeof recordActionMemory === "function") {
@@ -3771,12 +5065,17 @@ function startOfferWorkLoop(offerSnapshot, {
   const workplace = typeof getOfferWorkplaceSummary === "function"
     ? getOfferWorkplaceSummary(offer, targetState)
     : null;
-  const offerKey = typeof getOfferKey === "function"
-    ? getOfferKey(offer)
-    : (offer.careerPostingId || offer.jobId || "");
+  const offerKey = getOfferMiniGameKey(offer);
   const visitKey = offerKey || job.id || "work";
   const nextVisitCount = (targetState.jobVisits[visitKey] || 0) + 1;
-  const miniGameSession = createOfferMiniGameSession(offer, targetState);
+  const evaluation = evaluateOfferMiniGameStart(offer, targetState, {
+    source: "start-offer-work-loop",
+    shiftPhaseOverride: "active",
+  });
+  if (!evaluation.ok && evaluation.shouldBlockWorkLoop) {
+    return false;
+  }
+  const miniGameSession = evaluation.ok ? evaluation.session : null;
   const incident = offer.jobId ? pickIncident(offer.jobId, nextVisitCount, targetState) : null;
 
   targetState.currentOffer = offer;
@@ -3863,9 +5162,7 @@ function finishOfferMiniGame() {
     ? getOfferRuntimeDefinition(offer)
     : (JOB_LOOKUP?.[game.jobId] || null);
   if (!offer || !job) {
-    state.jobMiniGame = null;
-    state.scene = "room";
-    renderGame();
+    recoverBrokenJobMiniGameState("finish-offer-missing-context", state);
     return;
   }
 
@@ -3875,16 +5172,26 @@ function finishOfferMiniGame() {
     bonus += game.perfectBonus || 0;
   }
   bonus = roundToHundred(bonus);
+  const restoredLocationId = restoreJobMiniGameOrigin(state, game);
 
   state.jobMiniGameResult = {
     jobId: offer.jobId || game.jobId || "",
     offer,
-    offerKey: game.offerKey || (typeof getOfferKey === "function" ? getOfferKey(offer) : (offer.careerPostingId || offer.jobId || "")),
+    offerKey: game.offerKey || getOfferMiniGameKey(offer),
     bonus,
     mistakes: game.mistakes,
     perfect,
   };
   state.jobMiniGame = null;
+
+  logJobMiniGameDiagnostic("finish", {
+    offerKey: state.jobMiniGameResult.offerKey,
+    jobId: offer.jobId || game.jobId || "",
+    bonus,
+    mistakes: game.mistakes,
+    perfect,
+    restoredLocationId,
+  }, state);
 
   const summaryLine = buildOfferMiniGameSummary(state.jobMiniGameResult);
   state.headline = {
@@ -4037,6 +5344,7 @@ function finishJobMiniGame() {
     bonus += game.perfectBonus || 0;
   }
   bonus = roundToHundred(bonus);
+  const restoredLocationId = restoreJobMiniGameOrigin(state, game);
 
   state.jobMiniGameResult = {
     jobId: game.jobId,
@@ -4045,7 +5353,15 @@ function finishJobMiniGame() {
     perfect,
   };
   state.jobMiniGame = null;
-  state.scene = "incident";
+  state.scene = state.currentIncident ? "incident" : "outside";
+
+  logJobMiniGameDiagnostic("finish-legacy", {
+    jobId: game.jobId,
+    bonus,
+    mistakes: game.mistakes,
+    perfect,
+    restoredLocationId,
+  }, state);
 
   const summaryLine = buildJobMiniGameSummary(state.jobMiniGameResult);
   state.headline = {
@@ -4066,13 +5382,13 @@ function startScheduledShiftLegacy() {
 
 function waitInRoom() {
   state.headline = {
-    badge: "시간 경과",
-    text: "방 안에서 30분을 보낸다.",
+    badge: "짧은 휴식",
+    text: "방에서 잠깐 쉬며 시간을 보낸다.",
   };
-  recordActionMemory("방 안에서 시간을 보냈다", "특별한 일 없이 방 안에서 잠깐 시간을 흘려보냈다.", {
+  recordActionMemory("방에서 잠깐 쉬었다", "밖으로 나가기 전에 방에서 숨을 고르며 잠깐 쉬었다.", {
     type: "action",
     source: "집",
-    tags: ["일상", "대기"],
+    tags: ["일상", "휴식"],
   });
   if (spendTimeSlots(TIME_COSTS.waitInRoom)) {
     advanceDayOrFinish();
@@ -4084,9 +5400,17 @@ function waitInRoom() {
 function wanderAroundOutside() {
   const locationId = getCurrentLocationId(state);
   const worldState = syncWorldState(state);
-  const npcPool = getAlleyNpcPool(state, locationId);
+  const npcPool = typeof getAdjustedLocationNpcPool === "function"
+    ? getAdjustedLocationNpcPool(state, locationId)
+    : getAlleyNpcPool(state, locationId);
   const locationLabel = getCurrentLocationLabel();
-  const activeNpc = pickWeightedEntry(npcPool);
+  const previousNpcId = typeof getLocationWanderNpcId === "function"
+    ? getLocationWanderNpcId(locationId, state)
+    : "";
+  const rotatedNpcPool = previousNpcId
+    ? npcPool.filter((entry) => String(entry?.id || "") !== previousNpcId)
+    : npcPool;
+  const activeNpc = pickWeightedEntry(rotatedNpcPool.length ? rotatedNpcPool : npcPool);
   const streetRomanceLead = activeNpc && typeof tryAutoStreetRomanceLead === "function"
     ? tryAutoStreetRomanceLead(activeNpc.id, state, {
         locationId,
@@ -4128,6 +5452,9 @@ function wanderAroundOutside() {
   worldState.alleyNpcVisible = Boolean(activeNpc) && !streetRomanceLead;
   worldState.alleyNpcId = worldState.alleyNpcVisible ? activeNpc?.id || "" : "";
   worldState.activeNpcLocationId = worldState.alleyNpcVisible && activeNpc ? locationId : "";
+  if (typeof setLocationWanderNpcId === "function") {
+    setLocationWanderNpcId(locationId, worldState.alleyNpcId || activeNpc?.id || "", state);
+  }
   setLocationWanderResult(
     locationId,
     streetRomanceLead?.sceneTitle || activeNpc?.sceneTitle || `${locationLabel}을 천천히 돌아다녔다`,
@@ -4169,12 +5496,17 @@ function wanderAroundOutside() {
 }
 
 function approachAlleyNpc() {
+  const locationId = getCurrentLocationId(state);
   const activeNpc = getActiveAlleyNpcConfig(state);
-  if (!activeNpc) {
+  const fallbackNpcId = typeof getLocationWanderNpcId === "function"
+    ? getLocationWanderNpcId(locationId, state)
+    : "";
+  const resolvedNpcId = activeNpc?.id || fallbackNpcId;
+  if (!resolvedNpcId) {
     return;
   }
 
-  startNpcInteraction(activeNpc.id, "approach-button");
+  startNpcInteraction(resolvedNpcId, "approach-button");
 }
 
 function startNpcInteraction(npcId, source = "actor-click") {
@@ -4182,7 +5514,12 @@ function startNpcInteraction(npcId, source = "actor-click") {
   const activeNpc = getActiveAlleyNpcConfig(state);
   const npcConfig = activeNpc?.id === npcId
     ? activeNpc
-    : getAlleyNpcPool(state, locationId).find((entry) => entry.id === npcId) || null;
+    : (
+      (typeof getAdjustedLocationNpcPool === "function"
+        ? getAdjustedLocationNpcPool(state, locationId)
+        : getAlleyNpcPool(state, locationId)
+      ).find((entry) => entry.id === npcId) || null
+    );
 
   if (!npcId) {
     return false;
@@ -4297,6 +5634,8 @@ function normalizeStateForCurrentRules() {
     syncPhoneSessionState(state);
   }
 
+  syncInputGateState(state);
+
   if (typeof syncJobsDomainState === "function") {
     const jobsState = syncJobsDomainState(state);
     const jobsPatch = {};
@@ -4404,22 +5743,64 @@ function normalizeStateForCurrentRules() {
   }
 
   syncWorldState(state);
+  recoverStaleInputGate(state);
+  syncInputGateState(state).mode = getCurrentInputGateMode(state);
 }
 
 function canPersistState() {
   return Boolean(ui.startScreen?.classList.contains("is-hidden")) && !state.devPreviewMode;
 }
 
-function persistState() {
+let renderPersistTimerId = 0;
+let pendingPersistReason = "";
+
+function writePersistedState(reason = "render") {
   if (!canPersistState()) {
-    return;
+    return false;
   }
 
   try {
-    localStorage.setItem(SAVE_STATE_KEY, JSON.stringify(serializeState()));
+    localStorage.setItem(SAVE_STATE_KEY, JSON.stringify(serializeState(state, { reason })));
+    return true;
   } catch (error) {
     console.warn("Failed to save game state", error);
+    return false;
   }
+}
+
+function cancelPendingPersistState() {
+  if (renderPersistTimerId) {
+    clearTimeout(renderPersistTimerId);
+    renderPersistTimerId = 0;
+  }
+  pendingPersistReason = "";
+}
+
+function flushPendingPersistState(reason = "") {
+  const resolvedReason = String(reason || pendingPersistReason || "render");
+  cancelPendingPersistState();
+  return writePersistedState(resolvedReason);
+}
+
+function persistState(reason = "render") {
+  if (!canPersistState()) {
+    cancelPendingPersistState();
+    return;
+  }
+
+  const normalizedReason = String(reason || "render").trim() || "render";
+  if (normalizedReason === "render") {
+    pendingPersistReason = normalizedReason;
+    if (renderPersistTimerId) {
+      clearTimeout(renderPersistTimerId);
+    }
+    renderPersistTimerId = window.setTimeout(() => {
+      flushPendingPersistState("render");
+    }, RENDER_SAVE_DEBOUNCE_MS);
+    return;
+  }
+
+  flushPendingPersistState(normalizedReason);
 }
 
 function loadSavedState() {
@@ -4444,6 +5825,7 @@ function loadSavedState() {
 }
 
 function clearSavedState() {
+  cancelPendingPersistState();
   try {
     localStorage.removeItem(SAVE_STATE_KEY);
   } catch (error) {
@@ -4456,7 +5838,14 @@ function restoreSavedState(savedState = pendingSavedState || loadSavedState()) {
     return false;
   }
 
+  cancelPendingPersistState();
   pendingSavedState = null;
+  if (typeof stopRankingRealtimeSubscription === "function") {
+    stopRankingRealtimeSubscription();
+  }
+  if (typeof closeRankingScreen === "function") {
+    closeRankingScreen();
+  }
   state = savedState;
   hideStartScreen();
   renderGame();
@@ -4532,10 +5921,10 @@ const ACTION_HANDLERS = {
   },
   "study-office-prep"() {
     gainCareerPrep("office", {
-      badge: "도서관 준비",
-      text: "도서관에서 이력서와 문서 정리를 다듬으며 사무 준비도를 올렸다.",
-      memoryTitle: "도서관에서 사무 준비를 했다",
-      memoryBody: "조용한 열람실에서 이력서와 서류를 정리하며 다음 지원을 준비했다.",
+      badge: "이력서 정리",
+      text: "도서관에서 이력서와 서류를 정리하며 사무 준비를 했다.",
+      memoryTitle: "도서관에서 이력서를 정리했다",
+      memoryBody: "조용한 열람실에서 이력서와 서류를 손보며 다음 지원을 준비했다.",
       intelligenceDelta: 2,
       energyDelta: -8,
       tags: ["도서관", "사무"],
@@ -4543,13 +5932,18 @@ const ACTION_HANDLERS = {
   },
   "study-academic-prep"() {
     gainCareerPrep("academic", {
-      badge: "도서관 준비",
-      text: "도서관 자료를 훑으며 학업 준비도를 올렸다.",
-      memoryTitle: "도서관에서 학업 준비를 했다",
-      memoryBody: "강의 자료와 문제집을 뒤적이며 학원과 교육 계열 지원을 준비했다.",
+      badge: "도서관 공부",
+      text: "도서관에서 강의 자료를 보며 학업 준비를 했다.",
+      memoryTitle: "도서관에서 공부했다",
+      memoryBody: "강의 자료와 문제집을 훑으며 졸업 심사에 필요한 공부를 했다.",
       intelligenceDelta: 3,
       energyDelta: -10,
       tags: ["도서관", "학업"],
+      ambientRomanceTrigger: "study-academic-prep",
+      ambientRomanceContext: {
+        locationId: "library",
+        locationLabel: typeof getCurrentLocationLabel === "function" ? getCurrentLocationLabel(state) : "",
+      },
     });
   },
   "take-computer-cert"() {
@@ -4597,10 +5991,10 @@ const ACTION_HANDLERS = {
   "study-career-center-review"() {
     const currentMeetings = Number(state.social?.contacts?.careerCenterClerk?.meetings || 0);
     runStudyDistrictEvent({
-      badge: "캠퍼스 상담",
-      text: "취업지원센터에서 이력서 흐름과 지원 순서를 짚으며 사무 준비도를 올렸다.",
-      memoryTitle: "대학가 취업지원센터에서 상담을 받았다",
-      memoryBody: "캠퍼스 취업지원센터 직원이 이력서 순서와 공고 읽는 법을 짚어주며 다음 지원 루트를 정리해줬다.",
+      badge: "취업 상담",
+      text: "취업지원센터에서 이력서와 지원 순서를 상담받았다.",
+      memoryTitle: "대학가에서 취업 상담을 받았다",
+      memoryBody: "취업지원센터에서 어떤 공고부터 노려야 할지와 서류 순서를 정리했다.",
       prepKey: "office",
       prepGain: 1,
       intelligenceDelta: 1,
@@ -4617,7 +6011,7 @@ const ACTION_HANDLERS = {
         met: true,
         meetings: currentMeetings + 1,
         lastSeenDay: state.day,
-        note: "사무 계열 지원 흐름과 서류 순서를 짚어줬다.",
+        note: "서류 순서와 지원 흐름을 알려줬다.",
       },
       unlockEventId: "study-career-center-review",
       unlockNpcId: "careerCenterClerk",
@@ -4639,8 +6033,8 @@ const ACTION_HANDLERS = {
     const prepState = getCareerPrepSnapshotForState(state);
     if ((prepState.academic || 0) < 2) {
       state.headline = {
-        badge: "졸업 요건 부족",
-        text: "연구직 준비도를 2 이상 쌓아야 졸업 심사를 통과할 수 있다.",
+        badge: "졸업 준비 부족",
+        text: "졸업 심사를 받으려면 먼저 대학가에서 공부를 더 쌓아 학업 준비 2를 만들어야 한다.",
       };
       renderGame();
       return;
@@ -4648,9 +6042,9 @@ const ACTION_HANDLERS = {
 
     earnCareerCertification("universityDegree", {
       badge: "졸업 완료",
-      text: "대학 졸업장을 확보해 직장 면접을 볼 기본 자격이 열렸다.",
+      text: "대학 졸업장을 챙겨 직장 지원 기본 자격을 확보했다.",
       memoryTitle: "대학 졸업 심사를 마쳤다",
-      memoryBody: "졸업 심사를 통과하고 졸업장을 챙겨 직장 면접에 지원할 기본 자격을 확보했다.",
+      memoryBody: "졸업 심사를 통과하고 졸업장을 챙겨 직장 지원에 필요한 기본 자격을 확보했다.",
       tags: ["대학가", "졸업"],
       slots: 2,
     });
@@ -4658,10 +6052,10 @@ const ACTION_HANDLERS = {
   "study-campus-network"() {
     const currentMeetings = Number(state.social?.contacts?.campusSenior?.meetings || 0);
     runStudyDistrictEvent({
-      badge: "캠퍼스 인연",
-      text: "벤치에서 만난 선배와 이야기를 나누며 학업 준비도를 올리고 숨을 골랐다.",
-      memoryTitle: "캠퍼스 공원에서 선배와 이야기를 나눴다",
-      memoryBody: "공원 벤치에서 만난 선배가 학원 조교와 계약직 루트 이야기를 꺼내며 다음 지원에 도움이 될 만한 힌트를 남겼다.",
+      badge: "캠퍼스 대화",
+      text: "캠퍼스 공원에서 선배와 이야기하며 학업 준비와 인맥을 챙겼다.",
+      memoryTitle: "캠퍼스 공원에서 선배를 만났다",
+      memoryBody: "벤치에서 만난 선배가 학원 조교와 계약직 루트를 알려줬다.",
       prepKey: "academic",
       prepGain: 1,
       reputationDelta: 1,
@@ -4684,6 +6078,11 @@ const ACTION_HANDLERS = {
       unlockNpcId: "campusSenior",
       slots: 1,
       tags: ["대학가", "공원", "인맥"],
+      ambientRomanceTrigger: "study-campus-network",
+      ambientRomanceContext: {
+        locationId: "campus-park",
+        locationLabel: "캠퍼스 공원",
+      },
     });
   },
   "enter-casino-venue"() {
@@ -4723,17 +6122,73 @@ function bindStaticEvents() {
     renderGame();
   });
   window.addEventListener("scroll", handlePhoneScrollableInteraction, true);
+  window.addEventListener("pagehide", () => {
+    flushPendingPersistState("render");
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushPendingPersistState("render");
+    }
+  });
 
-  ui.phoneToggleButton?.addEventListener("click", togglePhonePanel);
-  ui.phoneStageButton?.addEventListener("click", togglePhoneStage);
-  ui.phoneBackButton?.addEventListener("click", goBackInPhone);
-  ui.memoryButton?.addEventListener("click", toggleMemoryLog);
+  ui.phoneToggleButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      togglePhonePanel();
+    }, {
+      source: "phone-toggle",
+      actionId: "phone:toggle-panel",
+      allowedModes: ["normal", "phone"],
+    });
+  });
+  ui.phoneStageButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      togglePhoneStage();
+    }, {
+      source: "phone-toggle",
+      actionId: "phone:toggle-stage",
+      allowedModes: ["normal", "phone"],
+    });
+  });
+  ui.phoneBackButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      goBackInPhone();
+    }, {
+      source: "phone-action",
+      actionId: "phone:back",
+      allowedModes: ["normal", "phone"],
+    });
+  });
+  ui.memoryButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      toggleMemoryLog();
+    }, {
+      source: "overlay-toggle",
+      actionId: "memory:toggle",
+      allowedModes: ["normal"],
+    });
+  });
   ui.memoryCloseButton?.addEventListener("click", closeMemoryLog);
-  ui.inventoryButton?.addEventListener("click", toggleInventoryLog);
+  ui.inventoryButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      toggleInventoryLog();
+    }, {
+      source: "overlay-toggle",
+      actionId: "inventory:toggle",
+      allowedModes: ["normal"],
+    });
+  });
   ui.inventoryCloseButton?.addEventListener("click", closeInventoryLog);
   ui.inventoryTabs?.addEventListener("click", handleInventoryTabClick);
   ui.inventoryList?.addEventListener("click", handleInventoryListClick);
-  ui.characterButton?.addEventListener("click", toggleCharacterLog);
+  ui.characterButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      toggleCharacterLog();
+    }, {
+      source: "overlay-toggle",
+      actionId: "character:toggle",
+      allowedModes: ["normal"],
+    });
+  });
   ui.characterCloseButton?.addEventListener("click", closeCharacterLog);
   ui.textbox?.addEventListener("click", handleTextboxClick);
   ui.message?.addEventListener("click", handleCasinoVenueClick);
@@ -5053,8 +6508,15 @@ function startGame(selectedTierIdOverride = "") {
   }
 
   clearGameplayFeedback();
+  cancelPendingPersistState();
   clearSavedState();
   pendingSavedState = null;
+  if (typeof stopRankingRealtimeSubscription === "function") {
+    stopRankingRealtimeSubscription();
+  }
+  if (typeof closeRankingScreen === "function") {
+    closeRankingScreen();
+  }
   hideSpoonDrawOverlay();
   state = createInitialState();
   state.playerName = playerName;
@@ -5072,8 +6534,15 @@ function startGame(selectedTierIdOverride = "") {
 
 function continueSavedGame() {
   clearGameplayFeedback();
+  cancelPendingPersistState();
   resetStartScreenDrawState();
   hideSpoonDrawOverlay();
+  if (typeof stopRankingRealtimeSubscription === "function") {
+    stopRankingRealtimeSubscription();
+  }
+  if (typeof closeRankingScreen === "function") {
+    closeRankingScreen();
+  }
   if (restoreSavedState()) {
     return;
   }
@@ -5174,10 +6643,16 @@ function handleInventoryTabClick(event) {
     return;
   }
 
-  if (typeof setInventoryTab === "function") {
-    setInventoryTab(tabButton.dataset.inventoryTab, state);
-  }
-  renderGame();
+  runGuardedUiAction(() => {
+    if (typeof setInventoryTab === "function") {
+      setInventoryTab(tabButton.dataset.inventoryTab, state);
+    }
+    renderGame();
+  }, {
+    source: "overlay-action",
+    actionId: `inventory:tab:${tabButton.dataset.inventoryTab || ""}`,
+    allowedModes: ["normal"],
+  });
 }
 
 function handleInventoryListClick(event) {
@@ -5186,7 +6661,13 @@ function handleInventoryListClick(event) {
     return;
   }
 
-  useInventoryConsumable(useButton.dataset.inventoryUseId, state);
+  runGuardedUiAction(() => {
+    useInventoryConsumable(useButton.dataset.inventoryUseId, state);
+  }, {
+    source: "overlay-action",
+    actionId: `inventory:use:${useButton.dataset.inventoryUseId || ""}`,
+    allowedModes: ["normal"],
+  });
 }
 
 function prepareDayStateLegacy(targetState = state) {
@@ -5882,6 +7363,20 @@ function setBankAppStatusMessage({
   setHeadline("🏦 은행", body);
 }
 
+function setSimpleBankFailureStatus({
+  kicker = "BANK",
+  title = "처리 불가",
+  body = "다시 확인해 주세요.",
+} = {}) {
+  setBankAppStatusMessage({
+    kicker,
+    title,
+    body,
+    tone: "fail",
+    previewTitle: title,
+  });
+}
+
 function resolvePhoneAmountValue(rawValue, maxAmount = 0) {
   const numericMax = Math.max(0, Math.round(Number(maxAmount) || 0));
   const normalized = String(rawValue || "").trim().toLowerCase();
@@ -5946,24 +7441,18 @@ function depositCashToBank(actionTarget) {
   const amount = resolvePhoneAmountValue(actionTarget?.dataset.amount, availableCash);
 
   if (!amount || availableCash <= 0) {
-    setBankAppStatusMessage({
-      kicker: "BANK",
-      title: "입금할 현금 없음",
-      body: "지금 손에 들고 있는 현금이 없어서 계좌에 넣을 수 없었다.",
-      tone: "fail",
-      previewTitle: "현금 입금 실패",
+    setSimpleBankFailureStatus({
+      title: "입금 불가",
+      body: "현금이 부족합니다.",
     });
     renderGame();
     return;
   }
 
   if (typeof spendCash === "function" && !spendCash(amount)) {
-    setBankAppStatusMessage({
-      kicker: "BANK",
-      title: "입금 실패",
-      body: "현금 잔액이 부족해서 입금에 실패했다.",
-      tone: "fail",
-      previewTitle: "현금 입금 실패",
+    setSimpleBankFailureStatus({
+      title: "입금 불가",
+      body: "현금이 부족합니다.",
     });
     renderGame();
     return;
@@ -6016,12 +7505,9 @@ function withdrawCashFromBank(actionTarget) {
   const amount = resolvePhoneAmountValue(actionTarget?.dataset.amount, bankState.balance);
 
   if (!amount || bankState.balance <= 0) {
-    setBankAppStatusMessage({
-      kicker: "BANK",
-      title: "출금할 잔액 없음",
-      body: "계좌에 남은 돈이 없어서 현금으로 뺄 수 없었다.",
-      tone: "fail",
-      previewTitle: "현금 출금 실패",
+    setSimpleBankFailureStatus({
+      title: "출금 불가",
+      body: "계좌 잔고가 부족합니다.",
     });
     renderGame();
     return;
@@ -6102,36 +7588,30 @@ function submitBankTransfer(actionTarget) {
   const amount = Math.max(0, Math.round(Number(formValues.amount) || 0));
 
   if (!recipient) {
-    setBankAppStatusMessage({
+    setSimpleBankFailureStatus({
       kicker: "TRANSFER",
-      title: "송금 대상 필요",
-      body: "누구에게 보낼지 먼저 입력해야 한다.",
-      tone: "fail",
-      previewTitle: "송금 실패",
+      title: "송금 불가",
+      body: "받는 사람을 입력하세요.",
     });
     renderGame();
     return;
   }
 
   if (!amount) {
-    setBankAppStatusMessage({
+    setSimpleBankFailureStatus({
       kicker: "TRANSFER",
-      title: "송금 금액 필요",
-      body: "보낼 금액을 입력해야 송금을 진행할 수 있다.",
-      tone: "fail",
-      previewTitle: "송금 실패",
+      title: "송금 불가",
+      body: "금액을 입력하세요.",
     });
     renderGame();
     return;
   }
 
   if (bankState.balance < amount) {
-    setBankAppStatusMessage({
+    setSimpleBankFailureStatus({
       kicker: "TRANSFER",
-      title: "잔액 부족",
-      body: `계좌 잔액이 부족해서 ${formatMoney(amount)}을 보낼 수 없었다.`,
-      tone: "fail",
-      previewTitle: "송금 실패",
+      title: "송금 불가",
+      body: "계좌 잔고가 부족합니다.",
     });
     renderGame();
     return;
@@ -6327,6 +7807,8 @@ function runStudyDistrictEvent({
   unlockNpcId = "",
   slots = 1,
   tags = [],
+  ambientRomanceTrigger = "",
+  ambientRomanceContext = null,
 } = {}) {
   ensureMetaRunStateReady(state);
   const feedbackChips = [];
@@ -6397,6 +7879,22 @@ function runStudyDistrictEvent({
 
   if (spendTimeSlots(slots)) {
     advanceDayOrFinish();
+    return;
+  }
+
+  if (
+    ambientRomanceTrigger
+    && typeof tryStartAmbientRomanceEvent === "function"
+    && tryStartAmbientRomanceEvent(
+      ambientRomanceTrigger,
+      ambientRomanceContext || {
+        locationId: typeof getCurrentLocationId === "function" ? getCurrentLocationId(state) : "",
+        locationLabel: typeof getCurrentLocationLabel === "function" ? getCurrentLocationLabel(state) : "",
+      },
+      state,
+    )
+  ) {
+    renderGame();
     return;
   }
 
@@ -6883,6 +8381,9 @@ function buyConvenienceStoreItem(actionId, targetState = state) {
 
 function visitMcDonaldsMenu(actionId, targetState = state) {
   const menu = MCDONALDS_MENU_CATALOG[actionId];
+  const ambientRomanceTrigger = actionId === "buy-mcdonalds-coffee"
+    ? actionId
+    : "";
   if (!menu || !targetState) {
     return false;
   }
@@ -6945,6 +8446,22 @@ function visitMcDonaldsMenu(actionId, targetState = state) {
 
   if (spendTimeSlots(Math.max(0, Number(menu.slots || 0)))) {
     advanceDayOrFinish();
+    return true;
+  }
+
+  if (
+    ambientRomanceTrigger
+    && typeof tryStartAmbientRomanceEvent === "function"
+    && tryStartAmbientRomanceEvent(
+      ambientRomanceTrigger,
+      {
+        locationId: typeof getCurrentLocationId === "function" ? getCurrentLocationId(targetState) : "mcdonalds-counter",
+        locationLabel: typeof getCurrentLocationLabel === "function" ? getCurrentLocationLabel(targetState) : "맥도날드 카운터",
+      },
+      targetState,
+    )
+  ) {
+    renderGame();
     return true;
   }
 
@@ -7732,21 +9249,33 @@ function prepareDayState(targetState = state) {
 function handlePhoneScreenClick(event) {
   const appTarget = event.target.closest("[data-phone-app]");
   if (appTarget) {
-    if (spendPhoneInteractionTime()) {
-      return;
-    }
-    usePhoneApp(appTarget.dataset.phoneApp);
+    runGuardedUiAction(() => {
+      if (spendPhoneInteractionTime()) {
+        return;
+      }
+      usePhoneApp(appTarget.dataset.phoneApp);
+    }, {
+      source: "phone-action",
+      actionId: `phone-app:${appTarget.dataset.phoneApp || ""}`,
+      allowedModes: ["normal", "phone"],
+    });
     return;
   }
 
   const routeTarget = event.target.closest("[data-phone-route]");
   if (routeTarget) {
-    if (spendPhoneInteractionTime()) {
-      return;
-    }
-    if (typeof openPhoneRoute === "function" && openPhoneRoute(routeTarget.dataset.phoneRoute, state)) {
-      renderGame();
-    }
+    runGuardedUiAction(() => {
+      if (spendPhoneInteractionTime()) {
+        return;
+      }
+      if (typeof openPhoneRoute === "function" && openPhoneRoute(routeTarget.dataset.phoneRoute, state)) {
+        renderGame();
+      }
+    }, {
+      source: "phone-action",
+      actionId: `phone-route:${routeTarget.dataset.phoneRoute || ""}`,
+      allowedModes: ["normal", "phone"],
+    });
     return;
   }
 
@@ -7762,14 +9291,15 @@ function handlePhoneScreenClick(event) {
     track,
   } = actionTarget.dataset;
 
-  if (spendPhoneInteractionTime()) {
-    return;
-  }
+  runGuardedUiAction(() => {
+    if (spendPhoneInteractionTime()) {
+      return;
+    }
 
-  if (phoneAction === "close-phone-view") {
-    openPhoneHome();
-    return;
-  }
+    if (phoneAction === "close-phone-view") {
+      openPhoneHome();
+      return;
+    }
 
   if (phoneAction === "install-phone-app") {
     installPhoneAppFromStore(actionTarget.dataset.appId);
@@ -8051,9 +9581,14 @@ function handlePhoneScreenClick(event) {
     return;
   }
 
-  if (phoneAction === "watch-video-feed") {
-    watchVideoFeed();
-  }
+    if (phoneAction === "watch-video-feed") {
+      watchVideoFeed();
+    }
+  }, {
+    source: "phone-action",
+    actionId: `phone-action:${phoneAction || "unknown"}`,
+    allowedModes: ["normal", "phone"],
+  });
 }
 
 function buildDayOffersForState(targetState = state) {
@@ -8560,6 +10095,10 @@ function goOutside(options = {}) {
 }
 
 function completeBusTravel() {
+  return completePendingWorldTravel({
+    targetState: state,
+    fallbackLocationId: "bus-stop",
+  });
   const worldState = syncWorldState(state);
   const targetLocation = worldState.pendingTravelTarget;
   const locationMap = getDayWorldLocationMap(state.day);
@@ -8604,6 +10143,12 @@ function completeBusTravel() {
 }
 
 function completeWalkTravel() {
+  return completePendingWorldTravel({
+    targetState: state,
+    fallbackLocationId: typeof getResolvedHomeLocationId === "function"
+      ? getResolvedHomeLocationId(state)
+      : getDayHomeLocationId(state.day),
+  });
   const worldState = syncWorldState(state);
   const targetLocation = worldState.pendingTravelTarget;
   const locationMap = getDayWorldLocationMap(state.day);
@@ -8687,13 +10232,27 @@ function handleWorldKeyDown(event) {
 
   if (!isTypingTarget && (event.key === "m" || event.key === "M")) {
     event.preventDefault();
-    toggleMemoryLog();
+    runGuardedUiAction(() => {
+      toggleMemoryLog();
+    }, {
+      source: "overlay-toggle",
+      actionId: "keyboard:memory-toggle",
+      allowedModes: ["normal"],
+      suppressFeedback: true,
+    });
     return;
   }
 
   if (!isTypingTarget && (event.key === "i" || event.key === "I")) {
     event.preventDefault();
-    toggleInventoryLog();
+    runGuardedUiAction(() => {
+      toggleInventoryLog();
+    }, {
+      source: "overlay-toggle",
+      actionId: "keyboard:inventory-toggle",
+      allowedModes: ["normal"],
+      suppressFeedback: true,
+    });
     return;
   }
 
@@ -8709,9 +10268,30 @@ function handleWorldKeyDown(event) {
     return;
   }
 
+  if (!isEditableTarget && event.key === "Escape" && state.scene === "job-minigame") {
+    event.preventDefault();
+    runGuardedUiAction(() => {
+      if (typeof cancelJobMiniGame === "function") {
+        cancelJobMiniGame("escape");
+      }
+    }, {
+      source: "minigame-action",
+      actionId: "keyboard:cancel-job-minigame",
+      allowedModes: ["minigame"],
+      suppressFeedback: true,
+    });
+    return;
+  }
+
   if (!isEditableTarget && ["Enter", " "].includes(event.key) && typeof canAdvanceSceneText === "function" && canAdvanceSceneText()) {
     event.preventDefault();
-    advanceSceneText();
+    runGuardedUiAction(() => {
+      advanceSceneText();
+    }, {
+      source: "textbox-advance",
+      actionId: "keyboard:advance-text",
+      suppressFeedback: true,
+    });
     return;
   }
 
@@ -8727,8 +10307,13 @@ function handleWorldKeyDown(event) {
 function handleTextboxClick(event) {
   const terminalTabTarget = event.target?.closest?.("[data-terminal-tab]");
   if (terminalTabTarget) {
-    setWorldTerminalTab(terminalTabTarget.dataset.terminalTab, state);
-    renderGame();
+    runGuardedUiAction(() => {
+      setWorldTerminalTab(terminalTabTarget.dataset.terminalTab, state);
+      renderGame();
+    }, {
+      source: "scene-choice",
+      actionId: `terminal-tab:${terminalTabTarget.dataset.terminalTab || ""}`,
+    });
     return;
   }
 
@@ -8737,16 +10322,327 @@ function handleTextboxClick(event) {
   }
 
   if (typeof canAdvanceSceneText === "function" && canAdvanceSceneText()) {
-    advanceSceneText();
+    runGuardedUiAction(() => {
+      advanceSceneText();
+    }, {
+      source: "textbox-advance",
+      actionId: "textbox:advance-text",
+      suppressFeedback: true,
+    });
   }
 }
 
-function startWorldTravelToLocation(targetLocation = "", config = {}) {
+function getInputGateDebugLog(targetState = state) {
+  return [...(syncInputGateState(targetState).debugLog || [])];
+}
+
+function forceRecoverInputGate(targetState = state, reason = "manual-reset") {
+  return recoverStaleInputGate(targetState, {
+    force: true,
+    reason,
+  });
+}
+
+function getWorldLocationConfig(locationId = "", targetState = state) {
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    return null;
+  }
+
+  const day = targetState?.day || getCurrentDayNumber();
+  return getDayWorldLocationMap(day)?.[normalizedLocationId] || null;
+}
+
+function resolveWorldMoveFallbackLocation(preferredLocationId = "", targetState = state) {
+  const day = targetState?.day || getCurrentDayNumber();
+  const locationMap = getDayWorldLocationMap(day) || {};
+  const worldState = syncWorldState(targetState);
+  const currentLocationId = getCurrentLocationId(targetState);
+  const candidateIds = [
+    preferredLocationId,
+    worldState.pendingTravelSourceLocationId,
+    !isTravelSceneLocationId(currentLocationId) ? currentLocationId : "",
+    typeof getResolvedHomeLocationId === "function"
+      ? getResolvedHomeLocationId(targetState)
+      : getDayHomeLocationId(day),
+    getDayHomeLocationId(day),
+    ...Object.keys(locationMap),
+  ];
+
+  return candidateIds.find((locationId) => {
+    const normalizedLocationId = String(locationId || "").trim();
+    return normalizedLocationId
+      && locationMap[normalizedLocationId]
+      && !(typeof isTravelSceneLocationId === "function" && isTravelSceneLocationId(normalizedLocationId));
+  }) || "";
+}
+
+function getWorldMoveTravelMethod(config = {}, targetState = state) {
+  if (typeof config.travelMethod === "string" && config.travelMethod.trim()) {
+    return config.travelMethod.trim();
+  }
+
+  const normalizedTravelSceneId = String(config.travelSceneId || "").trim();
+  const travelMode = normalizedTravelSceneId === "bus-ride" || normalizedTravelSceneId === "express-bus-travel"
+    ? "bus"
+    : "walk";
+
+  if (typeof getTravelMethodLabelForMode === "function") {
+    return getTravelMethodLabelForMode(travelMode, targetState);
+  }
+
+  return travelMode === "bus" ? "\uBC84\uC2A4" : "\uB3C4\uBCF4";
+}
+
+function shouldResolveWorldMoveDirectly(targetLocation = "", config = {}, targetState = state) {
+  if (config.forceTravelMode === true) {
+    return false;
+  }
+  if (config.forceDirectMove === true) {
+    return true;
+  }
+
   const normalizedTargetLocation = String(targetLocation || "").trim();
-  const currentLocationId = getCurrentLocationId();
-  const currentLocation = getCurrentOutsideSceneConfig();
-  const locationMap = getDayWorldLocationMap(state.day);
-  const currentLabel = currentLocation?.label || getCurrentLocationLabel();
+  const currentLocationId = getCurrentLocationId(targetState);
+  const currentLocation = getWorldLocationConfig(currentLocationId, targetState);
+  const nextLocation = getWorldLocationConfig(normalizedTargetLocation, targetState);
+
+  if (!normalizedTargetLocation || !currentLocation || !nextLocation || currentLocationId === normalizedTargetLocation) {
+    return false;
+  }
+
+  const currentExits = Array.isArray(currentLocation.exits) ? currentLocation.exits : [];
+  if (!currentExits.includes(normalizedTargetLocation)) {
+    return false;
+  }
+
+  const normalizedTravelSceneId = String(config.travelSceneId || "").trim();
+  if (normalizedTravelSceneId === "bus-ride" || normalizedTravelSceneId === "express-bus-travel") {
+    return false;
+  }
+
+  const explicitTravelMinutes = Number(config.travelMinutes);
+  const currentAnchorId = typeof getCityMapAnchorLocationId === "function"
+    ? getCityMapAnchorLocationId(currentLocationId, targetState)
+    : "";
+  const targetAnchorId = typeof getCityMapAnchorLocationId === "function"
+    ? getCityMapAnchorLocationId(normalizedTargetLocation, targetState)
+    : "";
+  const nextExits = Array.isArray(nextLocation.exits) ? nextLocation.exits : [];
+  const sameAnchorId = Boolean(currentAnchorId && targetAnchorId && currentAnchorId === targetAnchorId);
+  const touchesHiddenLocation = Boolean(currentLocation.cityMapHidden || nextLocation.cityMapHidden);
+  const missingMapNode = !currentLocation.mapNode || !nextLocation.mapNode;
+  const shortHop = Number.isFinite(explicitTravelMinutes) && explicitTravelMinutes > 0 && explicitTravelMinutes <= TIME_SLOT_MINUTES;
+  const edgeLocationHop = currentExits.length <= 2 || nextExits.length <= 2;
+
+  return sameAnchorId || touchesHiddenLocation || missingMapNode || shortHop || edgeLocationHop || config.keepVisible === true;
+}
+
+function getDirectWorldMoveMinutes(targetLocation = "", config = {}, targetState = state) {
+  const explicitTravelMinutes = Number(config.travelMinutes);
+  if (Number.isFinite(explicitTravelMinutes) && explicitTravelMinutes > 0) {
+    return Math.max(1, Math.round(explicitTravelMinutes));
+  }
+
+  const estimatedTravelMinutes = estimateWalkTravelMinutes(
+    getCurrentLocationId(targetState),
+    targetLocation,
+    targetState
+  );
+  if (Number.isFinite(estimatedTravelMinutes) && estimatedTravelMinutes > 0) {
+    return Math.max(1, Math.min(TIME_SLOT_MINUTES, Math.round(estimatedTravelMinutes)));
+  }
+
+  return 4;
+}
+
+function finalizeWorldArrival(targetLocation = "", config = {}) {
+  const {
+    targetState = state,
+    fallbackLocationId = "",
+    arrivalBadge = "",
+    arrivalText = "",
+    memoryTitle = "",
+    memoryText = "",
+    memoryTags = null,
+    sourceLabel = "",
+    render = true,
+  } = config;
+  const day = targetState?.day || getCurrentDayNumber();
+  const locationMap = getDayWorldLocationMap(day) || {};
+  const worldState = syncWorldState(targetState);
+  const normalizedTargetLocation = String(targetLocation || "").trim();
+  const resolvedTargetLocation = locationMap[normalizedTargetLocation]
+    ? normalizedTargetLocation
+    : resolveWorldMoveFallbackLocation(fallbackLocationId, targetState);
+
+  if (!resolvedTargetLocation || !locationMap[resolvedTargetLocation]) {
+    clearPendingTravelState(targetState);
+    clearAlleyNpcState(targetState);
+    clearWanderResultState(targetState);
+    if (render && targetState === state) {
+      renderGame();
+    }
+    return false;
+  }
+
+  const pendingDistrict = worldState.pendingTravelTarget === resolvedTargetLocation
+    ? worldState.pendingTravelDistrict
+    : "";
+  worldState.currentLocation = resolvedTargetLocation;
+  worldState.currentDistrict = pendingDistrict
+    || (typeof getWorldLocationDistrictId === "function"
+      ? getWorldLocationDistrictId(resolvedTargetLocation, day)
+      : worldState.currentDistrict);
+  if (resolvedTargetLocation === "bus-stop-map") {
+    setWorldTerminalTab("route", targetState);
+  }
+  if (worldState.currentDistrict && !worldState.unlockedDistricts.includes(worldState.currentDistrict)) {
+    worldState.unlockedDistricts.push(worldState.currentDistrict);
+  }
+  if (!worldState.unlockedLocations.includes(resolvedTargetLocation)) {
+    worldState.unlockedLocations.push(resolvedTargetLocation);
+  }
+
+  clearAlleyNpcState(targetState);
+  clearWanderResultState(targetState);
+  clearPendingTravelState(targetState);
+  targetState.scene = "outside";
+  targetState.headline = {
+    badge: arrivalBadge,
+    text: arrivalText,
+  };
+
+  if (memoryTitle && typeof recordActionMemory === "function") {
+    recordActionMemory(memoryTitle, memoryText, {
+      type: "travel",
+      source: sourceLabel || locationMap[resolvedTargetLocation].label || resolvedTargetLocation,
+      tags: Array.isArray(memoryTags) ? memoryTags : ["travel", resolvedTargetLocation],
+    });
+  }
+
+  if (render && targetState === state) {
+    if (typeof hideCityMapOverlay === "function") {
+      hideCityMapOverlay();
+    }
+    renderGame();
+  }
+  return resolvedTargetLocation === normalizedTargetLocation;
+}
+
+function performWorldDirectMove(targetLocation = "", config = {}, targetState = state) {
+  const normalizedTargetLocation = String(targetLocation || "").trim();
+  const currentLocationId = getCurrentLocationId(targetState);
+  const currentLabel = getCurrentLocationLabel(targetState);
+  const nextLocation = getWorldLocationConfig(normalizedTargetLocation, targetState);
+
+  if (!normalizedTargetLocation || !nextLocation || currentLocationId === normalizedTargetLocation) {
+    return false;
+  }
+
+  const travelMinutes = getDirectWorldMoveMinutes(normalizedTargetLocation, config, targetState);
+  if (spendMinorTime(travelMinutes)) {
+    advanceDayOrFinish();
+    return true;
+  }
+
+  const targetLabel = nextLocation.label || normalizedTargetLocation;
+  const durationLabel = formatTravelDurationLabel(travelMinutes);
+  const memoryTitle = typeof config.memoryTitle === "string" && config.memoryTitle.trim()
+    ? config.memoryTitle.trim()
+    : `${targetLabel}\uB85C \uC774\uB3D9\uD588\uB2E4`;
+  const memoryText = typeof config.memoryText === "string" && config.memoryText.trim()
+    ? config.memoryText.trim()
+    : `${currentLabel}\uC5D0\uC11C ${targetLabel}\uAE4C\uC9C0 ${durationLabel} \uC815\uB3C4 \uAC78\uC5B4 \uC790\uB9AC\uB97C \uC62E\uACBC\uB2E4.`;
+
+  return finalizeWorldArrival(normalizedTargetLocation, {
+    targetState,
+    fallbackLocationId: currentLocationId,
+    arrivalBadge: "\uC774\uB3D9 \uC644\uB8CC",
+    arrivalText: `${targetLabel}\uC5D0 \uB3C4\uCC29\uD588\uB2E4.`,
+    memoryTitle,
+    memoryText,
+    memoryTags: Array.isArray(config.memoryTags) && config.memoryTags.length
+      ? config.memoryTags
+      : ["travel", "direct", normalizedTargetLocation],
+    sourceLabel: currentLabel,
+  });
+}
+
+function completePendingWorldTravel(config = {}) {
+  const {
+    targetState = state,
+    fallbackLocationId = "",
+  } = config;
+  const worldState = syncWorldState(targetState);
+  const pendingTargetLocation = String(worldState.pendingTravelTarget || "").trim();
+  const nextLocation = getWorldLocationConfig(pendingTargetLocation, targetState);
+  const safeFallbackLocation = resolveWorldMoveFallbackLocation(
+    fallbackLocationId || worldState.pendingTravelSourceLocationId,
+    targetState
+  );
+
+  if (!pendingTargetLocation || !nextLocation) {
+    const fallbackLabel = getWorldLocationConfig(safeFallbackLocation, targetState)?.label || "\uC548\uC804\uD55C \uC7A5\uC18C";
+    return finalizeWorldArrival(safeFallbackLocation, {
+      targetState,
+      fallbackLocationId: safeFallbackLocation,
+      arrivalBadge: "\uC774\uB3D9 \uC624\uB958",
+      arrivalText: `\uC774\uB3D9 \uC911 \uBB38\uC81C\uAC00 \uC0DD\uACA8 ${fallbackLabel}\uC73C\uB85C \uB3CC\uC544\uC654\uB2E4.`,
+      memoryTitle: "\uC774\uB3D9 \uACBD\uB85C\uB97C \uB2E4\uC2DC \uC815\uB9AC\uD588\uB2E4",
+      memoryText: `\uC774\uB3D9 \uC911 \uCDA9\uB3CC\uC774 \uC0DD\uACA8 ${fallbackLabel}\uC5D0\uC11C \uB2E4\uC2DC \uC2DC\uC791\uD588\uB2E4.`,
+      memoryTags: ["travel", "fallback", safeFallbackLocation],
+      sourceLabel: worldState.pendingTravelSource || fallbackLabel,
+    });
+  }
+
+  const locationMap = getDayWorldLocationMap(targetState.day) || {};
+  const travelMethod = getPendingTravelMethodLabel(targetState);
+  const walkLabel = typeof getTravelMethodLabelForMode === "function"
+    ? getTravelMethodLabelForMode("walk", targetState)
+    : "\uB3C4\uBCF4";
+  const currentTravelSceneId = getCurrentLocationId(targetState);
+  const usedBusTravel = currentTravelSceneId === "bus-ride"
+    || currentTravelSceneId === "express-bus-travel"
+    || travelMethod.includes("\uBC84\uC2A4");
+  const arrivalBadge = usedBusTravel
+    ? "\uBC84\uC2A4 \uB3C4\uCC29"
+    : (travelMethod === walkLabel ? "\uB3C4\uBCF4 \uB3C4\uCC29" : "\uC774\uB3D9 \uC644\uB8CC");
+  const arrivalText = usedBusTravel
+    ? `${locationMap[pendingTargetLocation].label}\uC5D0 \uB0B4\uB824 \uC8FC\uBCC0\uC744 \uB458\uB7EC\uBCF8\uB2E4.`
+    : (travelMethod === walkLabel
+      ? `${locationMap[pendingTargetLocation].label}\uC5D0 \uAC78\uC5B4\uC11C \uB3C4\uCC29\uD588\uB2E4.`
+      : `${locationMap[pendingTargetLocation].label}\uC5D0 ${travelMethod}\uB85C \uB3C4\uCC29\uD588\uB2E4.`);
+  const memoryTitle = usedBusTravel
+    ? "\uBC84\uC2A4\uC5D0\uC11C \uB0B4\uB838\uB2E4"
+    : "\uC774\uB3D9\uC744 \uB9C8\uCE58\uACE0 \uB3C4\uCC29\uD588\uB2E4";
+
+  return finalizeWorldArrival(pendingTargetLocation, {
+    targetState,
+    fallbackLocationId: safeFallbackLocation,
+    arrivalBadge,
+    arrivalText,
+    memoryTitle,
+    memoryText: arrivalText,
+    memoryTags: ["travel", ...(usedBusTravel ? ["bus"] : ["walk"]), pendingTargetLocation],
+    sourceLabel: travelMethod,
+  });
+}
+
+function moveToWorldLocation(targetLocation = "", config = {}, targetState = state) {
+  if (shouldResolveWorldMoveDirectly(targetLocation, config, targetState)) {
+    return performWorldDirectMove(targetLocation, config, targetState);
+  }
+
+  return startWorldTravelToLocation(targetLocation, config, targetState);
+}
+
+function startWorldTravelToLocation(targetLocation = "", config = {}, targetState = state) {
+  const normalizedTargetLocation = String(targetLocation || "").trim();
+  const currentLocationId = getCurrentLocationId(targetState);
+  const currentLocation = getCurrentOutsideSceneConfig(targetState);
+  const locationMap = getDayWorldLocationMap(targetState.day);
+  const currentLabel = currentLocation?.label || getCurrentLocationLabel(targetState);
   const targetLabel = locationMap?.[normalizedTargetLocation]?.label || normalizedTargetLocation;
   const canMove = config.skipExitCheck
     || !Array.isArray(currentLocation?.exits)
@@ -8756,14 +10652,15 @@ function startWorldTravelToLocation(targetLocation = "", config = {}) {
     return false;
   }
 
-  const travelMinutes = Math.max(
-    TIME_SLOT_MINUTES,
-    Math.round(
-      Number(config.travelMinutes)
-      || estimateWalkTravelMinutes(currentLocationId, normalizedTargetLocation, state)
-      || TIME_SLOT_MINUTES
-    )
+  const resolvedTravelMinutes = Math.round(
+    Number(config.travelMinutes)
+    || estimateWalkTravelMinutes(currentLocationId, normalizedTargetLocation, targetState)
+    || TIME_SLOT_MINUTES
   );
+  const allowMinorTravelMinutes = config.forceTravelMode === true || config.allowMinorTravelMinutes === true;
+  const travelMinutes = allowMinorTravelMinutes
+    ? Math.max(4, resolvedTravelMinutes)
+    : Math.max(TIME_SLOT_MINUTES, resolvedTravelMinutes);
   const travelSlots = Number.isFinite(config.travelSlots)
     ? Math.max(TIME_COSTS.moveBetweenScenes, Math.round(config.travelSlots))
     : Math.max(TIME_COSTS.moveBetweenScenes, Math.ceil(travelMinutes / TIME_SLOT_MINUTES));
@@ -8776,23 +10673,28 @@ function startWorldTravelToLocation(targetLocation = "", config = {}) {
     ? config.memoryTags
     : ["이동", travelMethod.includes("버스") ? "bus" : "walk", normalizedTargetLocation];
 
+  const resolvedTravelMethod = getWorldMoveTravelMethod(config, targetState);
+  const resolvedMemoryTags = Array.isArray(config.memoryTags) && config.memoryTags.length
+    ? config.memoryTags
+    : ["travel", resolvedTravelMethod.includes("\uBC84\uC2A4") ? "bus" : "walk", normalizedTargetLocation];
   const reachedDayEnd = spendMinorTime(travelMinutes);
   if (reachedDayEnd) {
     advanceDayOrFinish();
     return true;
   }
 
-  syncWorldState(state);
-  state.world.pendingTravelTarget = normalizedTargetLocation;
-  state.world.pendingTravelDistrict = typeof getWorldLocationDistrictId === "function"
-    ? getWorldLocationDistrictId(normalizedTargetLocation, state.day)
-    : state.world.pendingTravelDistrict;
-  state.world.pendingTravelSource = currentLabel;
-  state.world.pendingTravelMinutes = travelMinutes;
-  state.world.pendingTravelMethod = travelMethod;
-  state.world.currentLocation = typeof config.travelSceneId === "string" && config.travelSceneId.trim()
+  syncWorldState(targetState);
+  targetState.world.pendingTravelTarget = normalizedTargetLocation;
+  targetState.world.pendingTravelDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(normalizedTargetLocation, targetState.day)
+    : targetState.world.pendingTravelDistrict;
+  targetState.world.pendingTravelSource = currentLabel;
+  targetState.world.pendingTravelSourceLocationId = currentLocationId;
+  targetState.world.pendingTravelMinutes = travelMinutes;
+  targetState.world.pendingTravelMethod = resolvedTravelMethod;
+  targetState.world.currentLocation = typeof config.travelSceneId === "string" && config.travelSceneId.trim()
     ? config.travelSceneId.trim()
-    : (config.travelMethod === "버스" ? "bus-ride" : "walk-travel");
+    : (resolvedTravelMethod.includes("\uBC84\uC2A4") ? "bus-ride" : "walk-travel");
 
   recordActionMemory(
     config.memoryTitle || `${targetLabel}로 이동한다`,
@@ -8800,28 +10702,50 @@ function startWorldTravelToLocation(targetLocation = "", config = {}) {
     {
       type: "travel",
       source: currentLabel,
-      tags: memoryTags,
+      tags: resolvedMemoryTags,
     }
   );
 
-  clearAlleyNpcState(state);
-  clearWanderResultState(state);
-  state.headline = {
+  clearAlleyNpcState(targetState);
+  clearWanderResultState(targetState);
+  targetState.headline = {
     badge: "",
     text: "",
   };
 
-  if (typeof hideCityMapOverlay === "function") {
+  if (typeof hideCityMapOverlay === "function" && targetState === state) {
     hideCityMapOverlay();
   }
 
-  renderGame();
+  if (targetState === state) {
+    renderGame();
+  }
   return true;
 }
 
 function handleOutsideOption(action) {
   const option = typeof action === "string" ? { action } : action;
   if (!option) {
+    return;
+  }
+
+  if (option.action === "mcd-apply-job") {
+    if (typeof runMcDonaldsJobInquiryAction === "function") {
+      const result = runMcDonaldsJobInquiryAction(option.jobId, state);
+      if (result && !result.rendered) {
+        renderGame();
+      }
+    }
+    return;
+  }
+
+  if (option.action === "mcd-check-shift") {
+    if (typeof runMcDonaldsShiftCheckAction === "function") {
+      const result = runMcDonaldsShiftCheckAction(state);
+      if (result && !result.rendered) {
+        renderGame();
+      }
+    }
     return;
   }
 
@@ -8843,8 +10767,9 @@ function handleOutsideOption(action) {
     const cityMapSummary = typeof getCityMapTravelSummary === "function"
       ? getCityMapTravelSummary(homeLocationId, state)
       : null;
-    startWorldTravelToLocation(homeLocationId, {
+    moveToWorldLocation(homeLocationId, {
       skipExitCheck: Boolean(cityMapSummary) || option.skipExitCheck === true,
+      forceTravelMode: Boolean(cityMapSummary),
       travelMinutes: cityMapSummary?.minutes,
       travelSlots: cityMapSummary?.slots,
       travelMethod: cityMapSummary?.methodLabel,
@@ -8879,8 +10804,9 @@ function handleOutsideOption(action) {
       ? option.travelSceneId.trim()
       : undefined;
 
-    startWorldTravelToLocation(option.targetLocation, {
+    moveToWorldLocation(option.targetLocation, {
       skipExitCheck: Boolean(cityMapSummary) || shouldUseBusTravel || option.skipExitCheck === true,
+      forceTravelMode: Boolean(cityMapSummary) || shouldUseBusTravel,
       travelMinutes: shouldUseBusTravel
         ? TIME_SLOT_MINUTES
         : (cityMapSummary?.minutes ?? directTravelMinutes),
@@ -8928,11 +10854,16 @@ function handleCasinoVenueClick(event) {
   if (routeTarget) {
     event.preventDefault();
     event.stopPropagation();
-    if (spendPhoneInteractionTime()) {
-      return;
-    }
-    setCasinoVenueScreen(routeTarget.dataset.casinoRoute, state);
-    renderGame();
+    runGuardedUiAction(() => {
+      if (spendPhoneInteractionTime()) {
+        return;
+      }
+      setCasinoVenueScreen(routeTarget.dataset.casinoRoute, state);
+      renderGame();
+    }, {
+      source: "scene-choice",
+      actionId: `casino-route:${routeTarget.dataset.casinoRoute || ""}`,
+    });
     return;
   }
 
@@ -8940,10 +10871,15 @@ function handleCasinoVenueClick(event) {
   if (exitTarget) {
     event.preventDefault();
     event.stopPropagation();
-    if (spendPhoneInteractionTime()) {
-      return;
-    }
-    leaveCasinoVenue(state);
+    runGuardedUiAction(() => {
+      if (spendPhoneInteractionTime()) {
+        return;
+      }
+      leaveCasinoVenue(state);
+    }, {
+      source: "scene-choice",
+      actionId: "casino:leave",
+    });
     return;
   }
 
@@ -9076,6 +11012,12 @@ function advanceDayOrFinish({ recover = true } = {}) {
 }
 
 function finishRun() {
+  if (typeof stopRankingRealtimeSubscription === "function") {
+    stopRankingRealtimeSubscription();
+  }
+  if (typeof closeRankingScreen === "function") {
+    closeRankingScreen();
+  }
   if (typeof closeMemoryPanel === "function") {
     closeMemoryPanel(state);
   }
@@ -9102,6 +11044,7 @@ function finishRun() {
     badge: "최종 정산",
     text: `${MAX_DAYS}일이 끝났다. 최종 순자산과 행복 보너스를 합산해 마지막 순위를 정한다.`,
   };
+  persistState("finish-run");
   const myEntry = {
     entryKey: `local:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
     name: summary.playerName,
@@ -9118,9 +11061,33 @@ function finishRun() {
     stopRankingRealtimeSubscription();
   }
 
+  const showRankingFallbackEnding = (reason = "랭킹 연결 실패") => {
+    if (typeof closeRankingScreen === "function") {
+      closeRankingScreen();
+    }
+    state.scene = "ending";
+    if (typeof queueGameplayFeedback === "function") {
+      queueGameplayFeedback({
+        title: reason,
+        body: "온라인 랭킹 연결에 실패해도 정산은 계속 볼 수 있다.",
+        tone: "warn",
+        duration: 2600,
+      });
+    }
+    renderGame();
+  };
+
   const renderRankingEntries = (entries = []) => {
-    if (typeof showRankingScreen === "function") {
+    if (typeof showRankingScreen !== "function") {
+      showRankingFallbackEnding("랭킹 화면 로드 실패");
+      return;
+    }
+
+    try {
       showRankingScreen(myEntry, entries);
+    } catch (error) {
+      console.warn("[ranking] 화면 렌더 실패:", error);
+      showRankingFallbackEnding("랭킹 화면 오류");
     }
   };
 
@@ -9347,10 +11314,14 @@ function getRankByMoney(money) {
 
 function restartToTitle() {
   clearGameplayFeedback();
+  cancelPendingPersistState();
   clearSavedState();
   pendingSavedState = null;
   if (typeof stopRankingRealtimeSubscription === "function") {
     stopRankingRealtimeSubscription();
+  }
+  if (typeof closeRankingScreen === "function") {
+    closeRankingScreen();
   }
   resetStartScreenDrawState();
   hideSpoonDrawOverlay();

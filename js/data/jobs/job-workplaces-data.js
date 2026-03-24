@@ -50,10 +50,10 @@ const JOB_WORKPLACE_REGISTRY = {
   "mcd-kitchen": {
     employerName: "맥도날드",
     workplaceName: "맥도날드 배금거리점 주방",
-    locationId: "mcdonalds-counter",
+    locationId: "mcdonalds-kitchen",
     districtId: "commercial",
     routeStopId: "mcdonalds",
-    commuteHint: "배금거리 맥도날드 뒤쪽 주방으로 들어가 조리 라인에 선다.",
+    commuteHint: "카운터 안쪽 직원문을 지나 주방 라인으로 들어가면 된다.",
   },
   warehouse: {
     employerName: "배금상가물류",

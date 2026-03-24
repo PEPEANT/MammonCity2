@@ -17,7 +17,18 @@ function buildPhoneAppScreenHeaderMarkup({
   note = "",
   showHomeButton = true,
   homeButtonLabel = "홈",
+  actionsHtml = "",
 } = {}) {
+  const shouldShowActions = Boolean(actionsHtml || showHomeButton);
+  const actionMarkup = shouldShowActions
+    ? `
+      <div class="phone-app-screen-actions">
+        ${actionsHtml || ""}
+        ${showHomeButton ? `<button class="phone-app-mini-btn" type="button" data-phone-action="close-phone-view">${escapePhoneAppHtml(homeButtonLabel)}</button>` : ""}
+      </div>
+    `
+    : "";
+
   return `
     <div class="phone-app-screen-top">
       <div class="phone-app-screen-copy">
@@ -25,7 +36,7 @@ function buildPhoneAppScreenHeaderMarkup({
         <div class="phone-app-screen-title">${escapePhoneAppHtml(title)}</div>
         ${note ? `<div class="phone-app-screen-note">${escapePhoneAppHtml(note)}</div>` : ""}
       </div>
-      ${showHomeButton ? `<button class="phone-app-mini-btn" type="button" data-phone-action="close-phone-view">${escapePhoneAppHtml(homeButtonLabel)}</button>` : ""}
+      ${actionMarkup}
     </div>
   `;
 }

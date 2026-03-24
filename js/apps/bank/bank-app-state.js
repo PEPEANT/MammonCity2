@@ -174,6 +174,9 @@ function setBankBalance(nextAmount, targetState = state) {
   const nextState = patchBankDomainState(targetState, {
     balance: Math.max(0, Math.round(Number(nextAmount) || 0)),
   });
+  if (typeof syncCriticalResourceWarnings === "function") {
+    syncCriticalResourceWarnings(targetState);
+  }
   return nextState.balance;
 }
 
@@ -287,6 +290,7 @@ function createBankAppViewModel(targetState = state) {
   return {
     balance: bankState.balance,
     cashOnHand,
+    liquidFunds: cashOnHand + bankState.balance,
     transactions: bankState.transactions.map(cloneBankTransactionSnapshot).filter(Boolean),
     transferDraft: normalizeBankTransferDraft(bankState.transferDraft),
     loans: bankState.loans.map(cloneBankLoanSnapshot).filter(Boolean),
