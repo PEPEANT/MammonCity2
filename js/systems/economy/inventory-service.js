@@ -614,9 +614,8 @@ function getTravelMethodLabelForMode(mode = "walk", targetState = state) {
     return "버스";
   }
 
-  const travelProfile = getOwnedVehicleTravelProfile(targetState);
-  if (normalizedMode === "walk" && travelProfile?.label) {
-    return travelProfile.label;
+  if (normalizedMode === "walk") {
+    return "도보";
   }
 
   return "도보";

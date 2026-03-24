@@ -113,6 +113,13 @@ function getCurrentOutsideSceneConfig(targetState = state) {
       resolvedScene.lines[0] = `${sourceLabel}에서 ${targetLabel} 쪽으로 ${methodLabel} ${durationLabel} 코스를 잡고 걸음을 옮긴다.`;
     }
 
+    if (locationId === "walk-travel") {
+      const sourceLabel = getPendingTravelSourceLabel(targetState);
+      const targetLabel = getPendingTravelTargetLabel(targetState);
+      const durationLabel = getPendingTravelDurationLabel(targetState);
+      resolvedScene.lines[0] = `${sourceLabel}에서 ${targetLabel} 쪽으로 ${durationLabel} 정도 걸어간다.`;
+    }
+
     const activeAlleyNpc = getActiveAlleyNpcConfig(targetState);
     const wanderResult = worldState.wanderResult || {};
     const wanderFocusNpcId = wanderResult.locationId === locationId
@@ -184,6 +191,17 @@ function getCurrentOutsideSceneConfig(targetState = state) {
     });
 
     applyMcDonaldsVenueSceneState(resolvedScene, locationId, targetState);
+
+    if (locationId === "baegeum-hospital") {
+      resolvedScene.options = resolvedScene.options.map((option) =>
+        option?.action === "get-plastic-surgery"
+          ? {
+              ...option,
+              title: "상담실로 들어가 성형 플랜을 고른다",
+            }
+          : option
+      );
+    }
 
     if (typeof resolveSceneActorPresentation === "function") {
       resolvedScene.actors = resolvedScene.actors.map((actor) =>
@@ -552,6 +570,7 @@ function getCurrentInputGateMode(targetState = state) {
     "clockout",
     "result",
     "lecture",
+    "plastic-surgery",
     "turn-briefing",
     "romance",
     "romance-call",
@@ -1655,6 +1674,7 @@ function createInitialState() {
       followUpStateByNpcId: { ...(ambientRomanceDefaults.followUpStateByNpcId || {}) },
     },
     romanceScene: null,
+    plasticSurgeryEvent: null,
     lottoRetailer: createDefaultLottoRetailerState(),
     pendingTurnEvents: [],
     turnBriefing: null,
@@ -1744,6 +1764,7 @@ function buildPersistenceSceneFrame(targetState = state) {
     currentIncident: targetState?.currentIncident || null,
     jobMiniGame: targetState?.jobMiniGame || null,
     clockOutSummary: targetState?.clockOutSummary || null,
+    plasticSurgeryEvent: targetState?.plasticSurgeryEvent || null,
   };
   const collapsePhone = () => {
     frame.phoneMinimized = true;
@@ -1785,6 +1806,13 @@ function buildPersistenceSceneFrame(targetState = state) {
     return frame;
   }
 
+  if (frame.scene === "plastic-surgery") {
+    const restoreLocationId = String(frame.plasticSurgeryEvent?.locationId || getPlasticSurgeryEventLocationId(targetState)).trim();
+    frame.worldPatch = buildWorldLocationPersistencePatch(targetState, restoreLocationId);
+    collapsePhone();
+    return frame;
+  }
+
   if (frame.scene === "ranking") {
     frame.scene = targetState?.endingSummary ? "ending" : "room";
     frame.currentOffer = null;
@@ -1820,6 +1848,7 @@ function applyPersistenceSceneFrame(targetState = state, frame = buildPersistenc
   targetState.jobMiniGame = frame.jobMiniGame ?? null;
   targetState.clockOutSummary = frame.clockOutSummary ?? null;
   targetState.homeTransition = frame.homeTransition ?? null;
+  targetState.plasticSurgeryEvent = frame.plasticSurgeryEvent ?? null;
   targetState.phoneMinimized = Boolean(frame.phoneMinimized);
   targetState.phoneStageExpanded = Boolean(frame.phoneStageExpanded);
   targetState.phoneView = String(frame.phoneView || "home");
@@ -1869,6 +1898,10 @@ function stabilizeRestoredStateForPlay(targetState = state) {
     targetState.scene = targetState.currentIncident ? "incident" : "room";
   }
 
+  if (targetState.scene === "plastic-surgery" && !targetState.plasticSurgeryEvent) {
+    targetState.scene = "outside";
+  }
+
   targetState.inputGate = createDefaultInputGateState();
   return targetState;
 }
@@ -1878,6 +1911,12 @@ function serializeState(currentState = state, { reason = "render" } = {}) {
   const currentWorldState = typeof syncWorldState === "function"
     ? syncWorldState(currentState)
     : (currentState.world || {});
+  const activeJobs = currentState?.activeJobs instanceof Set
+    ? [...currentState.activeJobs]
+    : (Array.isArray(currentState?.activeJobs) ? [...currentState.activeJobs] : []);
+  const seenIncidents = currentState?.seenIncidents instanceof Set
+    ? [...currentState.seenIncidents]
+    : (Array.isArray(currentState?.seenIncidents) ? [...currentState.seenIncidents] : []);
   const {
     dayOffers,
     nextDayShift,
@@ -1996,8 +2035,8 @@ function serializeState(currentState = state, { reason = "render" } = {}) {
           ])
         ),
       },
-      activeJobs: [...currentState.activeJobs],
-      seenIncidents: [...currentState.seenIncidents],
+      activeJobs,
+      seenIncidents,
     },
   };
 }
@@ -2147,7 +2186,10 @@ function hydrateState(rawState = {}) {
           npcActor: rawState.romanceScene.npcActor && typeof rawState.romanceScene.npcActor === "object"
             ? { ...rawState.romanceScene.npcActor }
             : null,
-        })
+          })
+    : null;
+  mergedState.plasticSurgeryEvent = rawState.plasticSurgeryEvent && typeof rawState.plasticSurgeryEvent === "object"
+    ? { ...rawState.plasticSurgeryEvent }
     : null;
   mergedState.romance = rawState.romance && typeof rawState.romance === "object"
     ? {
@@ -4069,6 +4111,7 @@ function restoreJobMiniGameOrigin(targetState = state, gameSnapshot = null) {
   }
 
   const restoreLocationId = resolveJobMiniGameRestoreLocationId(targetState, gameSnapshot);
+  const day = targetState?.day || getCurrentDayNumber();
 
   if (!restoreLocationId) {
     return "";
@@ -5003,6 +5046,10 @@ function completeWorkClockOut(targetState = state) {
     ],
   };
 
+  if (Array.isArray(targetState.lastResult?.lines) && targetState.lastResult.lines.length > 0) {
+    targetState.lastResult.lines[0] = `${summary.depositDestination === "bank" ? "급여" : "정산"} ${formatMoney(pay)}${summary.depositDestination === "bank" ? "이 계좌로 들어왔다." : "를 받았다."}`;
+  }
+
   if (summary.nextLocationId && typeof syncWorldState === "function") {
     const worldState = syncWorldState(targetState);
     worldState.currentLocation = summary.nextLocationId;
@@ -5833,8 +5880,21 @@ function clearSavedState() {
   }
 }
 
-function restoreSavedState(savedState = pendingSavedState || loadSavedState()) {
+function resolveRestoredStatePayload(savedState) {
   if (!savedState) {
+    return null;
+  }
+
+  if (savedState?.version === SAVE_STATE_VERSION && savedState.state) {
+    return hydrateState(savedState.state);
+  }
+
+  return hydrateState(savedState);
+}
+
+function restoreSavedState(savedState = pendingSavedState || loadSavedState()) {
+  const resolvedState = resolveRestoredStatePayload(savedState);
+  if (!resolvedState) {
     return false;
   }
 
@@ -5846,7 +5906,10 @@ function restoreSavedState(savedState = pendingSavedState || loadSavedState()) {
   if (typeof closeRankingScreen === "function") {
     closeRankingScreen();
   }
-  state = savedState;
+  state = resolvedState;
+  if (typeof markSceneTextForImmediateReveal === "function") {
+    markSceneTextForImmediateReveal();
+  }
   hideStartScreen();
   renderGame();
   return true;
@@ -5968,7 +6031,7 @@ const ACTION_HANDLERS = {
     });
   },
   "get-plastic-surgery"() {
-    performPlasticSurgery(state);
+    openPlasticSurgeryConsultation(state);
   },
   "buy-convenience-water"() {
     buyConvenienceStoreItem("buy-convenience-water", state);
@@ -7962,6 +8025,442 @@ function useInventoryConsumable(itemId, targetState = state) {
 }
 
 const PLASTIC_SURGERY_COST = 10000000;
+const PLASTIC_SURGERY_GLAM_COST = 12000000;
+const PLASTIC_SURGERY_RECOVERY_BACKGROUND = Object.freeze({
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/baegeum-hospital-recovery.png",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(8, 15, 26, 0.06) 0%, rgba(8, 15, 26, 0.22) 100%)",
+});
+const PLASTIC_SURGERY_PLAN_LIBRARY = Object.freeze({
+  natural: Object.freeze({
+    id: "natural",
+    label: "자연형",
+    cost: PLASTIC_SURGERY_COST,
+    attractivenessDelta: 2,
+    happinessDelta: 8,
+    consultationLine: "지금 인상을 크게 해치지 않고 깔끔하게 정리하는 방향이다.",
+    memoryLine: "전체 인상을 부드럽고 깔끔하게 정리했다.",
+  }),
+  defined: Object.freeze({
+    id: "defined",
+    label: "또렷형",
+    cost: PLASTIC_SURGERY_GLAM_COST,
+    attractivenessDelta: 3,
+    happinessDelta: 10,
+    consultationLine: "눈에 띄는 도시형 라인을 살려 첫인상을 더 또렷하게 만든다.",
+    memoryLine: "또렷한 라인을 살려 한 단계 강한 인상으로 정리했다.",
+  }),
+});
+
+function getPlasticSurgeryEventLocationId(targetState = state) {
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+  return String(currentLocationId || "baegeum-hospital").trim() || "baegeum-hospital";
+}
+
+function getAppearanceLevelForProfileId(profileId = "") {
+  const normalizedProfileId = String(profileId || "").trim();
+
+  if (["level3Start", "level3Mid", "level3Final"].includes(normalizedProfileId)) {
+    return 3;
+  }
+
+  if (normalizedProfileId === "level2") {
+    return 2;
+  }
+
+  return 1;
+}
+
+function getPlasticSurgeryResultProfileId(planId = "", targetState = state) {
+  const normalizedPlanId = String(planId || "").trim().toLowerCase();
+  const originProfileId = typeof getPlayerOriginAppearanceProfileId === "function"
+    ? getPlayerOriginAppearanceProfileId(targetState)
+    : "level1";
+
+  if (normalizedPlanId === "defined") {
+    if (originProfileId === "level3Start") {
+      return "level3Final";
+    }
+    if (originProfileId === "level2") {
+      return "level3Final";
+    }
+    return "level3Start";
+  }
+
+  if (originProfileId === "level3Start") {
+    return "level3Final";
+  }
+  if (originProfileId === "level2") {
+    return "level3Mid";
+  }
+  return "level2";
+}
+
+function getPlasticSurgeryPlanDefinition(planId = "", targetState = state) {
+  const normalizedPlanId = String(planId || "").trim().toLowerCase();
+  const basePlan = PLASTIC_SURGERY_PLAN_LIBRARY[normalizedPlanId] || null;
+  if (!basePlan) {
+    return null;
+  }
+
+  const resultProfileId = getPlasticSurgeryResultProfileId(normalizedPlanId, targetState);
+  const expectedAppearanceLevel = getAppearanceLevelForProfileId(resultProfileId);
+
+  return {
+    ...basePlan,
+    resultProfileId,
+    expectedAppearanceLevel,
+    expectedAppearanceLabel: `${expectedAppearanceLevel}LV`,
+  };
+}
+
+function getPlasticSurgeryPlanDefinitions(targetState = state) {
+  return Object.keys(PLASTIC_SURGERY_PLAN_LIBRARY)
+    .map((planId) => getPlasticSurgeryPlanDefinition(planId, targetState))
+    .filter(Boolean);
+}
+
+function createPlasticSurgeryEventSnapshot(targetState = state, patch = {}) {
+  const currentEvent = targetState?.plasticSurgeryEvent && typeof targetState.plasticSurgeryEvent === "object"
+    ? targetState.plasticSurgeryEvent
+    : {};
+  const fallbackLocationId = getPlasticSurgeryEventLocationId(targetState);
+  const resolvedLocationId = String(
+    patch.locationId
+    || currentEvent.locationId
+    || fallbackLocationId
+    || "baegeum-hospital"
+  ).trim() || "baegeum-hospital";
+
+  return {
+    stage: "consultation",
+    selectedPlanId: "",
+    locationId: resolvedLocationId,
+    spentAmount: 0,
+    resultProfileId: "",
+    afterAppearanceLevel: 0,
+    dayEnded: false,
+    completed: false,
+    ...currentEvent,
+    ...patch,
+    locationId: resolvedLocationId,
+  };
+}
+
+function getPlasticSurgerySceneConfig(targetState = state) {
+  const plasticEvent = targetState?.plasticSurgeryEvent;
+  if (!plasticEvent || typeof plasticEvent !== "object") {
+    return null;
+  }
+
+  const stage = String(plasticEvent.stage || "consultation").trim().toLowerCase() || "consultation";
+  const hospitalLocation = typeof getDayWorldLocationMap === "function"
+    ? getDayWorldLocationMap(targetState?.day || getCurrentDayNumber())?.[plasticEvent.locationId || "baegeum-hospital"]
+    : null;
+  const lobbyBackground = hospitalLocation?.background || null;
+  const plan = getPlasticSurgeryPlanDefinition(plasticEvent.selectedPlanId, targetState);
+  const afterAppearanceLevel = Math.max(
+    1,
+    Number(plasticEvent.afterAppearanceLevel) || getPlayerAppearanceLevel(targetState),
+  );
+  const afterAppearanceLabel = `${afterAppearanceLevel}LV`;
+  const sharedPlayerActor = {
+    kind: "player",
+    alt: "player-plastic-surgery",
+    left: 34,
+    bottom: 4,
+    height: 86,
+    zIndex: 2,
+  };
+
+  if (stage === "consultation") {
+    return {
+      stage,
+      speaker: "배금병원 성형외과",
+      title: "상담실에서 얼굴 라인을 고른다",
+      lines: [
+        "상담실 거울 옆으로 자연형과 또렷형 시안 카드가 가지런히 놓여 있다.",
+        "원장은 지금 인상은 살리되 어느 정도까지 또렷하게 바꿀지 먼저 고르라고 한다.",
+      ],
+      tags: ["병원", "성형", "상담"],
+      backgroundConfig: lobbyBackground,
+      actors: [sharedPlayerActor],
+      choices: getPlasticSurgeryPlanDefinitions(targetState).map((entry) => ({
+        type: "plan",
+        planId: entry.id,
+        title: `${entry.label}으로 진행한다 · ${entry.expectedAppearanceLabel}`,
+        description: `${entry.expectedAppearanceLabel} 목표 · ${entry.consultationLine}`,
+        earnText: formatMoney(entry.cost),
+      })).concat({
+        type: "cancel",
+        title: "오늘은 상담만 받고 나온다",
+      }),
+    };
+  }
+
+  if (stage === "procedure") {
+    return {
+      stage,
+      speaker: "수술 준비실",
+      title: `${plan?.label || "성형"} 수술 준비`,
+      lines: [
+        `${formatMoney(plasticEvent.spentAmount || plan?.cost || 0)} 결제가 끝나자 간단한 체크리스트와 동의서가 차례로 넘어온다.`,
+        "밝은 조명 아래에서 눈을 감으면 금방 끝난다는 말과 함께 수술대가 천천히 내려온다.",
+      ],
+      tags: ["병원", "수술", plan?.label || "성형"],
+      backgroundConfig: PLASTIC_SURGERY_RECOVERY_BACKGROUND,
+      actors: [],
+      choices: [
+        {
+          type: "advance",
+          title: "마취가 퍼지는 동안 눈을 감는다",
+        },
+      ],
+    };
+  }
+
+  if (stage === "recovery") {
+    return {
+      stage,
+      speaker: "회복실",
+      title: "붕대를 감은 채 회복실에서 눈을 뜬다",
+      lines: [
+        "희미한 소독약 냄새 사이로 간호사가 붓기가 가라앉는 동안 천천히 거울을 보라고 안내한다.",
+        "얼굴 라인이 정리된 느낌은 오지만 아직 완전히 실감이 나지 않는다.",
+      ],
+      tags: ["병원", "회복", plan?.label || "성형"],
+      backgroundConfig: PLASTIC_SURGERY_RECOVERY_BACKGROUND,
+      actors: [],
+      choices: [
+        {
+          type: "advance",
+          title: "천천히 자리에서 일어나 거울 앞으로 간다",
+        },
+      ],
+    };
+  }
+
+  return {
+    stage: "result",
+    speaker: "배금병원 성형외과",
+    title: "거울 앞에서 달라진 인상을 확인한다",
+    lines: [
+      `${plan?.label || "성형"} 수술이 마무리됐다. 거울 속 얼굴은 ${afterAppearanceLabel} 인상에 맞게 더 또렷하게 정리되어 있다.`,
+      "병원 로비로 나가면 사람들의 첫 반응도 전보다 달라질 것 같은 확신이 든다.",
+    ],
+    tags: ["병원", "성형 완료", afterAppearanceLabel],
+    backgroundConfig: lobbyBackground || PLASTIC_SURGERY_RECOVERY_BACKGROUND,
+    actors: [sharedPlayerActor],
+    choices: [
+      {
+        type: "finish",
+        title: "병원 로비로 나온다",
+      },
+    ],
+  };
+}
+
+function openPlasticSurgeryConsultation(targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  if (typeof ensurePresentationStateReady === "function") {
+    ensurePresentationStateReady(targetState);
+  }
+
+  if (targetState.appearance?.surgeryDone) {
+    targetState.headline = {
+      badge: "성형외과",
+      text: "이미 큰 시술은 마쳤다. 지금은 결과를 유지하는 쪽이 더 중요해 보인다.",
+    };
+    renderGame();
+    return false;
+  }
+
+  targetState.phoneView = "home";
+  targetState.scene = "plastic-surgery";
+  targetState.plasticSurgeryEvent = createPlasticSurgeryEventSnapshot(targetState, {
+    stage: "consultation",
+    selectedPlanId: "",
+    spentAmount: 0,
+    resultProfileId: "",
+    afterAppearanceLevel: 0,
+    dayEnded: false,
+    completed: false,
+  });
+  renderGame();
+  return true;
+}
+
+function performPlasticSurgeryPlan(planId = "", targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  if (typeof ensurePresentationStateReady === "function") {
+    ensurePresentationStateReady(targetState);
+  }
+
+  const normalizedPlanId = String(planId || "").trim().toLowerCase();
+  if (!normalizedPlanId) {
+    return openPlasticSurgeryConsultation(targetState);
+  }
+
+  if (targetState.appearance?.surgeryDone) {
+    targetState.headline = {
+      badge: "성형외과",
+      text: "이미 큰 시술은 마친 상태라 오늘은 추가 수술 일정을 잡지 않는다.",
+    };
+    renderGame();
+    return false;
+  }
+
+  const plan = getPlasticSurgeryPlanDefinition(normalizedPlanId, targetState);
+  if (!plan) {
+    return openPlasticSurgeryConsultation(targetState);
+  }
+
+  targetState.scene = "plastic-surgery";
+  targetState.phoneView = "home";
+  targetState.plasticSurgeryEvent = createPlasticSurgeryEventSnapshot(targetState, {
+    stage: "consultation",
+    selectedPlanId: normalizedPlanId,
+  });
+
+  if (typeof canAfford === "function" && !canAfford(plan.cost, targetState)) {
+    targetState.headline = {
+      badge: "상담 보류",
+      text: `${formatMoney(plan.cost)}이 있어야 ${plan.label} 수술을 진행할 수 있다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof spendCash === "function" && !spendCash(plan.cost, targetState)) {
+    targetState.headline = {
+      badge: "결제 실패",
+      text: "접수 단계에서 결제가 승인되지 않아 상담실로 다시 안내됐다.",
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof patchAppearanceState === "function") {
+    patchAppearanceState({
+      profileId: plan.resultProfileId,
+      surgeryDone: true,
+      attractivenessDelta: plan.attractivenessDelta,
+      flags: {
+        hadPlasticSurgery: true,
+        surgeryPlanId: plan.id,
+        surgeryPlanLabel: plan.label,
+      },
+    }, targetState);
+  }
+
+  if (typeof adjustHappiness === "function") {
+    adjustHappiness(plan.happinessDelta, targetState);
+  }
+
+  if (typeof addUnlockEntry === "function") {
+    addUnlockEntry("events", "plastic-surgery", targetState);
+  }
+
+  const afterAppearanceLevel = getAppearanceLevelForProfileId(plan.resultProfileId);
+  const dayEnded = spendTimeSlots(2);
+
+  targetState.headline = {
+    badge: "성형 진행",
+    text: `${formatMoney(plan.cost)}을 내고 ${plan.label} 수술을 시작했다. 회복이 끝나면 ${afterAppearanceLevel}LV 인상으로 정리된다.`,
+  };
+  targetState.plasticSurgeryEvent = createPlasticSurgeryEventSnapshot(targetState, {
+    stage: "procedure",
+    selectedPlanId: plan.id,
+    spentAmount: plan.cost,
+    resultProfileId: plan.resultProfileId,
+    afterAppearanceLevel,
+    dayEnded: Boolean(dayEnded),
+    completed: true,
+  });
+
+  recordActionMemory("배금병원에서 성형 수술을 받았다", `${formatMoney(plan.cost)}을 내고 ${plan.label} 수술을 진행했다. ${plan.memoryLine}`, {
+    type: "event",
+    source: getCurrentLocationLabel(),
+    tags: ["병원", "성형", plan.label],
+  });
+
+  renderGame();
+  return true;
+}
+
+function finishPlasticSurgeryEvent(targetState = state) {
+  const plasticEvent = targetState?.plasticSurgeryEvent;
+  if (!targetState || !plasticEvent) {
+    return false;
+  }
+
+  const plan = getPlasticSurgeryPlanDefinition(plasticEvent.selectedPlanId, targetState);
+  const afterAppearanceLevel = Math.max(
+    1,
+    Number(plasticEvent.afterAppearanceLevel) || getPlayerAppearanceLevel(targetState),
+  );
+  const locationId = String(plasticEvent.locationId || "baegeum-hospital").trim() || "baegeum-hospital";
+
+  targetState.headline = {
+    badge: "성형 완료",
+    text: `${plan?.label || "성형"} 수술을 마치고 ${afterAppearanceLevel}LV 인상으로 정리했다.`,
+  };
+  targetState.scene = "outside";
+  targetState.phoneView = "home";
+  targetState.plasticSurgeryEvent = null;
+  targetState.world = {
+    ...(targetState.world && typeof targetState.world === "object" ? targetState.world : {}),
+    ...buildWorldLocationPersistencePatch(targetState, locationId),
+  };
+
+  if (plasticEvent.dayEnded) {
+    advanceDayOrFinish();
+    return true;
+  }
+
+  renderGame();
+  return true;
+}
+
+function advancePlasticSurgeryEvent(targetState = state) {
+  const plasticEvent = targetState?.plasticSurgeryEvent;
+  if (!plasticEvent || typeof plasticEvent !== "object") {
+    return false;
+  }
+
+  const currentStage = String(plasticEvent.stage || "consultation").trim().toLowerCase();
+  if (currentStage === "procedure") {
+    targetState.plasticSurgeryEvent = createPlasticSurgeryEventSnapshot(targetState, {
+      stage: "recovery",
+    });
+    renderGame();
+    return true;
+  }
+
+  if (currentStage === "recovery") {
+    targetState.plasticSurgeryEvent = createPlasticSurgeryEventSnapshot(targetState, {
+      stage: "result",
+    });
+    renderGame();
+    return true;
+  }
+
+  if (currentStage === "result") {
+    return finishPlasticSurgeryEvent(targetState);
+  }
+
+  return false;
+}
 const CONVENIENCE_STORE_CATALOG = Object.freeze({
   "buy-convenience-water": Object.freeze({
     itemId: "water-bottle",
@@ -11086,7 +11585,6 @@ function finishRun() {
     try {
       showRankingScreen(myEntry, entries);
     } catch (error) {
-      console.warn("[ranking] 화면 렌더 실패:", error);
       showRankingFallbackEnding("랭킹 화면 오류");
     }
   };

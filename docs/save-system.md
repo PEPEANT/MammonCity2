@@ -82,4 +82,7 @@
 - Title reset, new game, continue, clear-save, and restore paths cancel or flush pending save timers before replacing state.
 - `buildPersistenceSceneFrame()` is the canonical sanitizer for unsafe scenes before serialization.
 - `ranking` always saves as `ending`, and `job-minigame` saves as a recoverable fallback scene instead of trying to resume a broken minigame directly.
+- `plastic-surgery` is now treated as a resumable custom event scene instead of being folded into `outside`, so mid-procedure saves do not lose the staged recovery/day-end flow.
+- `restoreSavedState()` now tolerates both raw hydrated state objects and full `{ version, state }` save wrappers, which keeps manual restore/dev replay paths from crashing on partial payloads.
+- Jobs save snapshots now sanitize `careerPrep`, `certifications`, `activeJobs`, and `seenIncidents` defensively, so malformed/null data no longer emits save-time console warnings.
 - Current release risk is not save corruption but incomplete manual coverage across the full `day 1 -> ending` run.

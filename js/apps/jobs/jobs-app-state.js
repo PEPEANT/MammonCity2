@@ -48,11 +48,12 @@ function sanitizeCareerPrepSnapshot(prep = {}) {
     office: 0,
     academic: 0,
   };
+  const source = prep && typeof prep === "object" ? prep : {};
 
   return Object.fromEntries(
     Object.keys(defaults).map((key) => [
       key,
-      Math.max(0, Math.round(Number(prep[key] ?? defaults[key]) || 0)),
+      Math.max(0, Math.round(Number(source[key] ?? defaults[key]) || 0)),
     ]),
   );
 }
@@ -63,9 +64,10 @@ function sanitizeCertificationSnapshot(certifications = {}) {
     computerCert: false,
     universityDegree: false,
   };
+  const source = certifications && typeof certifications === "object" ? certifications : {};
 
   return Object.fromEntries(
-    Object.keys(defaults).map((key) => [key, Boolean(certifications[key])]),
+    Object.keys(defaults).map((key) => [key, Boolean(source[key])]),
   );
 }
 

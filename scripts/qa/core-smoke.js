@@ -38,6 +38,32 @@ const textChecks = [
     failMessage: "Save-state sanitizer helper is missing from `js/logic.js`.",
   },
   {
+    label: "restore payload normalizer exists",
+    file: "js/logic.js",
+    test: (text) => text.includes("function resolveRestoredStatePayload("),
+    failMessage: "Restore-state payload normalizer is missing from `js/logic.js`.",
+  },
+  {
+    label: "save set fallback exists",
+    file: "js/logic.js",
+    test: (text) => text.includes("currentState?.activeJobs instanceof Set")
+      && text.includes("currentState?.seenIncidents instanceof Set"),
+    failMessage: "Save-state Set fallback for active jobs / incidents is missing from `js/logic.js`.",
+  },
+  {
+    label: "plastic surgery consultation exists",
+    file: "js/logic.js",
+    test: (text) => text.includes("function openPlasticSurgeryConsultation(")
+      && text.includes("function performPlasticSurgeryPlan("),
+    failMessage: "Plastic surgery consultation flow helpers are missing from `js/logic.js`.",
+  },
+  {
+    label: "plastic surgery scene renderer exists",
+    file: "js/ui.js",
+    test: (text) => text.includes("function renderPlasticSurgeryScene("),
+    failMessage: "Plastic surgery scene renderer is missing from `js/ui.js`.",
+  },
+  {
     label: "global hidden fallback exists",
     file: "css/components.css",
     test: (text) => /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/m.test(text),
@@ -91,6 +117,18 @@ for (const check of textChecks) {
     }
   } catch (error) {
     logFail(`${check.label}: ${error.message}`);
+  }
+}
+
+const requiredAssetPaths = [
+  "assets/backgrounds/day01/baegeum-hospital-recovery.png",
+];
+
+for (const relativePath of requiredAssetPaths) {
+  if (fs.existsSync(path.join(repoRoot, relativePath))) {
+    logPass(`asset ${relativePath}`);
+  } else {
+    logFail(`Missing required asset: ${relativePath}`);
   }
 }
 

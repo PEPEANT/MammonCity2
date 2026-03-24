@@ -88,7 +88,15 @@ This script currently checks:
 - Open trading and confirm quantity, average entry, pnl, liquidation price, and status are visible.
 - Confirm liquidation shows an explicit warning instead of a silent disappearance.
 
-### 10. Ending and ranking fallback
+### 10. Plastic surgery flow
+
+- Move to Baegeum Hospital and open the consultation room.
+- Confirm both `자연형` and `또렷형` choices are shown with price and target appearance level.
+- Confirm insufficient funds leaves the player in consultation with a clear failure headline.
+- Confirm successful surgery runs through consultation -> procedure -> recovery -> mirror -> hospital lobby return.
+- Save during the surgery scene, reload, and confirm the event scene resumes instead of dropping the player into a broken fallback state.
+
+### 11. Ending and ranking fallback
 
 - Progress to ending or load an ending-adjacent save.
 - Save just before ending, reload, and confirm recovery goes to `ending`.
@@ -105,6 +113,7 @@ Release should stay blocked if any of these remain:
 - repeated button presses trigger visible lock spam
 - major locations fail NPC visibility or NPC click interaction
 - McDonald's shift flow mixes inquiry, customer, and work states again
+- plastic surgery mid-save drops staged progress or loses day-end resolution
 - ranking failure blocks ending completion
 
 ## Recommended Order
@@ -117,4 +126,5 @@ Release should stay blocked if any of these remain:
 6. NPC visibility + wander checks
 7. McDonald's shift loop
 8. economy visibility checks
-9. ending + ranking fallback
+9. plastic surgery flow
+10. ending + ranking fallback

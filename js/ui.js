@@ -176,10 +176,23 @@ function cacheUi() {
 }
 
 const sceneTextProgress = {
-  key: "",
-  lineIndex: 0,
-  lineCount: 0,
+  activeKey: "",
+  progressByKey: {},
 };
+let revealAllSceneTextOnNextRender = false;
+
+function markSceneTextForImmediateReveal() {
+  revealAllSceneTextOnNextRender = true;
+}
+
+function consumePendingSceneTextReveal() {
+  if (!revealAllSceneTextOnNextRender) {
+    return false;
+  }
+
+  revealAllSceneTextOnNextRender = false;
+  return true;
+}
 
 function syncTextboxContentState() {
   if (!ui.textbox) {
@@ -217,9 +230,13 @@ function getSceneTextProgressState(progressKey, resolvedLines = []) {
   const lineCount = resolvedLines.length;
 
   if (!progressKey || lineCount <= 1) {
-    sceneTextProgress.key = progressKey || "";
-    sceneTextProgress.lineIndex = Math.max(0, lineCount - 1);
-    sceneTextProgress.lineCount = lineCount;
+    sceneTextProgress.activeKey = progressKey || "";
+    if (progressKey) {
+      sceneTextProgress.progressByKey[progressKey] = {
+        lineIndex: Math.max(0, lineCount - 1),
+        lineCount,
+      };
+    }
 
     return {
       visibleLines: resolvedLines,
@@ -228,16 +245,21 @@ function getSceneTextProgressState(progressKey, resolvedLines = []) {
     };
   }
 
-  if (sceneTextProgress.key !== progressKey) {
-    sceneTextProgress.key = progressKey;
-    sceneTextProgress.lineIndex = 0;
+  sceneTextProgress.activeKey = progressKey;
+
+  if (!sceneTextProgress.progressByKey[progressKey]) {
+    sceneTextProgress.progressByKey[progressKey] = {
+      lineIndex: 0,
+      lineCount,
+    };
   }
 
-  sceneTextProgress.lineCount = lineCount;
-  sceneTextProgress.lineIndex = Math.min(sceneTextProgress.lineIndex, Math.max(0, lineCount - 1));
+  const progressEntry = sceneTextProgress.progressByKey[progressKey];
+  progressEntry.lineCount = lineCount;
+  progressEntry.lineIndex = Math.min(progressEntry.lineIndex, Math.max(0, lineCount - 1));
 
-  const visibleLines = resolvedLines.slice(0, sceneTextProgress.lineIndex + 1);
-  const canAdvance = sceneTextProgress.lineIndex < lineCount - 1;
+  const visibleLines = resolvedLines.slice(0, progressEntry.lineIndex + 1);
+  const canAdvance = progressEntry.lineIndex < lineCount - 1;
 
   return {
     visibleLines,
@@ -247,7 +269,13 @@ function getSceneTextProgressState(progressKey, resolvedLines = []) {
 }
 
 function canAdvanceSceneText() {
-  return sceneTextProgress.lineCount > 1 && sceneTextProgress.lineIndex < sceneTextProgress.lineCount - 1;
+  const activeKey = sceneTextProgress.activeKey;
+  if (!activeKey) {
+    return false;
+  }
+
+  const progressEntry = sceneTextProgress.progressByKey[activeKey];
+  return Boolean(progressEntry && progressEntry.lineCount > 1 && progressEntry.lineIndex < progressEntry.lineCount - 1);
 }
 
 function advanceSceneText() {
@@ -255,7 +283,12 @@ function advanceSceneText() {
     return false;
   }
 
-  sceneTextProgress.lineIndex += 1;
+  const progressEntry = sceneTextProgress.progressByKey[sceneTextProgress.activeKey];
+  if (!progressEntry) {
+    return false;
+  }
+
+  progressEntry.lineIndex += 1;
   renderGame();
   return true;
 }
@@ -1543,7 +1576,10 @@ function syncGameplayObjectivePrompt(targetState = state) {
   const objective = typeof createGameplayObjectiveSnapshot === "function"
     ? createGameplayObjectiveSnapshot(targetState)
     : null;
-  const supportedScene = !["prologue", "cleanup", "job-minigame", "ending", "ranking", "turn-briefing"].includes(targetState?.scene);
+  const interactiveStartScene = targetState?.scene === "prologue"
+    && ui.game?.classList.contains("interactive-start-mode");
+  const supportedScene = interactiveStartScene
+    || !["prologue", "cleanup", "job-minigame", "ending", "ranking", "turn-briefing"].includes(targetState?.scene);
   const promptText = objective?.prompt || "";
   setSceneInteractionPrompt(promptText, supportedScene && Boolean(promptText));
 }
@@ -1688,6 +1724,15 @@ function renderJobMiniGame() {
 function renderMessage(title, lines = [], { progressKey = "", revealAll = false } = {}) {
   const resolvedTitle = resolveDynamicText(title);
   const resolvedLines = lines.map(resolveDynamicText);
+  if (revealAll) {
+    sceneTextProgress.activeKey = progressKey || "";
+    if (progressKey) {
+      sceneTextProgress.progressByKey[progressKey] = {
+        lineIndex: Math.max(0, resolvedLines.length - 1),
+        lineCount: resolvedLines.length,
+      };
+    }
+  }
   const progressState = revealAll
     ? {
         visibleLines: resolvedLines,
@@ -2253,7 +2298,7 @@ function renderPrologueScene() {
     renderTags(step.tags || []);
     clearMessage();
     clearChoices();
-    setSceneInteractionPrompt("", false);
+    syncGameplayObjectivePrompt(state);
     createChoiceButton({
       title: "밖으로 나가기",
       onClick: () => {
@@ -2453,6 +2498,7 @@ function renderRoomScene() {
   const shiftStatus = shiftUi?.shiftStatus || null;
 
   if (shiftStatus) {
+    const revealMessageImmediately = consumePendingSceneTextReveal();
     const job = shiftUi?.job || JOB_LOOKUP[shiftStatus.scheduledShift.offer.jobId];
     const workplaceLine = shiftUi?.workplaceLine || "";
     const shiftWindow = shiftUi?.shiftWindowLabel || "";
@@ -2482,6 +2528,7 @@ function renderRoomScene() {
 
     showChoices = renderMessage(messageTitle, messageLines, {
       progressKey: buildSceneTextProgressKey(`room:${state.day}:${shiftStatus.startSlot}:${messageTitle}`, messageTitle, messageLines),
+      revealAll: revealMessageImmediately,
     });
     clearChoices();
     syncGameplayObjectivePrompt(state);
@@ -2597,10 +2644,12 @@ function renderOutsideScene() {
   if (outsideScene?.map) {
     renderLocationMap(outsideScene, currentLocationId);
   } else {
+    const revealMessageImmediately = consumePendingSceneTextReveal();
     const outsideTitle = outsideScene?.title || outsideScene?.label || "";
     const outsideLines = outsideScene?.lines || [];
     showChoices = renderMessage(outsideTitle, outsideLines, {
       progressKey: buildSceneTextProgressKey(`outside:${state.day}:${currentLocationId}`, outsideTitle, outsideLines),
+      revealAll: revealMessageImmediately,
     });
   }
   clearChoices();
@@ -2619,6 +2668,11 @@ function renderOutsideScene() {
   const shiftUi = typeof getScheduledShiftUiModel === "function"
     ? getScheduledShiftUiModel(state)
     : null;
+  const suppressGenericShiftButtons = Boolean(
+    shiftUi?.isAtWorkplace
+    && typeof isMcDonaldsLocationId === "function"
+    && isMcDonaldsLocationId(shiftUi.currentLocationId || currentLocationId)
+  );
 
   if (choiceOptions.some((option) => option.uiVariant === "bus-route")) {
     ui.choices.classList.add("is-bus-route");
@@ -2640,14 +2694,14 @@ function renderOutsideScene() {
     });
   }
 
-  if (shiftUi?.canWait) {
+  if (shiftUi?.canWait && !suppressGenericShiftButtons) {
     createChoiceButton({
       title: "근무지에서 출근 시간까지 기다린다",
       onClick: waitForScheduledShift,
     });
   }
 
-  if (shiftUi?.canStart) {
+  if (shiftUi?.canStart && !suppressGenericShiftButtons) {
     createChoiceButton({
       title: `${shiftUi.workplaceLabel || "이 근무지"}로 출근한다`,
       onClick: startScheduledShift,
@@ -2773,6 +2827,80 @@ function renderLectureScene() {
     title: "강연 마치고 사례비 받기",
     earnText: formatMoney(lectureGig.pay || 0),
     onClick: () => completeHomeLectureGig(state),
+  });
+}
+
+function renderPlasticSurgeryScene() {
+  const surgeryScene = typeof getPlasticSurgerySceneConfig === "function"
+    ? getPlasticSurgerySceneConfig(state)
+    : null;
+  if (!surgeryScene) {
+    state.scene = "outside";
+    renderGame();
+    return;
+  }
+
+  setBackgroundByTone("outside");
+  if (!applySceneBackgroundConfig(surgeryScene.backgroundConfig || null)) {
+    clearSceneBackgroundOverride();
+  }
+  setWorldMode("incident");
+  setCharacter("");
+  renderActors((surgeryScene.actors || []).map((actor) =>
+    (typeof resolveSceneActorPresentation === "function"
+      ? resolveSceneActorPresentation(actor, state, {
+          source: "plastic-surgery",
+          stage: surgeryScene.stage,
+        })
+      : actor)
+  ));
+  setCharacterPosition(50, 1);
+  setSceneSpeaker(surgeryScene.speaker || "배금병원 성형외과");
+  renderTags(surgeryScene.tags || ["병원", "성형"]);
+
+  const title = surgeryScene.title || "성형외과";
+  const lines = Array.isArray(surgeryScene.lines) ? surgeryScene.lines : [];
+  const showChoices = renderMessage(title, lines, {
+    progressKey: buildSceneTextProgressKey(
+      `plastic-surgery:${state.day}:${surgeryScene.stage || "consultation"}:${surgeryScene.selectedPlanId || ""}`,
+      title,
+      lines,
+    ),
+  });
+  clearChoices();
+  syncGameplayObjectivePrompt(state);
+
+  if (!showChoices) {
+    return;
+  }
+
+  const choices = Array.isArray(surgeryScene.choices) ? surgeryScene.choices : [];
+  choices.forEach((choice, index) => {
+    createChoiceButton({
+      title: choice.title || `선택 ${index + 1}`,
+      earnText: choice.earnText || "",
+      description: choice.description || "",
+      onClick: () => {
+        if (choice.type === "plan" && typeof performPlasticSurgeryPlan === "function") {
+          performPlasticSurgeryPlan(choice.planId, state);
+          return;
+        }
+        if (choice.type === "advance" && typeof advancePlasticSurgeryEvent === "function") {
+          advancePlasticSurgeryEvent(state);
+          return;
+        }
+        if (choice.type === "finish" && typeof finishPlasticSurgeryEvent === "function") {
+          finishPlasticSurgeryEvent(state);
+          return;
+        }
+        if (choice.type === "cancel") {
+          state.plasticSurgeryEvent = null;
+          state.scene = "outside";
+          state.phoneView = "home";
+          renderGame();
+        }
+      },
+    });
   });
 }
 
@@ -3463,7 +3591,10 @@ function renderGame() {
   }
   applyHudResourceStatus(state);
   ui.timeDisplay.textContent = getSceneTimeText();
-  setHeadline(state.headline.badge, state.headline.text);
+  const headline = state?.headline && typeof state.headline === "object"
+    ? state.headline
+    : { badge: "", text: "" };
+  setHeadline(headline.badge || "", headline.text || "");
   renderGameplayFeedback();
   setProgressByScene(state.scene);
   renderMemoryPanel();
@@ -3505,6 +3636,11 @@ function renderGame() {
 
   if (state.scene === "lecture") {
     renderLectureScene();
+    return;
+  }
+
+  if (state.scene === "plastic-surgery") {
+    renderPlasticSurgeryScene();
     return;
   }
 

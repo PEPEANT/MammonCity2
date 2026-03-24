@@ -246,18 +246,17 @@ function getPlayerOriginAppearanceProfileId(targetState = state) {
 }
 
 function getPlayerAppearanceLevel(targetState = state) {
-  const appearanceState = syncAppearanceState(targetState);
-  const tierId = String(targetState?.startingOrigin?.tierId || "").trim().toLowerCase();
+  const resolvedProfileId = resolvePlayerAppearanceProfileId(targetState);
 
-  if (tierId === "gold") {
+  if (["level3Start", "level3Mid", "level3Final"].includes(resolvedProfileId)) {
     return 3;
   }
 
-  if (tierId === "silver") {
-    return appearanceState.surgeryDone ? 3 : 2;
+  if (resolvedProfileId === "level2") {
+    return 2;
   }
 
-  return appearanceState.surgeryDone ? 2 : 1;
+  return 1;
 }
 
 function getPlayerAppearanceLevelLabel(targetState = state) {
