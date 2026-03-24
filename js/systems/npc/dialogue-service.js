@@ -123,6 +123,21 @@ function applyDialogueEffects(effects = {}, targetState = state, context = {}) {
   if (effects.npcRelation && typeof patchNpcRelation === "function") {
     patchNpcRelation(effects.npcId || context.npcId, effects.npcRelation, targetState);
   }
+
+  if (effects.socialContact && typeof unlockRomanceContactFromEffect === "function") {
+    unlockRomanceContactFromEffect(effects.socialContact, targetState, {
+      npcId: effects.npcId || context.npcId,
+      source: context.source || "dialogue",
+      locationId: context.locationId || "",
+    });
+  }
+
+  if (effects.nextTurnEvent && typeof queueNextTurnEvent === "function") {
+    queueNextTurnEvent(effects.nextTurnEvent, targetState, {
+      dayOffset: effects.nextTurnEvent.dayOffset,
+      absoluteDay: effects.nextTurnEvent.day,
+    });
+  }
 }
 
 function startNpcDialogue(npcId, options = {}, targetState = state) {
@@ -198,6 +213,13 @@ function endNpcDialogue(targetState = state, { headline = null } = {}) {
     };
   }
 
+  if (activeNpcId && typeof tryUnlockRomanceContactFromDialogue === "function") {
+    tryUnlockRomanceContactFromDialogue(activeNpcId, targetState, {
+      source: dialogueState.source || "dialogue",
+      locationId: returnLocationId || "",
+    });
+  }
+
   resetDialogueState(targetState);
   targetState.scene = returnScene;
 
@@ -226,6 +248,8 @@ function chooseDialogueOption(index, targetState = state) {
   if (choice.effects) {
     applyDialogueEffects(choice.effects, targetState, {
       npcId: activeNode?.npcId || "",
+      source: syncDialogueState(targetState)?.source || "dialogue",
+      locationId: syncDialogueState(targetState)?.returnLocationId || "",
     });
   }
 

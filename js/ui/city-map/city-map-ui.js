@@ -45,7 +45,9 @@ function ensureCityMapUi() {
         <strong id="city-map-current-name" class="city-map-current-name"></strong>
       </div>
       <div class="city-map-canvas-wrap">
-        <div id="city-map-board" class="city-map-board"></div>
+        <div class="city-map-board-viewport">
+          <div id="city-map-board" class="city-map-board"></div>
+        </div>
         <aside id="city-map-card" class="city-map-travel-card" aria-live="polite"></aside>
       </div>
       <div id="city-map-legend" class="city-map-legend"></div>
@@ -59,6 +61,7 @@ function ensureCityMapUi() {
   ui.cityMapShellTitle = overlay.querySelector("#city-map-shell-title");
   ui.cityMapShellSubtitle = overlay.querySelector("#city-map-shell-subtitle");
   ui.cityMapCurrentName = overlay.querySelector("#city-map-current-name");
+  ui.cityMapBoardViewport = overlay.querySelector(".city-map-board-viewport");
   ui.cityMapBoard = overlay.querySelector("#city-map-board");
   ui.cityMapLegend = overlay.querySelector("#city-map-legend");
   ui.cityMapCard = overlay.querySelector("#city-map-card");
@@ -92,6 +95,16 @@ function openCityMapOverlay(targetState = state) {
   ensureCityMapSelection(targetState);
   renderCityMapOverlay(targetState);
   return true;
+}
+
+function openCityMapOverlayToLocation(locationId = "", targetState = state) {
+  const normalizedLocationId = typeof getCityMapAnchorLocationId === "function"
+    ? getCityMapAnchorLocationId(locationId, targetState) || String(locationId || "").trim()
+    : String(locationId || "").trim();
+  if (normalizedLocationId) {
+    cityMapUiState.selectedLocationId = normalizedLocationId;
+  }
+  return openCityMapOverlay(targetState);
 }
 
 function hideCityMapOverlay(options = {}) {

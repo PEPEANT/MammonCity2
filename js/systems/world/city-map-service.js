@@ -38,8 +38,15 @@ function canShowCityMapForState(targetState = state) {
   const currentLocationId = typeof getCurrentLocationId === "function"
     ? getCurrentLocationId(targetState)
     : "";
+  const currentMapLocationId = typeof getCurrentCityMapLocationId === "function"
+    ? getCurrentCityMapLocationId(targetState)
+    : "";
 
   if (!currentLocationId || ["bus-ride", "walk-travel"].includes(currentLocationId)) {
+    return false;
+  }
+
+  if (!currentMapLocationId) {
     return false;
   }
 
@@ -52,7 +59,17 @@ function getOutsideSceneActionOptions(locationConfig = null) {
     : (Array.isArray(locationConfig?.options) ? locationConfig.options : []);
 
   return sourceOptions
-    .filter((option) => option && !(option.action === "move" && option.targetLocation))
+    .filter((option) => {
+      if (!option) {
+        return false;
+      }
+
+      if (option.action === "move" && option.targetLocation) {
+        return option.keepVisible === true;
+      }
+
+      return true;
+    })
     .map((option) => ({ ...option }));
 }
 

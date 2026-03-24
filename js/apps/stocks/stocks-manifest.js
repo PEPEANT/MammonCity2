@@ -202,7 +202,17 @@ function getStockMarketAppDefinitions(targetState = state) {
   });
 }
 
-function createStockMarketAssetState(definition) {
+function createStockMarketAssetState(definition, targetState = state) {
+  if (typeof buildMarketCycleAssetState === "function") {
+    return buildMarketCycleAssetState({
+      appId: "stock-market",
+      definition,
+      targetState,
+      tick: definition.tick || 0,
+      candleCount: 30,
+    });
+  }
+
   const candles = createStockMarketCandles(definition.basePrice, definition.tick, definition.volatility);
   const sessionOpen = candles[0]?.o || definition.basePrice;
   const lastCandle = candles[candles.length - 1];
@@ -233,15 +243,20 @@ function ensureStockMarketAppState(targetState = state) {
       draftQuantity: "",
       assets: {},
       holdings: {},
+      lastSyncedTurn: 0,
     };
   }
 
   const app = targetState.stockMarketApp;
   const definitions = getStockMarketAppDefinitions(targetState);
+  const currentTurn = typeof getMarketCycleTurnNumber === "function"
+    ? getMarketCycleTurnNumber(targetState)
+    : Math.max(1, Math.round(Number(targetState?.day) || 1));
+  const shouldResyncAssets = app.lastSyncedTurn !== currentTurn;
 
   definitions.forEach((definition) => {
-    if (!app.assets[definition.symbol]) {
-      app.assets[definition.symbol] = createStockMarketAssetState(definition);
+    if (!app.assets[definition.symbol] || shouldResyncAssets) {
+      app.assets[definition.symbol] = createStockMarketAssetState(definition, targetState);
       return;
     }
 
@@ -258,6 +273,7 @@ function ensureStockMarketAppState(targetState = state) {
   app.holdings = app.holdings && typeof app.holdings === "object"
     ? app.holdings
     : {};
+  app.lastSyncedTurn = currentTurn;
 
   const visibleDefinitions = definitions.filter((definition) => definition.market === app.selectedGroup);
   if (!app.selectedAsset || !visibleDefinitions.some((definition) => definition.symbol === app.selectedAsset)) {
@@ -361,7 +377,7 @@ function calculateStockMarketHoldings(targetState = state) {
     return [];
   }
 
-  return Object.entries(app.holdings)
+  const holdings = Object.entries(app.holdings)
     .map(([symbol, holding]) => {
       const asset = app.assets[symbol];
       if (!asset || !holding || !Number(holding.qty)) {
@@ -390,6 +406,36 @@ function calculateStockMarketHoldings(targetState = state) {
     })
     .filter(Boolean)
     .sort((left, right) => right.currentValue - left.currentValue);
+
+  const legacyHolding = getLegacyStockMarketHolding(targetState);
+  if (legacyHolding) {
+    holdings.push(legacyHolding);
+  }
+
+  return holdings.sort((left, right) => right.currentValue - left.currentValue);
+}
+
+function getLegacyStockMarketHolding(targetState = state) {
+  const principal = Math.max(0, Math.round(Number(targetState?.stockHolding?.betAmount) || 0));
+  if (principal <= 0) {
+    return null;
+  }
+
+  const pnl = calculateStockMarketLegacyProfit(targetState);
+  const currentValue = calculateStockMarketLegacyValue(targetState);
+
+  return {
+    symbol: "SEED",
+    code: "SEED",
+    name: "시드 주식 보유분",
+    shortName: "시드",
+    badge: "초기",
+    qty: 1,
+    avgPrice: principal,
+    currentValue,
+    pnl,
+    returnRate: principal > 0 ? (pnl / principal) * 100 : 0,
+  };
 }
 
 function calculateStockMarketLegacyProfit(targetState = state) {
@@ -415,10 +461,8 @@ function calculateStockMarketSummary(targetState = state) {
   const holdings = calculateStockMarketHoldings(targetState);
   const holdingsValue = holdings.reduce((sum, holding) => sum + holding.currentValue, 0);
   const holdingsProfit = holdings.reduce((sum, holding) => sum + holding.pnl, 0);
-  const legacyProfit = calculateStockMarketLegacyProfit(targetState);
-  const legacyValue = calculateStockMarketLegacyValue(targetState);
-  const openProfit = Math.round(holdingsProfit + legacyProfit);
-  const totalEquity = Math.round(walletBalance + holdingsValue + legacyValue);
+  const openProfit = Math.round(holdingsProfit);
+  const totalEquity = Math.round(walletBalance + holdingsValue);
 
   return {
     walletBalance,
@@ -430,55 +474,7 @@ function calculateStockMarketSummary(targetState = state) {
 }
 
 function tickStockMarketApp(targetState = state) {
-  const app = ensureStockMarketAppState(targetState);
-  if (!app) {
-    return;
-  }
-
-  Object.values(app.assets).forEach((assetState) => {
-    const definition = assetState.meta;
-    const randomMove = (Math.random() - 0.5) * definition.volatility * 1.45;
-    const shockTriggered = Math.random() < (definition.shockChance || 0.05);
-    const shockMove = shockTriggered
-      ? (Math.random() - 0.5) * definition.volatility * (definition.shockMultiplier || 2.8)
-      : 0;
-    const move = randomMove + (definition.driftBias || 0) + shockMove;
-    const nextPrice = snapStockMarketPrice(assetState.price * (1 + move), definition.tick);
-
-    assetState.tickCount += 1;
-    assetState.price = nextPrice;
-    assetState.high24 = Math.max(assetState.high24, nextPrice);
-    assetState.low24 = Math.min(assetState.low24, nextPrice);
-    assetState.volume24 += Math.round((Math.abs(move) * 18000) + (Math.random() * 1800));
-
-    if (!assetState.candles.length || assetState.tickCount % 2 === 0) {
-      assetState.candles.push({
-        o: nextPrice,
-        h: nextPrice,
-        l: nextPrice,
-        c: nextPrice,
-      });
-      if (assetState.candles.length > 30) {
-        assetState.candles.shift();
-      }
-    } else {
-      const candle = assetState.candles[assetState.candles.length - 1];
-      candle.c = nextPrice;
-      candle.h = Math.max(candle.h, nextPrice);
-      candle.l = Math.min(candle.l, nextPrice);
-    }
-
-    if (Math.random() > 0.34) {
-      const sizeBase = definition.market === "leveraged" ? 2400 : definition.market === "us" ? 1800 : 1400;
-      assetState.trades.unshift({
-        id: Date.now() + Math.random(),
-        price: nextPrice,
-        size: Math.max(1, Math.floor(Math.random() * sizeBase)),
-        side: move >= 0 ? "buy" : "sell",
-      });
-      assetState.trades = assetState.trades.slice(0, 10);
-    }
-  });
+  ensureStockMarketAppState(targetState);
 }
 
 function getStockMarketOrderBook(targetState = state) {
@@ -495,14 +491,26 @@ function getStockMarketOrderBook(targetState = state) {
   for (let level = 5; level >= 1; level -= 1) {
     asks.push({
       price: snapStockMarketPrice(asset.price + (tick * level), tick),
-      size: Math.floor(Math.random() * maxBookSize) + 30,
+      size: typeof getMarketCycleBookSize === "function"
+        ? getMarketCycleBookSize(
+          ["stock-book", asset.meta.symbol, asset.cycleTurn || 0, "ask", level],
+          30,
+          maxBookSize + 30,
+        )
+        : Math.floor(Math.random() * maxBookSize) + 30,
     });
   }
 
   for (let level = 1; level <= 5; level += 1) {
     bids.push({
       price: snapStockMarketPrice(asset.price - (tick * level), tick),
-      size: Math.floor(Math.random() * maxBookSize) + 30,
+      size: typeof getMarketCycleBookSize === "function"
+        ? getMarketCycleBookSize(
+          ["stock-book", asset.meta.symbol, asset.cycleTurn || 0, "bid", level],
+          30,
+          maxBookSize + 30,
+        )
+        : Math.floor(Math.random() * maxBookSize) + 30,
     });
   }
 

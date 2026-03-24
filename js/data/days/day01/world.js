@@ -1,4 +1,5 @@
 const DAY01_WORLD_PLAYER_ACTOR = {
+  kind: "player",
   src: CHARACTER_ART.player.standing,
   alt: "player",
   left: 40,
@@ -8,6 +9,7 @@ const DAY01_WORLD_PLAYER_ACTOR = {
 };
 
 const DAY01_WORLD_PLAYER_WALKING_ACTOR = {
+  kind: "player",
   src: CHARACTER_ART.player.walking,
   alt: "player-walking",
   left: 50,
@@ -168,7 +170,7 @@ const DAY01_WORLD_TERMINAL_NPC_POOL = [
     memoryBody: "터미널 앞에서 서두르는 직장인과 스쳐 지나갔다.",
   }),
   createWorldWanderNpc({
-    id: "terminal-promoter",
+    id: "npc-woman",
     weight: 2,
     tag: "홍보원",
     src: CHARACTER_ART.npcWoman.default,
@@ -231,7 +233,7 @@ const DAY01_WORLD_CROSSROADS_NPC_POOL = [
     memoryBody: "사거리를 서성이다가 생활 냄새가 진한 아주머니와 스쳐 지나갔다.",
   }),
   createWorldWanderNpc({
-    id: "downtown-promoter",
+    id: "npc-woman",
     weight: 3,
     tag: "홍보원",
     src: CHARACTER_ART.npcWoman.default,
@@ -317,7 +319,7 @@ const DAY01_WORLD_STATION_FRONT_NPC_POOL = [
 
 const DAY01_WORLD_DOWNTOWN_NPC_POOL = [
   createWorldWanderNpc({
-    id: "downtown-promoter",
+    id: "npc-woman",
     weight: 4,
     tag: "홍보원",
     src: CHARACTER_ART.npcWoman.default,
@@ -400,7 +402,7 @@ const DAY01_WORLD_UNIVERSITY_NPC_POOL = [
     memoryBody: "대학가를 한 바퀴 돌다가 학생 하나와 잠깐 눈이 마주쳤다.",
   }),
   createWorldWanderNpc({
-    id: "campus-senior",
+    id: "npc-woman",
     weight: 3,
     tag: "선배",
     src: CHARACTER_ART.npcWoman.default,
@@ -443,7 +445,7 @@ const DAY01_WORLD_UNIVERSITY_NPC_POOL = [
 
 const DAY01_WORLD_CAMPUS_PARK_NPC_POOL = [
   createWorldWanderNpc({
-    id: "campus-senior",
+    id: "npc-woman",
     weight: 4,
     tag: "선배",
     src: CHARACTER_ART.npcWoman.default,
@@ -510,27 +512,27 @@ const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
     weight: 5,
     tag: "직장인",
     src: CHARACTER_ART.alleyOfficeWorker.default,
-    alt: "오피스플라자 직장인",
+    alt: "배금디지털단지 직장인",
     left: 70,
     bottom: 6,
     height: 88,
-    sceneTitle: "출근 시간대 직장인들이 오피스플라자 로비 앞을 빠르게 가른다",
+    sceneTitle: "출근 시간대 직장인들이 배금디지털단지 입구를 빠르게 가른다",
     sceneLines: [
       "사원증 줄이 재킷 위로 흔들리고, 커피 컵과 노트북 가방이 동시에 부딪힌다.",
       "여기서는 시간표와 직장 냄새가 같이 움직인다.",
     ],
     headlineBadge: "출근 러시",
-    headlineText: "오피스플라자 로비 앞에서 직장인들이 버스에서 쏟아지듯 흩어진다.",
+    headlineText: "배금디지털단지 입구에서 직장인들이 버스에서 쏟아지듯 흩어진다.",
     approachBadge: "바쁜 눈빛",
     approachText: "붙잡아 말을 걸기엔 다들 이미 다음 일정으로 몸이 기울어 있다.",
-    memoryBody: "회사구역 로비 앞에서 출근 러시 한가운데를 잠깐 스쳤다.",
+    memoryBody: "배금디지털단지 입구 앞에서 출근 러시 한가운데를 잠깐 스쳤다.",
   }),
   createWorldWanderNpc({
     id: "office-plaza-recruiter",
     weight: 2,
     tag: "채용담당",
     src: CHARACTER_ART.npcWoman.default,
-    alt: "회사구역 채용담당",
+    alt: "배금디지털단지 채용담당",
     left: 82,
     bottom: 7,
     height: 88,
@@ -543,7 +545,7 @@ const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
     headlineText: "채용 배지를 단 사람이 로비 게시판 앞에서 사람 흐름을 살핀다.",
     approachBadge: "짧은 응답",
     approachText: "오늘도 계약직 문의가 많다며 여자는 다시 안내 데스크 쪽으로 몸을 돌린다.",
-    memoryBody: "오피스플라자 게시판 앞에서 채용담당처럼 보이는 사람을 봤다.",
+    memoryBody: "배금디지털단지 안내 데스크 앞에서 채용담당처럼 보이는 사람을 봤다.",
   }),
 ];
 
@@ -624,8 +626,8 @@ const DAY01_WORLD_BUS_ROUTE_STOPS = [
   {
     id: "office-plaza",
     emoji: "🏢",
-    label: "오피스플라자",
-    note: "회사구역 로비, 관제센터, 물류동 입구",
+    label: "배금디지털단지",
+    note: "단지 입구, 배금전자 사무동, 생산동, 배금연구소",
     type: "major",
     eta: "11분",
     badge: "회사구역",
@@ -713,7 +715,7 @@ const DAY01_WORLD_TERMINAL_SCHEDULE = [
 const DAY01_WORLD_BUS_MAP = {
   variant: "bus-terminal",
   routeTitle: "배금 100번",
-  routeSubtitle: "배금시외버스터미널 ↔ 오피스플라자 ↔ 배금역",
+  routeSubtitle: "배금시외버스터미널 ↔ 배금디지털단지 ↔ 배금역",
   serviceLabel: "간선버스",
   statusLabel: "노선 개편",
   nextStopLabel: "중심상업구역",
@@ -763,6 +765,22 @@ const DAY01_WORLD_EXPRESS_BUS_BACKGROUND = {
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0%, rgba(0, 0, 0, 0.28) 100%)",
+};
+
+const DAY01_WORLD_BUSAN_CASINO_EXTERIOR_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day03/casino-exterior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.26) 100%)",
+};
+
+const DAY01_WORLD_BUSAN_CASINO_INTERIOR_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day03/casino-interior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.34) 100%)",
 };
 
 const DAY01_WORLD_METROPOLIS_ENDING_BACKGROUND = {
@@ -909,9 +927,33 @@ const DAY01_WORLD_CONVENIENCE_STORE_BACKGROUND = {
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.16) 100%)",
 };
 
+const DAY01_WORLD_LOTTO_RETAILER_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/lotto-retailer-exterior.png",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0.18) 100%)",
+};
+
+const DAY01_WORLD_LOTTO_RETAILER_INTERIOR_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/lotto-retailer-interior.png",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%)",
+};
+
 const DAY01_WORLD_MCDONALDS_BACKGROUND = {
   className: "custom-location-bg",
-  image: "assets/backgrounds/day01/mcdonalds-kitchen.jpg",
+  image: "assets/backgrounds/day01/commercial/mcdonalds-building-exterior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%)",
+};
+
+const DAY01_WORLD_MCDONALDS_COUNTER_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/mcdonalds-counter.png",
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%)",
@@ -919,10 +961,18 @@ const DAY01_WORLD_MCDONALDS_BACKGROUND = {
 
 const DAY01_WORLD_OFFICE_PLAZA_BACKGROUND = {
   className: "custom-location-bg",
-  image: "assets/backgrounds/day01/university-building.jpg",
+  image: "assets/backgrounds/day01/industrial/digital-complex-exterior.png",
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(7, 13, 24, 0.1) 0%, rgba(7, 13, 24, 0.24) 100%)",
+};
+
+const DAY01_WORLD_DIGITAL_COMPLEX_VIEW_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/industrial/digital-complex-view.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(7, 13, 24, 0.12) 0%, rgba(7, 13, 24, 0.28) 100%)",
 };
 
 const DAY01_WORLD_MOBILITY_CONTROL_CENTER_BACKGROUND = {
@@ -933,32 +983,56 @@ const DAY01_WORLD_MOBILITY_CONTROL_CENTER_BACKGROUND = {
   overlay: "linear-gradient(180deg, rgba(7, 13, 24, 0.12) 0%, rgba(7, 13, 24, 0.28) 100%)",
 };
 
+const DAY01_WORLD_LOGISTICS_CENTER_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/logistics-center-exterior.png",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(8, 11, 18, 0.12) 0%, rgba(8, 11, 18, 0.26) 100%)",
+};
+
 const DAY01_WORLD_LOGISTICS_HUB_BACKGROUND = {
   className: "custom-location-bg",
-  image: "assets/backgrounds/day01/job-warehouse-shift.jpg",
+  image: "assets/backgrounds/day01/industrial/factory-exterior.jpg",
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(8, 11, 18, 0.14) 0%, rgba(8, 11, 18, 0.3) 100%)",
 };
 
+const DAY01_WORLD_PRODUCTION_LINE_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/industrial/production-line.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(8, 11, 18, 0.16) 0%, rgba(8, 11, 18, 0.34) 100%)",
+};
+
 const DAY01_WORLD_TOWER_CAFE_BACKGROUND = {
   className: "custom-location-bg",
-  image: "assets/backgrounds/day01/mcdonalds-exterior.jpg",
+  image: "assets/backgrounds/day01/industrial/research-lab-exterior.png",
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(12, 10, 8, 0.12) 0%, rgba(12, 10, 8, 0.24) 100%)",
 };
 
+const DAY01_WORLD_RESEARCH_LAB_INTERIOR_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/industrial/research-lab-interior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(10, 12, 18, 0.1) 0%, rgba(10, 12, 18, 0.28) 100%)",
+};
+
 const DAY01_WORLD_LOCATIONS = {
   "apt-alley": {
-    label: "집앞골목",
-    speaker: "집앞골목",
-    title: "골목 바람이 아직 잠에서 덜 깬다",
+    label: "배금고시원 앞",
+    speaker: "배금고시원 앞",
+    title: "고시원 골목 바람이 아직 잠에서 덜 깬다",
     lines: [
-      "익숙한 담배 냄새와 편의점 불빛이 뒤섞인 동네 입구다.",
-      "집으로 들어갈지, 사거리 쪽으로 걸어 나갈지 정하면 된다.",
+      "좁은 고시원 입구와 편의점 불빛이 뒤섞인 주거 골목이다.",
+      "고시원으로 들어갈지, 사거리 쪽으로 걸어 나갈지 정하면 된다.",
     ],
-    tags: ["집앞", "생활", "골목"],
+    tags: ["집앞", "주거", "고시원"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     randomNpcPool: DAY01_WORLD_ALLEY_NPC_POOL,
     exits: ["city-crossroads", "bus-stop"],
@@ -983,6 +1057,24 @@ const DAY01_WORLD_LOCATIONS = {
       },
     ],
   },
+  "silver-home-front": {
+    x: 10,
+    y: 84,
+    icon: "🏢",
+    shortLabel: "아파트 앞",
+    note: "배금아파트 로비를 거쳐 나오는 주거 구역 출입점.",
+    zoneTone: "residential",
+    order: 11,
+  },
+  "golden-home-front": {
+    x: 23,
+    y: 84,
+    icon: "🚘",
+    shortLabel: "복합빌딩 앞",
+    note: "배금복합빌딩 차고 램프와 입구가 이어지는 주거 구역 출입점.",
+    zoneTone: "residential",
+    order: 12,
+  },
   "bus-stop": {
     label: "배금시외버스터미널 앞",
     speaker: "배금시외버스터미널 앞",
@@ -1003,9 +1095,8 @@ const DAY01_WORLD_LOCATIONS = {
         targetLocation: "bus-stop-map",
       },
       {
-        title: "집앞 골목으로 돌아간다",
-        action: "move",
-        targetLocation: "apt-alley",
+        title: "현재 집 쪽으로 돌아간다",
+        action: "move-home",
       },
       {
         title: "배금시 사거리로 간다",
@@ -1078,6 +1169,25 @@ const DAY01_WORLD_LOCATIONS = {
       },
     ],
   },
+  "express-bus-travel": {
+    label: "부산역행 고속버스",
+    speaker: "고속버스 좌석",
+    title: "고속버스가 부산역 방향으로 길게 달린다",
+    background: DAY01_WORLD_EXPRESS_BUS_BACKGROUND,
+    lines: [
+      "커튼 틈으로 야경과 도로 표지판이 빠르게 밀려난다.",
+      "부산역 쪽으로 가까워질수록 카지노 간판이 보일 거라는 말이 머릿속을 맴돈다.",
+    ],
+    tags: ["이동", "고속버스", "부산역"],
+    actors: [],
+    cityMapHidden: true,
+    options: [
+      {
+        title: "도착해서 내린다",
+        action: "complete-bus-travel",
+      },
+    ],
+  },
   "city-crossroads": {
     label: "배금 사거리",
     speaker: "배금 사거리",
@@ -1136,7 +1246,7 @@ const DAY01_WORLD_LOCATIONS = {
     tags: ["알바", "식사", "유동인구"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     randomNpcPool: DAY01_WORLD_STATION_FRONT_NPC_POOL,
-    exits: ["bus-stop", "city-crossroads", "station-interior"],
+    exits: ["bus-stop", "city-crossroads", "station-interior", "logistics-center", "lotto-retailer", "busan-casino-exterior"],
     options: [
       {
         title: "버스 정류장으로 간다",
@@ -1154,8 +1264,53 @@ const DAY01_WORLD_LOCATIONS = {
         targetLocation: "station-interior",
       },
       {
+        title: "배금 물류센터 앞으로 간다",
+        action: "move",
+        targetLocation: "logistics-center",
+        travelMinutes: 8,
+        keepVisible: true,
+      },
+      {
+        title: "로또판매장으로 간다",
+        action: "move",
+        targetLocation: "lotto-retailer",
+        travelMinutes: 3,
+        keepVisible: true,
+      },
+      {
+        title: "부산역 카지노행 고속버스를 탄다",
+        action: "move",
+        targetLocation: "busan-casino-exterior",
+        travelMinutes: 60,
+        travelMethod: "고속버스",
+        travelSceneId: "express-bus-travel",
+        keepVisible: true,
+      },
+      {
         title: "역 앞 공고를 확인한다",
         action: "board",
+      },
+    ],
+  },
+  "logistics-center": {
+    label: "배금 물류센터 앞",
+    speaker: "배금 물류센터",
+    title: "역 광장에서 빠져나오면 배금 물류센터 건물 앞이 바로 이어진다",
+    background: DAY01_WORLD_LOGISTICS_CENTER_BACKGROUND,
+    districtId: "commercial",
+    lines: [
+      "화물차 진입로와 출고 안내문이 물류센터 앞 공기를 분주하게 만들고 있다.",
+      "새벽 물류 알바가 잡히면 이 앞에서 출근 동선을 다시 정리하게 된다.",
+    ],
+    tags: ["물류", "알바", "역세권"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    exits: ["station-front"],
+    options: [
+      {
+        title: "배금역 광장으로 돌아간다",
+        action: "move",
+        targetLocation: "station-front",
+        travelMinutes: 8,
       },
     ],
   },
@@ -1208,6 +1363,67 @@ const DAY01_WORLD_LOCATIONS = {
       },
     ],
   },
+  "busan-casino-exterior": {
+    label: "부산 카지노 앞",
+    speaker: "부산 카지노 앞",
+    title: "부산역 근처 카지노 건물이 밤빛을 빨아들인다",
+    background: DAY01_WORLD_BUSAN_CASINO_EXTERIOR_BACKGROUND,
+    districtId: "underworld",
+    cityMapHidden: true,
+    lines: [
+      "대형 간판과 유리문 너머 조명이 지나가는 사람의 시선을 오래 붙잡아 둔다.",
+      "안으로 들어가면 환전소와 테이블, 슬롯 구역이 한꺼번에 열려 있다.",
+    ],
+    tags: ["부산", "카지노", "유흥"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    exits: ["busan-casino-interior", "station-front"],
+    options: [
+      {
+        title: "카지노 안으로 들어간다",
+        action: "move",
+        targetLocation: "busan-casino-interior",
+        travelMinutes: 6,
+        keepVisible: true,
+      },
+      {
+        title: "배금역으로 돌아가는 고속버스를 탄다",
+        action: "move",
+        targetLocation: "station-front",
+        travelMinutes: 60,
+        travelMethod: "고속버스",
+        travelSceneId: "express-bus-travel",
+        keepVisible: true,
+      },
+    ],
+  },
+  "busan-casino-interior": {
+    label: "부산 카지노 내부",
+    speaker: "부산 카지노 내부",
+    title: "칩 부딪히는 소리와 기계음이 홀 전체를 메운다",
+    background: DAY01_WORLD_BUSAN_CASINO_INTERIOR_BACKGROUND,
+    districtId: "underworld",
+    cityMapHidden: true,
+    lines: [
+      "환전소와 블랙잭 테이블, 슬롯머신 줄이 한 공간에서 동시에 돌아간다.",
+      "원하면 바로 테이블로 들어가 오늘 운을 시험해 볼 수 있다.",
+    ],
+    tags: ["부산", "카지노", "실내"],
+    actors: [],
+    exits: ["busan-casino-exterior"],
+    options: [
+      {
+        title: "카지노 게임장으로 들어간다",
+        action: "enter-casino-venue",
+      },
+      {
+        title: "카지노 밖으로 나간다",
+        action: "move",
+        targetLocation: "busan-casino-exterior",
+        travelMinutes: 6,
+        keepVisible: true,
+      },
+    ],
+  },
   downtown: {
     label: "배금 중심가",
     speaker: "배금 중심가",
@@ -1237,11 +1453,11 @@ const DAY01_WORLD_LOCATIONS = {
   "baegeum-hospital": {
     label: "배금병원 성형외과",
     speaker: "배금병원 성형외과",
-    title: "로비 안내판 너머로 성형 상담 배너가 차갑게 줄지어 서 있다",
+    title: "로비 안내판 아래로 성형 상담 배너가 차갑게 줄지어 서 있다",
     background: DAY01_WORLD_BAEGEUM_HOSPITAL_BACKGROUND,
     lines: [
-      "수술 전후 사진과 상담 안내 문구가 유리 벽면을 따라 반듯하게 붙어 있다.",
-      "돈만 준비되면 얼굴과 인상을 다시 설계할 수 있다는 공기가 병원 안에 가득하다.",
+      "수술 전후 사진과 상담 안내 문구가 복도 벽면을 따라 반듯하게 붙어 있다.",
+      "준비만 되면 얼굴과 인상을 다시 설계할 수 있다는 공기가 병원 안에 가라앉아 있다.",
     ],
     tags: ["병원", "성형", "상업 구역"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
@@ -1252,7 +1468,7 @@ const DAY01_WORLD_LOCATIONS = {
         action: "get-plastic-surgery",
       },
       {
-        title: "배금 네거리로 돌아간다",
+        title: "배금 사거리로 돌아간다",
         action: "move",
         targetLocation: "city-crossroads",
       },
@@ -1290,26 +1506,88 @@ const DAY01_WORLD_LOCATIONS = {
       },
     ],
   },
-  mcdonalds: {
-    label: "맥도날드 배금사거리점",
-    speaker: "맥도날드 배금사거리점",
-    title: "유리문 너머로 주문 번호와 감자튀김 냄새가 연달아 밀려온다",
-    background: DAY01_WORLD_MCDONALDS_BACKGROUND,
+  "lotto-retailer": {
+    label: "배금역 로또판매장",
+    speaker: "배금역 로또판매장",
+    title: "복권 간판과 작은 창구가 붙어 있는 로또판매장이다",
+    background: DAY01_WORLD_LOTTO_RETAILER_BACKGROUND,
     lines: [
-      "사거리 코너에 새로 들어온 매장이 밤낮 없이 환하게 켜져 있다.",
-      "잠깐 들어가 한 끼를 해결하거나 커피를 들고 다시 거리로 나갈 수 있다.",
+      "배금역 앞 코너에 붙은 작은 판매장이라 지나가다 들르기 쉽다.",
+      "유리창 안쪽에는 로또 복권과 각종 복권 안내문이 빼곡하게 붙어 있다.",
     ],
-    tags: ["패스트푸드", "식사", "상업 구역"],
+    tags: ["로또", "복권", "상업 구역"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
-    exits: ["city-crossroads"],
+    districtId: "commercial",
+    exits: ["city-crossroads", "station-front", "lotto-retailer-interior"],
     options: [
       {
-        title: "세트 메뉴로 배를 채운다",
-        action: "eat-mcdonalds-set",
+        title: "판매 창구로 들어간다",
+        action: "move",
+        targetLocation: "lotto-retailer-interior",
+        travelMinutes: 2,
+        keepVisible: true,
       },
       {
-        title: "커피 한 잔을 주문한다",
-        action: "buy-mcdonalds-coffee",
+        title: "배금거리로 돌아간다",
+        action: "move",
+        targetLocation: "city-crossroads",
+      },
+      {
+        title: "배금역 앞으로 간다",
+        action: "move",
+        targetLocation: "station-front",
+        travelMinutes: 3,
+        keepVisible: true,
+      },
+    ],
+  },
+  "lotto-retailer-interior": {
+    label: "로또판매장 안",
+    speaker: "로또판매장 안",
+    title: "창구 앞에서 로또 복권을 사고 다음날 결과를 기다릴 수 있다",
+    background: DAY01_WORLD_LOTTO_RETAILER_INTERIOR_BACKGROUND,
+    lines: [
+      "좁은 창구 옆으로 복권 번호표와 추첨 안내지가 붙어 있다.",
+      "여기서는 복권을 사서 인벤토리에 보관하고 다음날 결과를 확인한다.",
+    ],
+    tags: ["로또", "판매장", "상업 구역"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["lotto-retailer"],
+    options: [
+      {
+        title: "로또 복권 한 장 사기",
+        action: "buy-lotto-ticket",
+      },
+      {
+        title: "판매장 밖으로 나간다",
+        action: "move",
+        targetLocation: "lotto-retailer",
+        travelMinutes: 2,
+        keepVisible: true,
+      },
+    ],
+  },
+  mcdonalds: {
+    label: "맥도날드 배금거리점",
+    speaker: "맥도날드 배금거리점",
+    title: "건물 앞에서 카운터 쪽으로 이어지는 입구가 바로 보인다",
+    background: DAY01_WORLD_MCDONALDS_BACKGROUND,
+    lines: [
+      "대로변 코너를 차지한 빨간 간판 아래로 입구 유리문이 환하게 켜져 있다.",
+      "안으로 들어가면 카운터에서 세트 메뉴나 커피를 바로 주문할 수 있다.",
+    ],
+    tags: ["패스트푸드", "상업", "상업 구역"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["city-crossroads", "mcdonalds-counter"],
+    options: [
+      {
+        title: "카운터로 들어간다",
+        action: "move",
+        targetLocation: "mcdonalds-counter",
+        travelMinutes: 4,
+        keepVisible: true,
       },
       {
         title: "배금 사거리로 돌아간다",
@@ -1318,38 +1596,68 @@ const DAY01_WORLD_LOCATIONS = {
       },
     ],
   },
+  "mcdonalds-counter": {
+    label: "맥도날드 배금거리점 카운터",
+    speaker: "맥도날드 배금거리점 카운터",
+    title: "주문 카운터와 픽업 안내판이 바로 눈앞에 있다",
+    background: DAY01_WORLD_MCDONALDS_COUNTER_BACKGROUND,
+    lines: [
+      "카운터 앞에서 주문 번호와 커피 픽업 벨이 번갈아 울린다.",
+      "잠깐 서 있기만 해도 패스트푸드 매장 특유의 바쁜 공기가 그대로 느껴진다.",
+    ],
+    tags: ["패스트푸드", "카운터", "맥도날드"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["mcdonalds"],
+    options: [
+      {
+        title: "세트 메뉴를 주문한다",
+        action: "eat-mcdonalds-set",
+      },
+      {
+        title: "커피 한 잔을 주문한다",
+        action: "buy-mcdonalds-coffee",
+      },
+      {
+        title: "건물 앞으로 나간다",
+        action: "move",
+        targetLocation: "mcdonalds",
+        travelMinutes: 4,
+        keepVisible: true,
+      },
+    ],
+  },
   "office-plaza": {
-    label: "오피스플라자 로비",
-    speaker: "오피스플라자",
-    title: "출근 배지와 커피 컵이 로비 공기를 먼저 장악한다",
+    label: "배금디지털단지 입구",
+    speaker: "배금디지털단지",
+    title: "정문 보안 게이트와 출근 인파가 단지 공기를 먼저 채운다",
     background: DAY01_WORLD_OFFICE_PLAZA_BACKGROUND,
     lines: [
-      "회사구역 버스 정류장에서 내리면 가장 먼저 닿는 로비다.",
-      "관제센터와 물류동, 로비 카페가 이 건물권 안쪽으로 이어지고 출근 시간엔 직장인이 끊이지 않는다.",
+      "배금디지털단지 정문 버스정류장에서 내리면 안쪽 건물로 갈라지는 동선이 먼저 보인다.",
+      "배금전자 사무동과 생산동, 배금연구소로 이어지는 길이 단지 안쪽으로 뻗어 있다.",
     ],
-    tags: ["회사구역", "오피스", "출근"],
+    tags: ["배금디지털단지", "기업", "출근"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     randomNpcPool: DAY01_WORLD_OFFICE_PLAZA_NPC_POOL,
     exits: ["bus-stop", "city-crossroads", "station-front", "mobility-control-center", "logistics-hub", "tower-cafe"],
     options: [
       {
-        title: "로비 게시판 공고를 다시 본다",
-        action: "board",
-      },
-      {
-        title: "관제센터로 들어간다",
+        title: "배금전자 사무동으로 들어간다",
         action: "move",
         targetLocation: "mobility-control-center",
+        keepVisible: true,
       },
       {
-        title: "물류허브 쪽으로 간다",
+        title: "배금전자 생산동 쪽으로 간다",
         action: "move",
         targetLocation: "logistics-hub",
+        keepVisible: true,
       },
       {
-        title: "로비 카페로 들어간다",
+        title: "배금연구소로 들어간다",
         action: "move",
         targetLocation: "tower-cafe",
+        keepVisible: true,
       },
       {
         title: "배금 사거리 쪽으로 돌아간다",
@@ -1359,75 +1667,126 @@ const DAY01_WORLD_LOCATIONS = {
     ],
   },
   "mobility-control-center": {
-    label: "배금모빌리티 관제센터",
-    speaker: "배금모빌리티 관제센터",
-    title: "대형 모니터와 라이더 배차판이 벽면을 가득 채운다",
+    label: "배금전자 사무동",
+    speaker: "배금전자 사무동",
+    title: "사무직 면접 안내와 층별 출입 게이트가 벽면을 채운다",
     background: DAY01_WORLD_MOBILITY_CONTROL_CENTER_BACKGROUND,
     lines: [
-      "실시간 배차판과 출근 체크 단말이 벽면을 따라 줄지어 있다.",
-      "배달 관제와 현장 순회, 모니터링 계열 공고가 실제로 숨 쉬는 장소다.",
+      "사무직 신입 면접과 문서 처리, 팀 배치 안내가 이 건물 안에서 돌아간다.",
+      "정장 차림 지원자와 사원증을 단 직원들이 층별 안내판 앞을 오간다.",
     ],
-    tags: ["회사구역", "관제", "배달"],
+    tags: ["배금디지털단지", "사무직", "배금전자"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     exits: ["office-plaza", "logistics-hub"],
     options: [
       {
-        title: "로비 게시판 공고를 다시 본다",
-        action: "board",
-      },
-      {
-        title: "오피스플라자 로비로 돌아간다",
+        title: "배금디지털단지 입구로 돌아간다",
         action: "move",
         targetLocation: "office-plaza",
+        keepVisible: true,
       },
     ],
   },
   "logistics-hub": {
-    label: "배금퀵 물류허브",
-    speaker: "배금퀵 물류허브",
-    title: "출고 라벨과 상차 소리가 새벽 공기처럼 건조하게 울린다",
+    label: "배금전자 생산동",
+    speaker: "배금전자 생산동",
+    title: "작업복 동선과 생산 라인 점검 소리가 규칙적으로 울린다",
     background: DAY01_WORLD_LOGISTICS_HUB_BACKGROUND,
     lines: [
-      "출고 동선과 차량 적재선이 바닥 표시선으로 빼곡하게 나뉘어 있다.",
-      "차량이 있으면 더 멀리, 더 비싼 콜로 이어지는 구역이라는 게 한눈에 들어온다.",
+      "생산직 신입 면접과 라인 배치 안내가 현장 사무실 앞에서 진행된다.",
+      "바깥 적재장과 안쪽 라인 출입문이 공장 외곽을 따라 이어진다.",
     ],
-    tags: ["회사구역", "물류", "현장"],
+    tags: ["배금디지털단지", "생산직", "배금전자"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     randomNpcPool: DAY01_WORLD_LOGISTICS_HUB_NPC_POOL,
-    exits: ["office-plaza", "mobility-control-center"],
+    exits: ["office-plaza", "mobility-control-center", "production-line"],
     options: [
       {
-        title: "로비 게시판 공고를 다시 본다",
-        action: "board",
+        title: "생산라인으로 들어간다",
+        action: "move",
+        targetLocation: "production-line",
+        travelMinutes: 6,
+        keepVisible: true,
       },
       {
-        title: "오피스플라자 로비로 돌아간다",
+        title: "배금디지털단지 입구로 돌아간다",
         action: "move",
         targetLocation: "office-plaza",
+        keepVisible: true,
+      },
+    ],
+  },
+  "production-line": {
+    label: "배금전자 생산라인",
+    speaker: "배금전자 생산라인",
+    title: "생산라인과 점검 로봇이 규칙적으로 움직이고 있다",
+    background: DAY01_WORLD_PRODUCTION_LINE_BACKGROUND,
+    lines: [
+      "라인 위로 자재 박스와 체크 표시가 일정한 리듬으로 지나간다.",
+      "생산직 출근이나 면접 동선을 확인할 때 가장 먼저 들어오게 되는 현장이다.",
+    ],
+    tags: ["생산라인", "배금전자", "생산직"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "industrial",
+    exits: ["logistics-hub"],
+    options: [
+      {
+        title: "공장 앞으로 돌아간다",
+        action: "move",
+        targetLocation: "logistics-hub",
+        travelMinutes: 6,
+        keepVisible: true,
       },
     ],
   },
   "tower-cafe": {
-    label: "모닝브루 오피스플라자점",
-    speaker: "모닝브루 오피스플라자점",
-    title: "에스프레소 향과 출근 대화가 동시에 카운터를 채운다",
+    label: "배금연구소",
+    speaker: "배금연구소",
+    title: "출입 배지와 연구 일정표가 유리문 안쪽 벽을 채운다",
     background: DAY01_WORLD_TOWER_CAFE_BACKGROUND,
     lines: [
-      "오피스플라자 직장인들이 출근 전 커피를 들고 빠르게 지나간다.",
-      "카페 알바와 서빙봇 관리 같은 서비스 공고가 실제로 붙는 자리다.",
+      "연구직 신입 면접과 프로젝트 브리핑이 연구동 로비에서 오간다.",
+      "사무동보다 조용하지만 안쪽 실험 구역으로 들어가는 긴장감이 감돈다.",
     ],
-    tags: ["회사구역", "카페", "서비스"],
+    tags: ["배금디지털단지", "연구직", "배금연구소"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
-    exits: ["office-plaza"],
+    exits: ["office-plaza", "research-lab-interior"],
     options: [
       {
-        title: "로비 게시판 공고를 다시 본다",
-        action: "board",
+        title: "연구동으로 들어간다",
+        action: "move",
+        targetLocation: "research-lab-interior",
+        travelMinutes: 5,
+        keepVisible: true,
       },
       {
-        title: "오피스플라자 로비로 돌아간다",
+        title: "배금디지털단지 입구로 돌아간다",
         action: "move",
         targetLocation: "office-plaza",
+        keepVisible: true,
+      },
+    ],
+  },
+  "research-lab-interior": {
+    label: "배금연구소 연구동",
+    speaker: "배금연구소 연구동",
+    title: "기구와 모니터 사이로 연구 일정의 긴장이 흐르고 있다",
+    background: DAY01_WORLD_RESEARCH_LAB_INTERIOR_BACKGROUND,
+    lines: [
+      "실험대와 분석 장비가 정돈된 채 다음 작업 순서를 기다리고 있다.",
+      "연구직 루트에서 실제로 발을 들이게 되는 내부 공간이다.",
+    ],
+    tags: ["연구동", "배금연구소", "연구직"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "industrial",
+    exits: ["tower-cafe"],
+    options: [
+      {
+        title: "연구소 앞으로 돌아간다",
+        action: "move",
+        targetLocation: "tower-cafe",
+        travelMinutes: 5,
+        keepVisible: true,
       },
     ],
   },
@@ -1438,7 +1797,7 @@ const DAY01_WORLD_LOCATIONS = {
     background: DAY01_WORLD_LIBRARY_BACKGROUND,
     lines: [
       "책장 사이로 오래된 종이 냄새가 돌고, 빈 좌석마다 누군가의 준비 시간이 남아 있다.",
-      "이력서를 다듬거나 공부를 하며 직장지원 준비도를 쌓기 좋은 곳이다.",
+      "이력서를 다듬거나 공부를 하며 직장 면접 준비도를 쌓기 좋은 곳이다.",
     ],
     tags: ["도서관", "준비", "공부"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
@@ -1490,11 +1849,11 @@ const DAY01_WORLD_LOCATIONS = {
   "university-district": {
     label: "대학가",
     speaker: "대학가",
-    title: "취업지원센터 배너와 동아리 전단이 뒤섞인 캠퍼스 길목이다",
+    title: "취업지원센터 배너와 졸업 안내문이 함께 보이는 캠퍼스 길목이다",
     background: DAY01_WORLD_UNIVERSITY_DISTRICT_BACKGROUND,
     lines: [
       "건물 유리문마다 강의실 안내와 취업 상담 포스터가 겹쳐 붙어 있다.",
-      "학생들 틈에서 서류를 다듬거나 사람을 만나면 직장지원 루트에 도움이 될 것 같은 분위기다.",
+      "학생들 틈에서 서류를 다듬고 졸업 요건을 채우면 직장 면접 루트에 도움이 될 것 같은 분위기다.",
     ],
     tags: ["대학가", "취업지원", "학생"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
@@ -1504,6 +1863,10 @@ const DAY01_WORLD_LOCATIONS = {
       {
         title: "취업지원센터에서 상담을 받는다",
         action: "study-career-center-review",
+      },
+      {
+        title: "졸업 심사를 진행한다",
+        action: "graduate-university",
       },
       {
         title: "캠퍼스 공원으로 걸어간다",
@@ -1549,6 +1912,68 @@ const DAY01_WORLD_LOCATIONS = {
   },
 };
 
+const DAY01_HOME_FRONT_LOCATION_IDS = ["apt-alley", "silver-home-front", "golden-home-front"];
+
+DAY01_WORLD_LOCATIONS["silver-home-front"] = {
+  label: "배금아파트 앞",
+  speaker: "배금아파트 앞",
+  title: "아파트 로비 문이 닫히고 낮은 바람 소리가 주거 구역에 번진다",
+  lines: [
+    "아파트 현관 앞 공기는 정리되어 있지만, 길 하나만 건너면 바로 배금시의 일상이 이어진다.",
+    "다시 안으로 들어가 로비를 지나 방으로 올라가거나, 버스 정류장 쪽으로 걸어 나갈 수 있다.",
+  ],
+  tags: ["집앞", "주거", "아파트"],
+  actors: [DAY01_WORLD_PLAYER_ACTOR],
+  randomNpcPool: DAY01_WORLD_ALLEY_NPC_POOL,
+  exits: ["city-crossroads", "bus-stop"],
+  options: [
+    {
+      title: "배금시 사거리로 간다",
+      action: "move",
+      targetLocation: "city-crossroads",
+    },
+    {
+      title: "버스 정류장으로 간다",
+      action: "move",
+      targetLocation: "bus-stop",
+    },
+    {
+      title: "다시 집 안으로 들어간다",
+      action: "home",
+    },
+  ],
+};
+
+DAY01_WORLD_LOCATIONS["golden-home-front"] = {
+  label: "배금복합빌딩 앞",
+  speaker: "배금복합빌딩 앞",
+  title: "복합빌딩 차고 셔터가 열리며 바깥 도로와 주거 구역 풍경이 한 번에 드러난다",
+  lines: [
+    "차량이 드나드는 램프 끝에서 바로 바깥 공기와 도시 소음이 닿는다.",
+    "다시 안으로 들어가 차고와 로비를 거쳐 방으로 올라가거나, 곧장 주거 구역으로 나갈 수 있다.",
+  ],
+  tags: ["집앞", "주거", "복합빌딩"],
+  actors: [DAY01_WORLD_PLAYER_ACTOR],
+  randomNpcPool: DAY01_WORLD_ALLEY_NPC_POOL,
+  exits: ["city-crossroads", "bus-stop"],
+  options: [
+    {
+      title: "배금시 사거리로 간다",
+      action: "move",
+      targetLocation: "city-crossroads",
+    },
+    {
+      title: "버스 정류장으로 간다",
+      action: "move",
+      targetLocation: "bus-stop",
+    },
+    {
+      title: "다시 집 안으로 들어간다",
+      action: "home",
+    },
+  ],
+};
+
 const DAY01_WORLD = {
   homeLocationId: "apt-alley",
   defaultLocationId: "apt-alley",
@@ -1562,7 +1987,7 @@ const DAY01_WORLD_DISTRICTS = {
   residential: {
     id: "residential",
     label: "주거 구역",
-    note: "집과 골목",
+    note: "배금고시원, 배금아파트, 배금복합빌딩",
     entryLocationId: "bus-stop",
   },
   study: {
@@ -1579,8 +2004,8 @@ const DAY01_WORLD_DISTRICTS = {
   },
   industrial: {
     id: "industrial",
-    label: "회사 구역",
-    note: "오피스와 물류",
+    label: "배금디지털단지",
+    note: "배금전자와 배금연구소",
     entryLocationId: "office-plaza",
   },
   underworld: {
@@ -1619,6 +2044,8 @@ const DAY01_WORLD_DISTRICT_MAP = {
 };
 
 DAY01_WORLD_LOCATIONS["apt-alley"].districtId = "residential";
+DAY01_WORLD_LOCATIONS["silver-home-front"].districtId = "residential";
+DAY01_WORLD_LOCATIONS["golden-home-front"].districtId = "residential";
 DAY01_WORLD_LOCATIONS["bus-stop"].districtId = "residential";
 DAY01_WORLD_LOCATIONS["bus-stop-map"].districtId = "residential";
 DAY01_WORLD_LOCATIONS["city-crossroads"].districtId = "commercial";
@@ -1683,9 +2110,10 @@ DAY01_WORLD_LOCATIONS["study-hub"] = {
 DAY01_WORLD_LOCATIONS["bus-stop-map"].map = null;
 DAY01_WORLD_LOCATIONS["bus-stop-map"].exits = [
   "bus-stop",
+  ...DAY01_HOME_FRONT_LOCATION_IDS,
   ...DAY01_WORLD_BUS_ROUTE_OPTIONS
     .map((option) => option.targetLocation)
-    .filter((locationId) => locationId !== "bus-stop"),
+    .filter((locationId) => ![...DAY01_HOME_FRONT_LOCATION_IDS, "bus-stop"].includes(locationId)),
 ];
 DAY01_WORLD_LOCATIONS["bus-stop-map"].label = "배금시외버스터미널 안내";
 DAY01_WORLD_LOCATIONS["bus-stop-map"].speaker = "배금시외버스터미널";
@@ -1711,12 +2139,28 @@ DAY01_WORLD_LOCATIONS["bus-stop-map"].options = [
 ];
 DAY01_WORLD_LOCATIONS["bus-stop-map"].timetableOptions = [];
 DAY01_WORLD_LOCATIONS["bus-stop"].exits = [
-  "apt-alley",
+  ...DAY01_HOME_FRONT_LOCATION_IDS,
   "city-crossroads",
   "bus-stop-map",
   ...DAY01_WORLD_BUS_ROUTE_OPTIONS
     .map((option) => option.targetLocation)
-    .filter((locationId) => !["apt-alley", "city-crossroads", "bus-stop", "bus-stop-map"].includes(locationId)),
+    .filter((locationId) => ![...DAY01_HOME_FRONT_LOCATION_IDS, "city-crossroads", "bus-stop", "bus-stop-map"].includes(locationId)),
+];
+DAY01_WORLD_LOCATIONS["bus-stop"].options = [
+  {
+    title: "안내판 앞으로 간다",
+    action: "move",
+    targetLocation: "bus-stop-map",
+  },
+  {
+    title: "집 쪽으로 돌아간다",
+    action: "move-home",
+  },
+  {
+    title: "배금시 사거리로 간다",
+    action: "move",
+    targetLocation: "city-crossroads",
+  },
 ];
 
 DAY01_WORLD_LOCATIONS.library.exits = ["study-hub"];
@@ -1784,8 +2228,8 @@ const DAY01_CITY_MAP_NODE_META = {
     x: 14,
     y: 76,
     icon: "🏠",
-    shortLabel: "집앞골목",
-    note: "하루 시작과 귀가가 이어지는 주거 구역.",
+    shortLabel: "고시원 앞",
+    note: "배금고시원으로 이어지는 주거 구역 출입점.",
     zoneTone: "residential",
     order: 10,
   },
@@ -1830,7 +2274,7 @@ const DAY01_CITY_MAP_NODE_META = {
     y: 16,
     icon: "🎓",
     shortLabel: "대학가",
-    note: "취업지원센터와 학생 네트워크가 엮이는 구역.",
+    note: "취업지원센터 상담과 졸업 심사를 챙길 수 있는 구역.",
     zoneTone: "study",
     order: 60,
   },
@@ -1880,13 +2324,28 @@ const DAY01_CITY_MAP_NODE_META = {
     order: 110,
   },
   "baegeum-hospital": {
-    x: 58,
-    y: 74,
-    icon: "🏥",
-    shortLabel: "배금병원",
-    note: "성형 상담과 병원 이벤트가 이어지는 장소.",
-    zoneTone: "commercial",
-    order: 120,
+    label: "배금병원 성형외과",
+    speaker: "배금병원 성형외과",
+    title: "로비 안내판 아래로 성형 상담 배너가 차갑게 줄지어 서 있다",
+    background: DAY01_WORLD_BAEGEUM_HOSPITAL_BACKGROUND,
+    lines: [
+      "수술 전후 사진과 상담 안내 문구가 복도 벽면을 따라 반듯하게 붙어 있다.",
+      "준비만 되면 얼굴과 인상을 다시 설계할 수 있다는 공기가 병원 안에 가라앉아 있다.",
+    ],
+    tags: ["병원", "성형", "상업 구역"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    exits: ["city-crossroads"],
+    options: [
+      {
+        title: "천만원으로 성형 상담을 진행한다",
+        action: "get-plastic-surgery",
+      },
+      {
+        title: "배금 사거리로 돌아간다",
+        action: "move",
+        targetLocation: "city-crossroads",
+      },
+    ],
   },
   "convenience-store": {
     x: 36,
@@ -1897,21 +2356,78 @@ const DAY01_CITY_MAP_NODE_META = {
     zoneTone: "commercial",
     order: 130,
   },
-  mcdonalds: {
-    x: 56,
-    y: 38,
-    icon: "🍔",
-    shortLabel: "맥도날드",
-    note: "세트 메뉴와 커피를 바로 주문할 수 있는 식사 거점.",
+  "lotto-retailer": {
+    x: 58,
+    y: 36,
+    icon: "🎟️",
+    shortLabel: "로또",
+    note: "배금역 앞 코너에 있는 로또판매장",
     zoneTone: "commercial",
-    order: 140,
+    order: 135,
+  },
+  mcdonalds: {
+    label: "맥도날드 배금거리점",
+    speaker: "맥도날드 배금거리점",
+    title: "건물 앞에서 카운터 쪽으로 이어지는 입구가 바로 보인다",
+    background: DAY01_WORLD_MCDONALDS_BACKGROUND,
+    lines: [
+      "대로변 코너를 차지한 빨간 간판 아래로 입구 유리문이 환하게 켜져 있다.",
+      "안으로 들어가면 카운터에서 세트 메뉴나 커피를 바로 주문할 수 있다.",
+    ],
+    tags: ["패스트푸드", "상업", "상업 구역"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["city-crossroads", "mcdonalds-counter"],
+    options: [
+      {
+        title: "카운터로 들어간다",
+        action: "move",
+        targetLocation: "mcdonalds-counter",
+        travelMinutes: 4,
+      },
+      {
+        title: "배금 사거리로 돌아간다",
+        action: "move",
+        targetLocation: "city-crossroads",
+      },
+    ],
+  },
+  "mcdonalds-counter": {
+    label: "맥도날드 배금거리점 카운터",
+    speaker: "맥도날드 배금거리점 카운터",
+    title: "주문 카운터와 픽업 안내판이 바로 눈앞에 있다",
+    background: DAY01_WORLD_MCDONALDS_COUNTER_BACKGROUND,
+    lines: [
+      "카운터 앞에서 주문 번호와 커피 픽업 벨이 번갈아 울린다.",
+      "잠깐 서 있기만 해도 패스트푸드 매장 특유의 바쁜 공기가 그대로 느껴진다.",
+    ],
+    tags: ["패스트푸드", "카운터", "맥도날드"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["mcdonalds"],
+    options: [
+      {
+        title: "세트 메뉴를 주문한다",
+        action: "eat-mcdonalds-set",
+      },
+      {
+        title: "커피 한 잔을 주문한다",
+        action: "buy-mcdonalds-coffee",
+      },
+      {
+        title: "건물 앞으로 나간다",
+        action: "move",
+        targetLocation: "mcdonalds",
+        travelMinutes: 4,
+      },
+    ],
   },
   "office-plaza": {
     x: 82,
     y: 48,
     icon: "🏢",
-    shortLabel: "오피스플라자",
-    note: "회사구역 로비. 직장인, 관제센터, 물류동 입구가 모인다.",
+    shortLabel: "디지털단지",
+    note: "단지 입구. 배금전자 사무동, 생산동, 배금연구소로 갈라진다.",
     zoneTone: "industrial",
     order: 145,
   },
@@ -1919,17 +2435,17 @@ const DAY01_CITY_MAP_NODE_META = {
     x: 85,
     y: 33,
     icon: "🖥️",
-    shortLabel: "관제센터",
-    note: "배달 관제와 배차 모니터링이 돌아가는 사무동.",
+    shortLabel: "사무동",
+    note: "배금전자 사무직 면접과 사무층 배치가 이뤄지는 건물.",
     zoneTone: "industrial",
     order: 150,
   },
   "tower-cafe": {
     x: 77,
     y: 63,
-    icon: "☕",
-    shortLabel: "로비카페",
-    note: "출근 직장인이 몰리는 오피스플라자 카페 지점.",
+    icon: "🧪",
+    shortLabel: "연구소",
+    note: "배금연구소 연구직 면접과 연구동 브리핑이 열리는 건물.",
     zoneTone: "industrial",
     order: 155,
   },
@@ -1937,8 +2453,8 @@ const DAY01_CITY_MAP_NODE_META = {
     x: 90,
     y: 73,
     icon: "📦",
-    shortLabel: "물류허브",
-    note: "상하차와 장거리 퀵 배송이 이어지는 물류동.",
+    shortLabel: "생산동",
+    note: "배금전자 생산직 면접과 라인 배치가 이어지는 공장동.",
     zoneTone: "industrial",
     order: 160,
   },
@@ -1950,11 +2466,35 @@ Object.entries(DAY01_CITY_MAP_NODE_META).forEach(([locationId, mapNode]) => {
   }
 });
 
+DAY01_WORLD_LOCATIONS["silver-home-front"].mapNode = {
+  x: 10,
+  y: 84,
+  icon: "🏢",
+  shortLabel: "아파트 앞",
+  note: "배금아파트 로비를 거쳐 나오는 주거 구역 출입점.",
+  zoneTone: "residential",
+  order: 11,
+};
+DAY01_WORLD_LOCATIONS["golden-home-front"].mapNode = {
+  x: 23,
+  y: 84,
+  icon: "🚘",
+  shortLabel: "복합빌딩 앞",
+  note: "배금복합빌딩 차고 램프와 입구가 이어지는 주거 구역 출입점.",
+  zoneTone: "residential",
+  order: 12,
+};
+
 [
   "bus-stop-map",
   "bus-ride",
   "walk-travel",
   "station-seoul-route",
+  "logistics-center",
+  "lotto-retailer-interior",
+  "mcdonalds-counter",
+  "production-line",
+  "research-lab-interior",
 ].forEach((locationId) => {
   if (DAY01_WORLD_LOCATIONS[locationId]) {
     DAY01_WORLD_LOCATIONS[locationId].cityMapHidden = true;
@@ -1964,6 +2504,11 @@ Object.entries(DAY01_CITY_MAP_NODE_META).forEach(([locationId, mapNode]) => {
 DAY01_WORLD_LOCATIONS["bus-stop-map"].cityMapAnchorId = "bus-stop";
 DAY01_WORLD_LOCATIONS["bus-ride"].cityMapHidden = true;
 DAY01_WORLD_LOCATIONS["walk-travel"].cityMapHidden = true;
+DAY01_WORLD_LOCATIONS["logistics-center"].cityMapAnchorId = "station-front";
+DAY01_WORLD_LOCATIONS["lotto-retailer-interior"].cityMapAnchorId = "lotto-retailer";
+DAY01_WORLD_LOCATIONS["mcdonalds-counter"].cityMapAnchorId = "mcdonalds";
+DAY01_WORLD_LOCATIONS["production-line"].cityMapAnchorId = "logistics-hub";
+DAY01_WORLD_LOCATIONS["research-lab-interior"].cityMapAnchorId = "tower-cafe";
 DAY01_WORLD_LOCATIONS["station-seoul-route"].cityMapAnchorId = "station-interior";
 
 DAY01_WORLD.cityMap = {
@@ -1972,12 +2517,16 @@ DAY01_WORLD.cityMap = {
   zones: [
     { id: "study", label: "학습 구역", tone: "study", x: 6, y: 4, width: 60, height: 30 },
     { id: "commercial", label: "상업 구역", tone: "commercial", x: 27, y: 25, width: 45, height: 57 },
-    { id: "industrial", label: "회사 구역", tone: "industrial", x: 73, y: 28, width: 23, height: 56 },
+    { id: "industrial", label: "배금디지털단지", tone: "industrial", x: 73, y: 28, width: 23, height: 56 },
     { id: "residential", label: "주거 구역", tone: "residential", x: 4, y: 58, width: 34, height: 30 },
   ],
   links: [
     { from: "apt-alley", to: "bus-stop", minutes: 8, mode: "walk" },
     { from: "apt-alley", to: "city-crossroads", minutes: 18, mode: "walk" },
+    { from: "silver-home-front", to: "bus-stop", minutes: 6, mode: "walk" },
+    { from: "silver-home-front", to: "city-crossroads", minutes: 16, mode: "walk" },
+    { from: "golden-home-front", to: "bus-stop", minutes: 10, mode: "walk" },
+    { from: "golden-home-front", to: "city-crossroads", minutes: 20, mode: "walk" },
     { from: "bus-stop", to: "city-crossroads", minutes: 14, mode: "walk" },
     { from: "bus-stop", to: "study-hub", minutes: 22, mode: "bus" },
     { from: "bus-stop", to: "downtown", minutes: 10, mode: "bus" },
@@ -1993,9 +2542,11 @@ DAY01_WORLD.cityMap = {
     { from: "city-crossroads", to: "downtown", minutes: 9, mode: "walk" },
     { from: "city-crossroads", to: "baegeum-hospital", minutes: 9, mode: "walk" },
     { from: "city-crossroads", to: "convenience-store", minutes: 4, mode: "walk" },
+    { from: "city-crossroads", to: "lotto-retailer", minutes: 6, mode: "walk" },
     { from: "city-crossroads", to: "mcdonalds", minutes: 5, mode: "walk" },
     { from: "city-crossroads", to: "office-plaza", minutes: 9, mode: "walk" },
     { from: "station-front", to: "station-interior", minutes: 4, mode: "walk" },
+    { from: "station-front", to: "lotto-retailer", minutes: 3, mode: "walk" },
     { from: "station-front", to: "office-plaza", minutes: 8, mode: "walk" },
     { from: "downtown", to: "office-plaza", minutes: 8, mode: "walk" },
     { from: "office-plaza", to: "mobility-control-center", minutes: 4, mode: "walk" },
@@ -2004,3 +2555,5 @@ DAY01_WORLD.cityMap = {
     { from: "mobility-control-center", to: "logistics-hub", minutes: 6, mode: "walk" },
   ],
 };
+
+

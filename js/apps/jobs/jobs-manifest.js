@@ -2,11 +2,12 @@ function getJobsAppManifest(targetState = state) {
   return {
     id: "jobs",
     label: "공고",
+    homeLabel: "공고",
     icon: "💼",
     openRoute: "jobs/home",
     installable: true,
     storeCategory: "생활",
-    storeDescription: "공고 앱",
+    storeDescription: "알바·직장 공고",
     isAvailable: () => (
       typeof canUsePhoneApps === "function"
         ? canUsePhoneApps(targetState)

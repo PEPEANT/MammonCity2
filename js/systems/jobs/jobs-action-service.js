@@ -10,6 +10,64 @@ function setJobsActionStatusMessage({
   }
 }
 
+function getScheduledShiftUiModel(targetState = state) {
+  const shiftStatus = typeof getScheduledShiftStatus === "function"
+    ? getScheduledShiftStatus(targetState)
+    : null;
+  if (!shiftStatus?.scheduledShift?.offer) {
+    return null;
+  }
+
+  const offer = shiftStatus.scheduledShift.offer;
+  const job = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : (JOB_LOOKUP?.[offer.jobId] || null);
+  const workplace = typeof getOfferWorkplaceSummary === "function"
+    ? getOfferWorkplaceSummary(offer, targetState)
+    : null;
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+  const isAtWorkplace = Boolean(
+    workplace?.locationId
+    && currentLocationId
+    && workplace.locationId === currentLocationId
+  );
+  const phase = shiftStatus.waiting
+    ? "waiting"
+    : (shiftStatus.active ? "active" : "missed");
+  const startLabel = typeof formatClockTime === "function"
+    ? formatClockTime(shiftStatus.startSlot)
+    : "";
+  const endLabel = typeof formatClockTime === "function"
+    ? formatClockTime(shiftStatus.endSlot)
+    : "";
+  const shiftWindowLabel = startLabel && endLabel
+    ? `${startLabel} - ${endLabel}`
+    : "";
+
+  return {
+    shiftStatus,
+    scheduledShift: shiftStatus.scheduledShift,
+    offer,
+    job,
+    workplace,
+    currentLocationId,
+    isAtWorkplace,
+    phase,
+    needsTravel: phase !== "missed" && Boolean(workplace?.locationId) && !isAtWorkplace,
+    canWait: phase === "waiting" && isAtWorkplace,
+    canStart: phase === "active" && isAtWorkplace,
+    startLabel,
+    endLabel,
+    shiftWindowLabel,
+    workplaceLabel: workplace?.workplaceName || workplace?.locationLabel || "근무지",
+    workplaceLine: [workplace?.workplaceName, workplace?.locationLabel || workplace?.districtLabel || ""]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
+
 function runPhoneJobApplicationAction(offerIndex, targetState = state) {
   if (typeof canApplyForJobOffer === "function" && !canApplyForJobOffer(targetState)) {
     return {
@@ -138,6 +196,55 @@ function runPhoneJobApplicationAction(offerIndex, targetState = state) {
   };
 }
 
+function runWaitForScheduledShiftAction(targetState = state) {
+  const shiftUi = getScheduledShiftUiModel(targetState);
+  if (!shiftUi) {
+    return {
+      ok: false,
+      code: "shift-not-found",
+    };
+  }
+
+  targetState.headline = {
+    badge: "출근 대기",
+    text: `${shiftUi.startLabel || "출근"}까지 시간을 보낸다.`,
+  };
+
+  if (typeof recordActionMemory === "function") {
+    const sourceLabel = shiftUi.isAtWorkplace
+      ? shiftUi.workplaceLabel
+      : (typeof getCurrentLocationLabel === "function" ? getCurrentLocationLabel(targetState) : "현재 위치");
+    const shiftTag = shiftUi.job?.isCareer ? "직장" : "알바";
+    const offerTag = shiftUi.offer?.careerPostingId || shiftUi.offer?.jobId || "";
+    recordActionMemory(
+      "출근 전까지 기다렸다",
+      shiftUi.job
+        ? `${shiftUi.workplaceLabel} ${shiftUi.job.title} 출근 시간에 맞추려고 잠깐 대기했다.`
+        : `${shiftUi.startLabel || "출근"}까지 시간을 보냈다.`,
+      {
+        type: "job",
+        source: sourceLabel,
+        tags: [shiftTag, "대기", offerTag].filter(Boolean),
+      },
+    );
+  }
+
+  if (typeof advanceTimeToSlot === "function" && advanceTimeToSlot(shiftUi.shiftStatus.startSlot)) {
+    if (typeof advanceDayOrFinish === "function") {
+      advanceDayOrFinish();
+      return {
+        ok: true,
+        rendered: true,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    rendered: false,
+  };
+}
+
 function runStartScheduledShiftAction(targetState = state) {
   const shiftStatus = typeof getScheduledShiftStatus === "function"
     ? getScheduledShiftStatus(targetState)
@@ -172,7 +279,9 @@ function runStartScheduledShiftAction(targetState = state) {
   const offer = typeof cloneOfferSnapshot === "function"
     ? cloneOfferSnapshot(scheduledShift.offer)
     : scheduledShift.offer;
-  const job = JOB_LOOKUP?.[offer?.jobId];
+  const job = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : JOB_LOOKUP?.[offer?.jobId];
   const workplace = typeof getOfferWorkplaceSummary === "function"
     ? getOfferWorkplaceSummary(offer, targetState)
     : null;
@@ -180,7 +289,11 @@ function runStartScheduledShiftAction(targetState = state) {
   const currentLocationId = typeof getCurrentLocationId === "function"
     ? getCurrentLocationId(targetState)
     : "";
-  const blockReason = typeof getShortTermOfferBlockedMessage === "function"
+  const isCareerOffer = typeof isCareerShiftOffer === "function"
+    ? isCareerShiftOffer(offer)
+    : Boolean(offer?.careerPostingId);
+  const offerTag = offer?.careerPostingId || offer?.jobId || "";
+  const blockReason = !isCareerOffer && typeof getShortTermOfferBlockedMessage === "function"
     ? getShortTermOfferBlockedMessage(offer, targetState)
     : "";
 
@@ -252,9 +365,20 @@ function runStartScheduledShiftAction(targetState = state) {
 
   targetState.timeSlot = Math.max(targetState.timeSlot, shiftStatus.startSlot) + shiftStatus.durationSlots;
   targetState.timeMinuteOffset = 0;
+  if (typeof startOfferWorkLoop === "function") {
+    startOfferWorkLoop(offer, {
+      clearScheduledShift: true,
+      targetState,
+    });
+    return {
+      ok: true,
+      rendered: true,
+    };
+  }
   if (typeof startWorkSceneForOffer === "function") {
     startWorkSceneForOffer(offer, {
       clearScheduledShift: true,
+      targetState,
     });
     return {
       ok: true,
@@ -283,11 +407,14 @@ function runSkipScheduledShiftAction(targetState = state) {
   const offer = typeof cloneOfferSnapshot === "function"
     ? cloneOfferSnapshot(scheduledShift.offer)
     : scheduledShift.offer;
-  const job = JOB_LOOKUP?.[offer?.jobId];
+  const job = typeof getOfferRuntimeDefinition === "function"
+    ? getOfferRuntimeDefinition(offer)
+    : JOB_LOOKUP?.[offer?.jobId];
   const workplace = typeof getOfferWorkplaceSummary === "function"
     ? getOfferWorkplaceSummary(offer, targetState)
     : null;
   const workplaceLabel = workplace?.workplaceName || workplace?.locationLabel || "";
+  const offerTag = offer?.careerPostingId || offer?.jobId || "";
 
   targetState.currentOffer = offer;
   targetState.lastResult = {
@@ -315,8 +442,8 @@ function runSkipScheduledShiftAction(targetState = state) {
       `${job?.title || "알바"}${workplaceLabel ? ` ${workplaceLabel}` : ""} 출근 시간에 맞추지 못해 오늘 근무가 사라졌다.`,
       {
         type: "job",
-        source: job?.title || "알바",
-        tags: ["알바", "결근", offer?.jobId].filter(Boolean),
+        source: job?.title || "근무",
+        tags: [job?.isCareer ? "직장" : "알바", "결근", offerTag].filter(Boolean),
       },
     );
   }
@@ -332,6 +459,54 @@ function runSkipScheduledShiftAction(targetState = state) {
   };
 }
 
+function runOpenScheduledShiftRouteAction(targetState = state) {
+  const shiftUi = getScheduledShiftUiModel(targetState);
+  if (!shiftUi?.workplace?.locationId) {
+    return {
+      ok: false,
+      code: "shift-route-not-found",
+    };
+  }
+
+  if (targetState.scene !== "outside") {
+    if (typeof goOutside === "function") {
+      goOutside({
+        autoOpenMapTargetLocation: shiftUi.workplace.locationId,
+      });
+      return {
+        ok: true,
+        rendered: true,
+      };
+    }
+
+    return {
+      ok: false,
+      code: "outside-required",
+    };
+  }
+
+  if (typeof openCityMapOverlayToLocation === "function") {
+    openCityMapOverlayToLocation(shiftUi.workplace.locationId, targetState);
+    return {
+      ok: true,
+      rendered: true,
+    };
+  }
+
+  if (typeof openCityMapOverlay === "function") {
+    openCityMapOverlay(targetState);
+    return {
+      ok: true,
+      rendered: true,
+    };
+  }
+
+  return {
+    ok: false,
+    code: "city-map-unavailable",
+  };
+}
+
 function resolveJobsPhoneActionRequest(phoneAction, actionTarget, targetState = state) {
   if (phoneAction === "apply-job") {
     return {
@@ -344,6 +519,13 @@ function resolveJobsPhoneActionRequest(phoneAction, actionTarget, targetState = 
     return {
       id: "jobs-go-shift",
       perform: () => runStartScheduledShiftAction(targetState),
+    };
+  }
+
+  if (phoneAction === "jobs-open-shift-route") {
+    return {
+      id: "jobs-open-shift-route",
+      perform: () => runOpenScheduledShiftRouteAction(targetState),
     };
   }
 

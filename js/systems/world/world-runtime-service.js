@@ -44,8 +44,51 @@ function getDayHomeLocationId(day = getCurrentDayNumber()) {
   return Object.keys(locations)[0] || null;
 }
 
-function createDefaultWorldState(day = getCurrentDayNumber()) {
-  const currentLocation = getDayHomeLocationId(day);
+function getResolvedHomeLocationId(targetState = state) {
+  const day = targetState?.day || getCurrentDayNumber();
+  if (typeof syncSpoonStartResidence === "function") {
+    syncSpoonStartResidence(targetState);
+  }
+
+  if (typeof shouldUseSpoonStartResidence === "function" && !shouldUseSpoonStartResidence(targetState)) {
+    return getDayHomeLocationId(day);
+  }
+
+  const spoonHomeLocationId = typeof getSpoonStartHomeLocationId === "function"
+    ? getSpoonStartHomeLocationId(targetState)
+    : "";
+
+  if (spoonHomeLocationId) {
+    return spoonHomeLocationId;
+  }
+
+  return getDayHomeLocationId(day);
+}
+
+function getResolvedInitialUnlockedLocationIds(targetState = null, day = targetState?.day || getCurrentDayNumber()) {
+  const initialUnlockedLocations = typeof getWorldInitialUnlockedLocationIds === "function"
+    ? getWorldInitialUnlockedLocationIds(day)
+    : [];
+  const homeLocationId = getResolvedHomeLocationId(targetState) || getDayHomeLocationId(day);
+  const homeLocationIds = typeof getAllSpoonStartHomeLocationIds === "function"
+    ? getAllSpoonStartHomeLocationIds()
+    : [];
+  const filteredLocations = initialUnlockedLocations.filter(
+    (locationId) => !homeLocationIds.includes(locationId) || locationId === homeLocationId
+  );
+
+  if (homeLocationId && !filteredLocations.includes(homeLocationId)) {
+    filteredLocations.unshift(homeLocationId);
+  }
+
+  return filteredLocations;
+}
+
+function createDefaultWorldState(day = getCurrentDayNumber(), targetState = null) {
+  const stateForHomeResolution = targetState && typeof targetState === "object"
+    ? targetState
+    : { day };
+  const currentLocation = getResolvedHomeLocationId(stateForHomeResolution) || getDayHomeLocationId(day);
   const currentDistrict = typeof getWorldLocationDistrictId === "function"
     ? getWorldLocationDistrictId(currentLocation, day)
     : "";
@@ -56,8 +99,8 @@ function createDefaultWorldState(day = getCurrentDayNumber()) {
     unlockedDistricts: typeof getWorldInitialUnlockedDistrictIds === "function"
       ? getWorldInitialUnlockedDistrictIds(day)
       : (currentDistrict ? [currentDistrict] : []),
-    unlockedLocations: typeof getWorldInitialUnlockedLocationIds === "function"
-      ? getWorldInitialUnlockedLocationIds(day)
+    unlockedLocations: typeof getResolvedInitialUnlockedLocationIds === "function"
+      ? getResolvedInitialUnlockedLocationIds(stateForHomeResolution, day)
       : (currentLocation ? [currentLocation] : []),
     alleyNpcVisible: false,
     alleyNpcId: "",
@@ -83,7 +126,7 @@ function syncWorldState(targetState = state) {
   }
 
   const day = targetState.day || getCurrentDayNumber();
-  const defaults = createDefaultWorldState(day);
+  const defaults = createDefaultWorldState(day, targetState);
   const worldState = targetState.world && typeof targetState.world === "object"
     ? targetState.world
     : {};
@@ -99,6 +142,14 @@ function syncWorldState(targetState = state) {
     currentLocation = defaults.currentLocation;
   }
 
+  const homeLocationIds = typeof getAllSpoonStartHomeLocationIds === "function"
+    ? getAllSpoonStartHomeLocationIds()
+    : [];
+  const resolvedHomeLocationId = getResolvedHomeLocationId(targetState) || defaults.currentLocation;
+  if (homeLocationIds.includes(currentLocation) && resolvedHomeLocationId && currentLocation !== resolvedHomeLocationId) {
+    currentLocation = resolvedHomeLocationId;
+  }
+
   let currentDistrict = typeof worldState.currentDistrict === "string"
     ? worldState.currentDistrict
     : defaults.currentDistrict;
@@ -112,7 +163,7 @@ function syncWorldState(targetState = state) {
   const unlockedDistricts = typeof normalizeWorldIdList === "function"
     ? normalizeWorldIdList(worldState.unlockedDistricts, Object.keys(districts), defaults.unlockedDistricts)
     : [...(defaults.unlockedDistricts || [])];
-  const unlockedLocations = typeof normalizeWorldIdList === "function"
+  let unlockedLocations = typeof normalizeWorldIdList === "function"
     ? normalizeWorldIdList(worldState.unlockedLocations, Object.keys(locations || {}), defaults.unlockedLocations)
     : [...(defaults.unlockedLocations || [])];
   const wanderedLocations = typeof normalizeWorldIdList === "function"
@@ -121,6 +172,12 @@ function syncWorldState(targetState = state) {
   const wanderResult = worldState.wanderResult && typeof worldState.wanderResult === "object"
     ? worldState.wanderResult
     : {};
+
+  if (homeLocationIds.length) {
+    unlockedLocations = unlockedLocations.filter(
+      (locationId) => !homeLocationIds.includes(locationId) || locationId === resolvedHomeLocationId
+    );
+  }
 
   if (currentDistrict && !unlockedDistricts.includes(currentDistrict)) {
     unlockedDistricts.push(currentDistrict);
@@ -271,7 +328,13 @@ function estimateWalkTravelMinutes(fromLocationId = "", toLocationId = "", targe
     ? getWorldLocationDistrictId(toLocationId, day)
     : "";
 
-  const nearbyResidentialStops = new Set(["apt-alley", "bus-stop", "bus-stop-map"]);
+  const nearbyResidentialStops = new Set([
+    "apt-alley",
+    "silver-home-front",
+    "golden-home-front",
+    "bus-stop",
+    "bus-stop-map",
+  ]);
   if (nearbyResidentialStops.has(fromLocationId) && nearbyResidentialStops.has(toLocationId)) {
     return typeof adjustTravelMinutesForOwnedVehicle === "function"
       ? adjustTravelMinutesForOwnedVehicle(TIME_SLOT_MINUTES, {

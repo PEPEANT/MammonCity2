@@ -163,11 +163,21 @@
   isolation: isolate;
 }
 
+.city-map-board-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: min(44vh, 320px);
+}
+
 .city-map-board {
   position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
+  width: max(100%, 760px);
+  min-width: 760px;
+  height: max(100%, 540px);
+  min-height: 540px;
   overflow: hidden;
   background: #080a0e;
 }
@@ -834,22 +844,27 @@
 
 @media (min-width: 900px) {
   .city-map-surface {
-    top: 50%;
-    right: auto;
-    bottom: auto;
-    left: 50%;
-    width: min(1120px, 92vw);
-    height: min(760px, 88vh);
+    top: 14px;
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    width: auto;
+    height: auto;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.13);
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.04),
       0 32px 80px rgba(0, 0, 0, 0.75);
-    transform: translate(-50%, calc(-50% + 22px));
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      transform 0.22s ease,
+      opacity 0.22s ease;
   }
 
   #city-map-overlay.is-open .city-map-surface {
-    transform: translate(-50%, -50%);
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .city-map-header {
@@ -871,12 +886,22 @@
 
   .city-map-canvas-wrap {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(320px, 31vw, 372px);
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 420px);
     align-items: stretch;
   }
 
-  .city-map-board {
+  .city-map-board-viewport {
+    position: relative;
+    inset: auto;
     min-width: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .city-map-board {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
     min-height: 100%;
   }
 
@@ -947,5 +972,14 @@
 
   .city-map-travel-btn {
     min-height: 46px;
+  }
+}
+
+@media (max-width: 899px) {
+  .city-map-board {
+    width: max(100%, 820px);
+    min-width: 820px;
+    height: max(100%, 580px);
+    min-height: 580px;
   }
 }

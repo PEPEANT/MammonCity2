@@ -48,7 +48,7 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
   }),
   "water-bottle": Object.freeze({
     id: "water-bottle",
-    hungerRestore: 1,
+    hungerRestore: 8,
     useLabel: "마신다",
     useMemoryBody: "가방 안에서 생수를 꺼내 몇 모금 넘기며 비어 가던 속을 잠깐 달랬다.",
     category: "carry",
@@ -58,7 +58,7 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
   }),
   "triangle-kimbap": Object.freeze({
     id: "triangle-kimbap",
-    hungerRestore: 3,
+    hungerRestore: 26,
     useLabel: "먹는다",
     useMemoryBody: "챙겨 둔 삼각김밥을 꺼내 허겁지겁 먹고 다시 움직일 기운을 붙잡았다.",
     category: "carry",
@@ -73,6 +73,13 @@ const INVENTORY_ITEM_CATALOG = Object.freeze({
     icon: "💊",
     description: "몸이 쑤실 때 버티기 좋게 해주는 진통제다.",
   }),
+  "lotto-ticket": Object.freeze({
+    id: "lotto-ticket",
+    category: "document",
+    label: "로또 복권",
+    icon: "🎟️",
+    description: "배금역 로또판매장에서 산 복권이다. 다음날 아침 결과가 나온다.",
+  }),
 });
 
 const OWNED_HOME_CATALOG = Object.freeze({
@@ -83,6 +90,30 @@ const OWNED_HOME_CATALOG = Object.freeze({
     description: "현재 머무는 기본 거처다.",
     deedLabel: "부모님 집 관련 서류",
     deedDescription: "직접 소유 문서는 아니지만 거주 정보를 확인하는 용도다.",
+  }),
+  "origin-dirt-home": Object.freeze({
+    id: "origin-dirt-home",
+    label: "배금고시원",
+    icon: "🏚",
+    description: "흙수저 시작에서 머무는 배금고시원 기본 거처다.",
+    deedLabel: "시작 거처 정보",
+    deedDescription: "흙수저 출생 패키지로 배정된 배금고시원 거처 정보다.",
+  }),
+  "origin-silver-home": Object.freeze({
+    id: "origin-silver-home",
+    label: "배금아파트",
+    icon: "🏢",
+    description: "은수저 시작에서 머무는 배금아파트 기본 거처다.",
+    deedLabel: "시작 거처 정보",
+    deedDescription: "은수저 출생 패키지로 배정된 배금아파트 거처 정보다.",
+  }),
+  "origin-gold-home": Object.freeze({
+    id: "origin-gold-home",
+    label: "배금복합빌딩",
+    icon: "🏛",
+    description: "금수저 시작에서 머무는 배금복합빌딩 기본 거처다.",
+    deedLabel: "시작 거처 정보",
+    deedDescription: "금수저 출생 패키지로 배정된 배금복합빌딩 거처 정보다.",
   }),
   "goshiwon": Object.freeze({
     id: "goshiwon",
@@ -505,8 +536,47 @@ function getOwnershipAssetPortfolio(targetState = state) {
   return portfolio;
 }
 
+function getLegacyMarketAssetPortfolio(targetState = state) {
+  const portfolio = [];
+
+  if (targetState?.stockHolding) {
+    const principal = Math.max(0, Math.round(Number(targetState.stockHolding.betAmount) || 0));
+    const market = typeof getStockMarketSnapshot === "function"
+      ? getStockMarketSnapshot(targetState)
+      : null;
+    const returnRate = Number(market?.stockDailyReturnRate) || 0;
+    portfolio.push({
+      id: "legacy-stock-holding",
+      label: "주식 보유분",
+      estimatedValue: Math.max(0, Math.round(principal * (1 + returnRate))),
+    });
+  }
+
+  if (targetState?.coinHolding) {
+    const principal = Math.max(0, Math.round(Number(targetState.coinHolding.betAmount) || 0));
+    const coinType = String(targetState.coinHolding.coinType || "").trim().toUpperCase();
+    const returnRate = typeof getCoinDailyReturnRate === "function"
+      ? (Number(getCoinDailyReturnRate(coinType, targetState)) || 0)
+      : 0;
+    const coinLabel = typeof getCoinTypeInfo === "function"
+      ? (getCoinTypeInfo(coinType)?.label || coinType || "코인")
+      : (coinType || "코인");
+    portfolio.push({
+      id: `legacy-coin-holding:${coinType || "coin"}`,
+      label: `${coinLabel} 보유분`,
+      estimatedValue: Math.max(0, Math.round(principal * (1 + returnRate))),
+    });
+  }
+
+  return portfolio;
+}
+
 function getOwnershipTotalAssetValue(targetState = state) {
-  return getOwnershipAssetPortfolio(targetState).reduce((sum, asset) => (
+  const combinedPortfolio = [
+    ...getOwnershipAssetPortfolio(targetState),
+    ...getLegacyMarketAssetPortfolio(targetState),
+  ];
+  return combinedPortfolio.reduce((sum, asset) => (
     sum + Math.max(0, Math.round(Number(asset?.estimatedValue) || 0))
   ), 0);
 }
@@ -601,6 +671,9 @@ function getInventoryCarryLoad(targetState = state) {
 }
 
 function getInventoryResidenceLabel(targetState = state) {
+  if (typeof syncSpoonStartResidence === "function") {
+    syncSpoonStartResidence(targetState);
+  }
   const ownershipState = syncOwnershipState(targetState);
   const residenceDefinition = getOwnedHomeDefinition(ownershipState.residence);
   return residenceDefinition?.label || "거처 미정";

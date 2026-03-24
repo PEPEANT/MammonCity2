@@ -3,12 +3,12 @@
 // same rules.
 
 function clampHungerValue(value) {
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
   return Math.max(0, Math.min(hungerMax, Math.round(Number(value) || 0)));
 }
 
 function createDefaultHungerState() {
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
   return {
     value: hungerMax,
     decayProgressMinutes: 0,
@@ -28,12 +28,16 @@ function ensureHungerState(targetState = state) {
   const activeVersion = storedVersion || 1;
 
   if (activeVersion < hungerVersion) {
-    const previousMax = activeVersion <= 1 && typeof LEGACY_HUNGER_MAX === "number"
-      ? LEGACY_HUNGER_MAX
-      : hungerMax;
-    const previousInterval = activeVersion <= 1 && typeof LEGACY_HUNGER_DECAY_INTERVAL_MINUTES === "number"
-      ? LEGACY_HUNGER_DECAY_INTERVAL_MINUTES
-      : HUNGER_DECAY_INTERVAL_MINUTES;
+    const previousMax = activeVersion <= 1
+      ? (typeof LEGACY_HUNGER_MAX === "number" ? LEGACY_HUNGER_MAX : hungerMax)
+      : (typeof LEGACY_HUNGER_V2_MAX === "number" ? LEGACY_HUNGER_V2_MAX : hungerMax);
+    const previousInterval = activeVersion <= 1
+      ? (typeof LEGACY_HUNGER_DECAY_INTERVAL_MINUTES === "number"
+        ? LEGACY_HUNGER_DECAY_INTERVAL_MINUTES
+        : HUNGER_DECAY_INTERVAL_MINUTES)
+      : (typeof LEGACY_HUNGER_V2_DECAY_INTERVAL_MINUTES === "number"
+        ? LEGACY_HUNGER_V2_DECAY_INTERVAL_MINUTES
+        : HUNGER_DECAY_INTERVAL_MINUTES);
     const previousValue = Math.max(0, Math.min(previousMax, Math.round(Number(targetState.hunger) || previousMax)));
     const previousProgress = Math.max(0, Math.min(previousInterval, Math.round(Number(targetState.hungerDecayProgress) || 0)));
     const valueRatio = previousMax > 0 ? previousValue / previousMax : 1;
@@ -56,17 +60,16 @@ function ensureHungerState(targetState = state) {
 
 function getHungerStatusTone(targetState = state) {
   const hungerValue = ensureHungerState(targetState).value;
-  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3;
-  const steadyThreshold = Math.max(2, Math.ceil(hungerMax * 0.6));
-  const hungryThreshold = Math.max(1, Math.ceil(hungerMax * 0.25));
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
+  const hungerRatio = hungerMax > 0 ? hungerValue / hungerMax : 0;
 
-  if (hungerValue >= hungerMax) {
+  if (hungerRatio >= 0.85) {
     return "sated";
   }
-  if (hungerValue >= steadyThreshold) {
+  if (hungerRatio >= 0.6) {
     return "steady";
   }
-  if (hungerValue >= hungryThreshold) {
+  if (hungerRatio >= 0.3) {
     return "hungry";
   }
   return "critical";
@@ -94,6 +97,40 @@ function restoreHunger(amount = 0, targetState = state, { resetProgress = true }
     targetState.hungerDecayProgress = 0;
   }
   return targetState.hunger;
+}
+
+function getHungerWarningProfile(value = 0, targetState = state) {
+  const hungerMax = typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100;
+  const safeValue = Math.max(0, Math.round(Number(value) || 0));
+
+  if (safeValue <= Math.max(1, Math.round(hungerMax * 0.1))) {
+    return {
+      key: "critical",
+      title: "배고픔 경고",
+      tone: "danger",
+      chips: [{ label: `배고픔 ${safeValue}/${hungerMax}`, tone: "down" }],
+    };
+  }
+
+  if (safeValue <= Math.max(1, Math.round(hungerMax * 0.3))) {
+    return {
+      key: "danger",
+      title: "허기가 심해진다",
+      tone: "warning",
+      chips: [{ label: `배고픔 ${safeValue}/${hungerMax}`, tone: "down" }],
+    };
+  }
+
+  if (safeValue <= Math.max(1, Math.round(hungerMax * 0.6))) {
+    return {
+      key: "hungry",
+      title: "배가 고파진다",
+      tone: "warning",
+      chips: [{ label: `배고픔 ${safeValue}/${hungerMax}`, tone: "down" }],
+    };
+  }
+
+  return null;
 }
 
 function getTotalLiquidFunds(targetState = state) {
@@ -223,7 +260,7 @@ function resolveHungerEmergency(targetState = state) {
 
   const payment = spendEmergencyFunds(HUNGER_HOSPITAL_COST, targetState);
   const paidFromBank = Boolean(payment?.bankPaid);
-  restoreHunger(typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3, targetState, { resetProgress: true });
+  restoreHunger(typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100, targetState, { resetProgress: true });
 
   if (typeof resetDialogueState === "function") {
     resetDialogueState(targetState);
@@ -268,10 +305,27 @@ function applyHungerTimePassage(minutes = 0, targetState = state) {
     targetState.hungerDecayProgress -= HUNGER_DECAY_INTERVAL_MINUTES;
     targetState.hunger = Math.max(0, targetState.hunger - 1);
 
+    const warningProfile = getHungerWarningProfile(targetState.hunger, targetState);
+    const previousWarningKey = String(targetState.lastHungerWarningKey || "").trim();
+    if (warningProfile?.key && warningProfile.key !== previousWarningKey) {
+      targetState.lastHungerWarningKey = warningProfile.key;
+      if (typeof queueGameplayFeedback === "function") {
+        queueGameplayFeedback({
+          title: warningProfile.title,
+          tone: warningProfile.tone,
+          chips: warningProfile.chips,
+        }, targetState);
+      }
+    }
+
     if (targetState.hunger <= 0) {
       targetState.hungerDecayProgress = 0;
       return resolveHungerEmergency(targetState);
     }
+  }
+
+  if (targetState.hunger > Math.max(1, Math.round((typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100) * 0.6))) {
+    targetState.lastHungerWarningKey = "";
   }
 
   return false;

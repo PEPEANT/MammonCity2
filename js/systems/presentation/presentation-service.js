@@ -4,9 +4,17 @@ function clonePresentationPlainObject(value) {
     : {};
 }
 
+function clampAppearanceAttractiveness(value = 0) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(normalized)));
+}
+
 function createDefaultAppearanceState() {
   return {
-    profileId: "default",
+    profileId: "",
     surgeryDone: false,
     attractiveness: 0,
     flags: {},
@@ -63,9 +71,11 @@ function syncAppearanceState(targetState = state) {
       ? appearanceState.profileId
       : defaults.profileId,
     surgeryDone: Boolean(appearanceState.surgeryDone),
-    attractiveness: Number.isFinite(appearanceState.attractiveness)
-      ? Number(appearanceState.attractiveness)
-      : defaults.attractiveness,
+    attractiveness: clampAppearanceAttractiveness(
+      Number.isFinite(appearanceState.attractiveness)
+        ? Number(appearanceState.attractiveness)
+        : defaults.attractiveness
+    ),
     flags: clonePresentationPlainObject(appearanceState.flags),
   };
 
@@ -93,7 +103,7 @@ function patchAppearanceState(patch = {}, targetState = state) {
     surgeryDone: typeof patch.surgeryDone === "boolean"
       ? patch.surgeryDone
       : appearanceState.surgeryDone,
-    attractiveness: nextAttractiveness,
+    attractiveness: clampAppearanceAttractiveness(nextAttractiveness),
     flags: patch.flags && typeof patch.flags === "object"
       ? {
           ...appearanceState.flags,
@@ -221,12 +231,83 @@ function patchNpcRelation(npcId = "", patch = {}, targetState = state) {
   return targetState.npcs.relations[normalizedNpcId];
 }
 
+function getPlayerOriginAppearanceProfileId(targetState = state) {
+  const tierId = String(targetState?.startingOrigin?.tierId || "").trim().toLowerCase();
+
+  if (tierId === "gold") {
+    return "level3Start";
+  }
+
+  if (tierId === "silver") {
+    return "level2";
+  }
+
+  return "level1";
+}
+
+function getPlayerAppearanceLevel(targetState = state) {
+  const appearanceState = syncAppearanceState(targetState);
+  const tierId = String(targetState?.startingOrigin?.tierId || "").trim().toLowerCase();
+
+  if (tierId === "gold") {
+    return 3;
+  }
+
+  if (tierId === "silver") {
+    return appearanceState.surgeryDone ? 3 : 2;
+  }
+
+  return appearanceState.surgeryDone ? 2 : 1;
+}
+
+function getPlayerAppearanceLevelLabel(targetState = state) {
+  return `${getPlayerAppearanceLevel(targetState)}LV`;
+}
+
+function resolvePlayerAppearanceProfileId(targetState = state) {
+  const appearanceState = syncAppearanceState(targetState);
+  const explicitProfileId = String(appearanceState.profileId || "").trim();
+  const originProfileId = getPlayerOriginAppearanceProfileId(targetState);
+
+  if ([
+    "level1",
+    "level2",
+    "level3Start",
+    "level3Mid",
+    "level3Final",
+  ].includes(explicitProfileId)) {
+    return explicitProfileId;
+  }
+
+  if (appearanceState.surgeryDone || explicitProfileId === "postSurgery" || explicitProfileId === "postSurgeryGold") {
+    if (originProfileId === "level3Start") {
+      return "level3Final";
+    }
+    if (originProfileId === "level2") {
+      return "level3Mid";
+    }
+    return "level2";
+  }
+
+  if (explicitProfileId === "gold") {
+    return "level3Start";
+  }
+
+  if (["silver", "postSurgery"].includes(explicitProfileId)) {
+    return "level2";
+  }
+
+  if (explicitProfileId === "default") {
+    return originProfileId;
+  }
+
+  return originProfileId;
+}
+
 function getPlayerPresentation(targetState = state, context = {}) {
   const appearanceState = syncAppearanceState(targetState);
   const playerArt = CHARACTER_ART?.player || {};
-  const resolvedProfileId = typeof appearanceState.profileId === "string" && appearanceState.profileId
-    ? appearanceState.profileId
-    : (appearanceState.surgeryDone ? "postSurgery" : "default");
+  const resolvedProfileId = resolvePlayerAppearanceProfileId(targetState);
   const resolvedSrc = playerArt[resolvedProfileId]
     || (appearanceState.surgeryDone ? playerArt.postSurgery : "")
     || playerArt.default
@@ -239,6 +320,8 @@ function getPlayerPresentation(targetState = state, context = {}) {
     alt: "player",
     surgeryDone: Boolean(appearanceState.surgeryDone),
     attractiveness: appearanceState.attractiveness,
+    appearanceLevel: getPlayerAppearanceLevel(targetState),
+    appearanceLevelLabel: getPlayerAppearanceLevelLabel(targetState),
     flags: { ...(appearanceState.flags || {}) },
     context: { ...(context || {}) },
   };
@@ -348,8 +431,13 @@ function resolveSceneActorPresentation(actor = {}, targetState = state, context 
   }
 
   const resolvedActor = { ...actor };
-  const actorKey = String(resolvedActor.npcId || resolvedActor.id || resolvedActor.alt || "").trim();
-  const isPlayerActor = resolvedActor.kind === "player" || actorKey === "player" || resolvedActor.alt === "player";
+  const actorKey = String(resolvedActor.npcId || resolvedActor.id || resolvedActor.alt || "").trim().toLowerCase();
+  const actorAlt = String(resolvedActor.alt || "").trim().toLowerCase();
+  const isPlayerActor = resolvedActor.kind === "player"
+    || actorKey === "player"
+    || actorAlt === "player"
+    || actorKey.startsWith("player")
+    || actorAlt.startsWith("player");
 
   if (isPlayerActor) {
     const presentation = getPlayerPresentation(targetState, context);

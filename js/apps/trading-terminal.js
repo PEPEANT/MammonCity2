@@ -26,6 +26,7 @@ const TRADING_TERMINAL_STOCK_DEFINITIONS = [
 ];
 
 const TRADING_TERMINAL_COIN_BASE_PRICES = Object.freeze({
+  BTC: 138000000,
   DICE: 1250,
   MAMC: 14800,
   DIAB: 6900,
@@ -125,6 +126,7 @@ function getTradingTerminalAssetDefinitions(appId, targetState = state) {
         symbol,
         name: info.label,
         icon: info.emoji,
+        isMeme: Boolean(info.isMeme),
         basePrice: TRADING_TERMINAL_COIN_BASE_PRICES[symbol] || 1000,
         volatility: clampTradingTerminalValue((Number(info.volatility) || 3) * 0.0018, 0.005, 0.032),
         driftBias: clampTradingTerminalValue((snapshot?.returnRate || 0) / 120, -0.005, 0.005),
@@ -147,7 +149,17 @@ function getTradingTerminalAssetDefinitions(appId, targetState = state) {
   }));
 }
 
-function createTradingTerminalAssetState(definition) {
+function createTradingTerminalAssetState(appId, definition, targetState = state) {
+  if (typeof buildMarketCycleAssetState === "function") {
+    return buildMarketCycleAssetState({
+      appId,
+      definition,
+      targetState,
+      tick: 0,
+      candleCount: 32,
+    });
+  }
+
   const basePrice = Math.max(1, Number(definition.basePrice) || 1);
   const candles = createTradingTerminalCandles(basePrice, definition.volatility);
   const lastCandle = candles[candles.length - 1];
@@ -194,15 +206,20 @@ function ensureTradingTerminalState(appId, targetState = state) {
       futuresPositions: [],
       nextPositionId: 1,
       assets: {},
+      lastSyncedTurn: 0,
     };
   }
 
   const terminal = targetState.marketTerminals[normalizedAppId];
   const definitions = getTradingTerminalAssetDefinitions(normalizedAppId, targetState);
+  const currentTurn = typeof getMarketCycleTurnNumber === "function"
+    ? getMarketCycleTurnNumber(targetState)
+    : Math.max(1, Math.round(Number(targetState?.day) || 1));
+  const shouldResyncAssets = terminal.lastSyncedTurn !== currentTurn;
 
   definitions.forEach((definition) => {
-    if (!terminal.assets[definition.symbol]) {
-      terminal.assets[definition.symbol] = createTradingTerminalAssetState(definition);
+    if (!terminal.assets[definition.symbol] || shouldResyncAssets) {
+      terminal.assets[definition.symbol] = createTradingTerminalAssetState(normalizedAppId, definition, targetState);
       return;
     }
     terminal.assets[definition.symbol].meta = { ...definition };
@@ -223,6 +240,7 @@ function ensureTradingTerminalState(appId, targetState = state) {
     ? terminal.futuresPositions
     : [];
   terminal.nextPositionId = Math.max(1, Math.round(Number(terminal.nextPositionId) || 1));
+  terminal.lastSyncedTurn = currentTurn;
 
   return terminal;
 }
@@ -238,7 +256,7 @@ function getTradingTerminalSpotHoldings(appId, targetState = state) {
     return [];
   }
 
-  return Object.entries(terminal.spotHoldings)
+  const holdings = Object.entries(terminal.spotHoldings)
     .map(([symbol, holding]) => {
       const asset = terminal.assets[symbol];
       if (!asset || !holding || !Number(holding.qty)) {
@@ -262,6 +280,59 @@ function getTradingTerminalSpotHoldings(appId, targetState = state) {
       };
     })
     .filter(Boolean);
+
+  const legacyHolding = getLegacyTradingSpotHolding(appId, targetState);
+  if (legacyHolding) {
+    holdings.push(legacyHolding);
+  }
+
+  return holdings;
+}
+
+function getLegacyTradingSpotHolding(appId, targetState = state) {
+  if (appId === "stocks" && targetState.stockHolding) {
+    const principal = Math.max(0, Math.round(Number(targetState.stockHolding.betAmount) || 0));
+    const pnl = calculateLegacyTradingProfit("stocks", targetState);
+    const currentValue = calculateLegacyTradingValue("stocks", targetState);
+
+    if (principal > 0 || currentValue > 0) {
+      return {
+        symbol: "SEED",
+        name: "시드 주식 보유분",
+        icon: "S",
+        qty: 1,
+        avgPrice: principal,
+        currentValue,
+        pnl,
+        metaText: "초기 보유분",
+      };
+    }
+  }
+
+  if (appId === "coin" && targetState.coinHolding) {
+    const coinType = String(targetState.coinHolding.coinType || "BTC").trim().toUpperCase();
+    const principal = Math.max(0, Math.round(Number(targetState.coinHolding.betAmount) || 0));
+    const pnl = calculateLegacyTradingProfit("coin", targetState);
+    const currentValue = calculateLegacyTradingValue("coin", targetState);
+    const coinInfo = typeof getCoinTypeInfo === "function"
+      ? getCoinTypeInfo(coinType)
+      : null;
+
+    if (principal > 0 || currentValue > 0) {
+      return {
+        symbol: coinType,
+        name: coinInfo?.label ? `${coinInfo.label} 시드 보유분` : `${coinType} 시드 보유분`,
+        icon: coinInfo?.icon || coinType.charAt(0) || "C",
+        qty: 1,
+        avgPrice: principal,
+        currentValue,
+        pnl,
+        metaText: "초기 보유분",
+      };
+    }
+  }
+
+  return null;
 }
 
 function getTradingTerminalFuturesPositions(appId, targetState = state) {
@@ -339,17 +410,15 @@ function calculateTradingTerminalSummary(appId, targetState = state) {
   const spotValue = spotHoldings.reduce((sum, holding) => sum + holding.currentValue, 0);
   const spotPnl = spotHoldings.reduce((sum, holding) => sum + holding.pnl, 0);
   const futuresPnl = futuresPositions.reduce((sum, position) => sum + position.pnl, 0);
-  const legacyProfit = calculateLegacyTradingProfit(appId, targetState);
-  const legacyValue = calculateLegacyTradingValue(appId, targetState);
-  const openProfit = Math.round(spotPnl + futuresPnl + legacyProfit);
-  const totalEquity = Math.round(walletBalance + spotValue + legacyValue + futuresPnl);
+  const openProfit = Math.round(spotPnl + futuresPnl);
+  const totalEquity = Math.round(walletBalance + spotValue + futuresPnl);
 
   return {
     walletBalance,
     spotValue: Math.round(spotValue),
     futuresPnl: Math.round(futuresPnl),
-    legacyProfit: Math.round(legacyProfit),
-    legacyValue: Math.round(legacyValue),
+    legacyProfit: 0,
+    legacyValue: 0,
     openProfit,
     totalEquity,
     spotHoldings,
@@ -375,45 +444,6 @@ function tickTradingTerminal(appId, targetState = state) {
   if (!terminal) {
     return;
   }
-
-  Object.values(terminal.assets).forEach((assetState) => {
-    const { meta } = assetState;
-    const randomMove = (Math.random() - 0.5) * meta.volatility * 1.8;
-    const shockTriggered = Math.random() < (meta.shockChance || 0.04);
-    const shockMove = shockTriggered
-      ? (Math.random() - 0.5) * meta.volatility * (meta.shockMultiplier || 3)
-      : 0;
-    const move = clampTradingTerminalValue(randomMove + (meta.driftBias || 0) + shockMove, -0.18, 0.18);
-    const nextPrice = Math.max(1, assetState.price * (1 + move));
-    assetState.tickCount += 1;
-    assetState.price = nextPrice;
-    assetState.high24 = Math.max(assetState.high24, nextPrice);
-    assetState.low24 = Math.min(assetState.low24, nextPrice);
-    assetState.volume24 += Math.round(Math.abs(move) * meta.basePrice * (Math.random() * 40 + 8));
-
-    const candles = assetState.candles;
-    if (!candles.length || assetState.tickCount % 3 === 0) {
-      candles.push({
-        o: nextPrice,
-        h: nextPrice,
-        l: nextPrice,
-        c: nextPrice,
-      });
-      if (candles.length > 36) {
-        candles.shift();
-      }
-    } else {
-      const candle = candles[candles.length - 1];
-      candle.c = nextPrice;
-      candle.h = Math.max(candle.h, nextPrice);
-      candle.l = Math.min(candle.l, nextPrice);
-    }
-
-    if (Math.random() > 0.26) {
-      assetState.trades.unshift(createTradingTerminalTrade(assetState, appId, move >= 0 ? "buy" : "sell"));
-      assetState.trades = assetState.trades.slice(0, 14);
-    }
-  });
 
   const survivingPositions = [];
   let liquidationMessage = "";
@@ -465,11 +495,19 @@ function getTradingTerminalOrderBook(appId, targetState = state) {
     const askPrice = asset.price + spreadBase * level;
     const bidPrice = Math.max(1, asset.price - spreadBase * level);
     const askSize = appId === "stocks"
-      ? Math.round(Math.random() * 140 + 12)
-      : Number((Math.random() * 7 + 0.2).toFixed(3));
+      ? (typeof getMarketCycleBookSize === "function"
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "ask", level], 12, 152)
+        : Math.round(Math.random() * 140 + 12))
+      : (typeof getMarketCycleBookSize === "function"
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "ask", level], 0.2, 7.2, 3)
+        : Number((Math.random() * 7 + 0.2).toFixed(3)));
     const bidSize = appId === "stocks"
-      ? Math.round(Math.random() * 140 + 12)
-      : Number((Math.random() * 7 + 0.2).toFixed(3));
+      ? (typeof getMarketCycleBookSize === "function"
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "bid", level], 12, 152)
+        : Math.round(Math.random() * 140 + 12))
+      : (typeof getMarketCycleBookSize === "function"
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "bid", level], 0.2, 7.2, 3)
+        : Number((Math.random() * 7 + 0.2).toFixed(3)));
 
     asks.push({ price: askPrice, size: askSize });
     bids.push({ price: bidPrice, size: bidSize });
@@ -1046,44 +1084,5 @@ function isTradingTerminalInputFocused() {
 }
 
 function startTradingTerminalTicker() {
-  if (tradingTerminalTickerId) {
-    return tradingTerminalTickerId;
-  }
-
-  tradingTerminalTickerId = window.setInterval(() => {
-    if (typeof state === "undefined" || !state) {
-      return;
-    }
-
-    const activeAppId = shouldTickTradingTerminal(state);
-    if (!activeAppId) {
-      return;
-    }
-
-    if (isTradingTerminalInputFocused()) {
-      const activeInput = document.activeElement;
-      if (activeInput?.dataset?.tradingApp) {
-        setTradingTerminalDraftAmount(activeInput.dataset.tradingApp, activeInput.value, state);
-      } else if (activeInput?.matches?.("[data-stock-qty-input]") && typeof setStockMarketDraftQuantity === "function") {
-        setStockMarketDraftQuantity(activeInput.value, state);
-      }
-      return;
-    }
-
-    if (activeAppId === "stocks" && typeof tickStockMarketApp === "function") {
-      tickStockMarketApp(state);
-    } else {
-      tickTradingTerminal(activeAppId, state);
-    }
-
-    if (typeof shouldDeferPhoneUiRerender === "function" && shouldDeferPhoneUiRerender()) {
-      return;
-    }
-
-    if (typeof renderGame === "function") {
-      renderGame();
-    }
-  }, 1100);
-
   return tradingTerminalTickerId;
 }

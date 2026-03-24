@@ -354,7 +354,7 @@ convenience: {
       },
     ],
   },
-  cafe: {
+  "mcd-counter": {
     critical: {
       id: "cafe-serving-bot",
       once: true,
@@ -374,7 +374,7 @@ convenience: {
             "이제 카페 공고는 서빙보다 봇 케어 쪽으로 바뀐다.",
           ],
           changes: {
-            remove: ["cafe"],
+            remove: ["mcd-counter", "mcd-kitchen"],
             add: ["robot_floor"],
             news: "카페 오픈 공고가 줄고 서빙봇 케어 공고가 새로 떴다.",
           },
@@ -388,7 +388,7 @@ convenience: {
             "다음부터는 사람이 서빙하던 공고 대신 봇 관리 공고가 보인다.",
           ],
           changes: {
-            remove: ["cafe"],
+            remove: ["mcd-counter", "mcd-kitchen"],
             add: ["robot_floor"],
             news: "서빙봇 도입으로 카페 공고가 관리형 공고로 교체됐다.",
           },
@@ -402,7 +402,7 @@ convenience: {
             "카페는 끝났고, 앱엔 서빙봇 케어 공고만 남는다.",
           ],
           changes: {
-            remove: ["cafe"],
+            remove: ["mcd-counter", "mcd-kitchen"],
             add: ["robot_floor"],
             news: "사람 서빙 공고가 사라지고 서빙봇 보조 공고가 메인에 올라왔다.",
           },

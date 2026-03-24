@@ -6,7 +6,7 @@ const PHONE_APP_ID_ALIASES = {
   store: "playstore",
 };
 
-const PHONE_DEFAULT_INSTALLED_APPS = ["dis", "market", "news", "playstore", "call", "gallery"];
+const PHONE_DEFAULT_INSTALLED_APPS = ["bank", "dis", "market", "news", "playstore", "call", "gallery", "jobs", "bus"];
 const PHONE_REMOVED_APP_IDS = new Set(["casino"]);
 
 function normalizePhoneAppId(appId = "") {
@@ -109,10 +109,10 @@ function syncPhoneSessionState(targetState = state) {
       ? targetState.installedPhoneApps
       : nested.installedApps,
   );
-  const sanitizedRoute = parsePhoneRoute(resolvedRoute).appId === "casino"
+  const routeInfo = parsePhoneRoute(resolvedRoute);
+  const safeRoute = PHONE_REMOVED_APP_IDS.has(routeInfo.appId)
     ? "home"
-    : resolvedRoute;
-  const routeInfo = parsePhoneRoute(sanitizedRoute);
+    : routeInfo.route;
   const resolved = {
     minimized: typeof targetState.phoneMinimized === "boolean"
       ? targetState.phoneMinimized
@@ -120,7 +120,7 @@ function syncPhoneSessionState(targetState = state) {
     stageExpanded: typeof targetState.phoneStageExpanded === "boolean"
       ? targetState.phoneStageExpanded
       : (typeof nested.stageExpanded === "boolean" ? nested.stageExpanded : defaults.stageExpanded),
-    route: routeInfo.route,
+    route: safeRoute,
     usedToday: typeof targetState.phoneUsedToday === "boolean"
       ? targetState.phoneUsedToday
       : (typeof nested.usedToday === "boolean" ? nested.usedToday : defaults.usedToday),
@@ -133,7 +133,7 @@ function syncPhoneSessionState(targetState = state) {
   };
   targetState.phoneMinimized = resolved.minimized;
   targetState.phoneStageExpanded = resolved.stageExpanded;
-  targetState.phoneView = routeInfo.route;
+  targetState.phoneView = safeRoute;
   targetState.phoneUsedToday = resolved.usedToday;
   targetState.installedPhoneApps = [...installedApps];
 

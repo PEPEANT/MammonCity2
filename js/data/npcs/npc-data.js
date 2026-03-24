@@ -56,4 +56,14 @@ const NPC_DATA = {
       },
     ],
   },
+  "npc-woman": {
+    id: "npc-woman",
+    name: "길거리 여자",
+    role: "street-romance",
+    homeLocation: "downtown",
+    art: CHARACTER_ART.npcWoman.default,
+    startNodeId: "intro",
+    interactionTypes: ["talk"],
+    tags: ["중심가", "길거리"],
+  },
 };

@@ -257,6 +257,15 @@ function getStockMarketSnapshot(targetState = state) {
 
 // 코인 종류별 변동성 배율
 const COIN_TYPES = {
+  BTC: {
+    label: "비트코인",
+    symbol: "BTC",
+    volatility: 1.6,
+    emoji: "₿",
+    shortDescription: "대표 메이저 코인",
+    description: "가장 널리 알려진 대표 코인. 밈 코인보다 느리지만 자산 규모가 크고 시장 심리를 강하게 탄다.",
+    isMeme: false,
+  },
   MAMC: {
     label: "맘코인",
     symbol: "MAMC",

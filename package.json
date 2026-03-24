@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "sync:market-cycle": "node scripts/sync-market-cycle-to-hosting.js"
+  },
   "devDependencies": {
     "jimp": "^1.6.0"
   }

@@ -563,6 +563,18 @@ const NPC_DIALOGUES = {
             label: "당황한 채 웃으며 넘긴다",
             end: true,
             effects: {
+              socialContact: {
+                npcId: "convenience-cashier",
+                source: "dialogue",
+                headline: {
+                  badge: "번호 교환",
+                  text: "편의점 알바녀가 먼저 번호를 남겼다.",
+                },
+                memory: {
+                  title: "편의점 알바녀의 번호를 받았다",
+                  body: "성형 뒤 처음 들른 편의점에서 알바녀가 먼저 번호를 물어봤다.",
+                },
+              },
               npcRelation: {
                 affinityDelta: 1,
                 attractionDelta: 2,
@@ -582,6 +594,18 @@ const NPC_DIALOGUES = {
             label: "짧게 대화를 이어본다",
             next: "ask-number-followup",
             effects: {
+              socialContact: {
+                npcId: "convenience-cashier",
+                source: "dialogue",
+                headline: {
+                  badge: "번호 교환",
+                  text: "편의점 알바녀와 연락처를 주고받았다.",
+                },
+                memory: {
+                  title: "편의점 알바녀와 연락처를 교환했다",
+                  body: "계산대 앞 대화가 자연스럽게 번호 교환으로 이어졌다.",
+                },
+              },
               npcRelation: {
                 met: true,
                 affinityDelta: 1,
@@ -625,6 +649,131 @@ const NPC_DIALOGUES = {
                 affinityDelta: 1,
               },
             },
+          },
+        ],
+      },
+    },
+  },
+  "npc-woman": {
+    startNodeId: "intro",
+    startNodeSelector(targetState) {
+      const relation = typeof getNpcRelation === "function"
+        ? getNpcRelation("npc-woman", targetState)
+        : null;
+      if ((relation?.meetings || 0) >= 2) {
+        return "repeat";
+      }
+      if ((relation?.meetings || 0) >= 1) {
+        return "playful";
+      }
+      return "intro";
+    },
+    nodes: {
+      intro: {
+        title: "네온 불빛 아래 선 여자가 시선을 한 번 붙든다",
+        lines: [
+          "낯선 거리의 공기를 잘 아는 사람처럼 표정이 이상하리만큼 느긋하다.",
+          "\"길 찾는 얼굴은 아닌데, 뭘 찾고 있어요?\"",
+        ],
+        choices: [
+          { label: "오늘 중심가 분위기를 묻는다", next: "mood" },
+          { label: "가볍게 웃고 지나간다", next: "leave" },
+        ],
+      },
+      mood: {
+        lines: [
+          "\"오늘은 사람도 돈도 다 빨리 움직여요. 눈치 잘 보면 재밌을걸요.\"",
+          "여자는 말을 끝내고도 잠깐 더 너를 살핀다.",
+        ],
+        choices: [
+          {
+            label: "중심가에서 자주 보이냐고 묻는다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "중심가 기류",
+                text: "길거리 여자는 오늘 중심가 공기가 예민하다고 짧게 웃었다.",
+              },
+              memory: {
+                type: "npc",
+                title: "중심가에서 길거리 여자와 말을 섞었다",
+                body: "돈 냄새와 사람 흐름을 잘 아는 듯한 말투가 오래 남았다.",
+                tags: ["NPC", "중심가", "길거리 여자"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+                attractionDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      playful: {
+        title: "길거리 여자가 먼저 눈웃음을 건넨다",
+        lines: [
+          "\"또 보네. 여기 계속 돌면 결국 다 마주치더라.\"",
+          "장난기 섞인 말투지만 반응을 보는 눈빛은 꽤 또렷하다.",
+        ],
+        choices: [
+          {
+            label: "오늘도 바쁘냐고 묻는다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "가벼운 플러팅",
+                text: "길거리 여자는 바쁜 척하면서도 발걸음을 쉽게 떼지 않았다.",
+              },
+              memory: {
+                type: "npc",
+                title: "길거리 여자와 두 번째로 마주쳤다",
+                body: "가벼운 농담 몇 마디였는데도 묘하게 분위기가 남았다.",
+                tags: ["NPC", "중심가", "두 번째 만남"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+                attractionDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      repeat: {
+        title: "익숙한 얼굴을 알아본 듯 여자가 먼저 멈춘다",
+        lines: [
+          "\"오늘은 그냥 지나가도 되는 얼굴은 아니네.\"",
+          "짧은 한마디인데도 먼저 말을 걸 기회를 남겨두는 느낌이다.",
+        ],
+        choices: [
+          {
+            label: "다음에 또 보자고 하고 지나간다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "익숙한 인연",
+                text: "중심가에서 자주 마주치던 얼굴이 이제는 완전히 낯설지만은 않다.",
+              },
+              memory: {
+                type: "npc",
+                title: "길거리 여자가 먼저 아는 척했다",
+                body: "짧은 대화인데도 거리의 공기가 한결 부드럽게 느껴졌다.",
+                tags: ["NPC", "반복 조우", "중심가"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+                attractionDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "여자는 굳이 붙잡지 않고, 네온빛 아래로 다시 몸을 돌린다.",
+        ],
+        choices: [
+          {
+            label: "중심가를 다시 둘러본다",
+            end: true,
           },
         ],
       },

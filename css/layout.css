@@ -589,8 +589,8 @@ body {
 
 #bg.room {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.30) 100%),
-    url('../assets/days/day01/room-04.png') center / cover no-repeat;
+    linear-gradient(180deg, rgba(24, 20, 18, 0.12) 0%, rgba(12, 10, 9, 0.42) 100%),
+    linear-gradient(135deg, #5f4b3d 0%, #7b6652 42%, #9a8369 100%);
   transition: none;
 }
 
@@ -610,8 +610,8 @@ body {
 
 #bg.day-1-room-04 {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
-    url('../assets/days/day01/room-04.png') center / cover no-repeat;
+    linear-gradient(180deg, rgba(24, 20, 18, 0.08) 0%, rgba(12, 10, 9, 0.24) 100%),
+    linear-gradient(135deg, #5f4b3d 0%, #7b6652 42%, #9a8369 100%);
   transition: none;
 }
 
@@ -625,7 +625,7 @@ body {
 #bg.apartment-front {
   background:
     linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
-    url('../assets/days/day01/room-05.png') center / cover no-repeat;
+    linear-gradient(135deg, #74706b 0%, #90867a 48%, #b0a496 100%);
   transition: none;
 }
 
@@ -679,6 +679,9 @@ body {
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 0.04em;
+  line-height: 1.45;
+  max-width: 260px;
+  white-space: normal;
   z-index: 6;
   opacity: 0;
   transform: translateY(6px);
@@ -686,6 +689,7 @@ body {
   pointer-events: none;
 }
 
+#game.room-mode #outside-goal,
 #game.outside-mode #outside-goal,
 #game.interactive-start-mode #outside-goal {
   opacity: 1;
@@ -922,6 +926,99 @@ body {
   max-width: min(520px, calc(100% - 36px));
 }
 
+#gameplay-feedback {
+  position: absolute;
+  left: 18px;
+  right: calc(var(--phone-panel-width) + 20px);
+  bottom: 126px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 16;
+  pointer-events: none;
+}
+
+#game.phone-collapsed #gameplay-feedback {
+  right: 18px;
+}
+
+.gameplay-feedback-card {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(8, 11, 20, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.24);
+}
+
+.gameplay-feedback-card.is-up,
+.gameplay-feedback-card.is-success {
+  border-color: rgba(77, 213, 153, 0.42);
+}
+
+.gameplay-feedback-card.is-warning {
+  border-color: rgba(255, 196, 97, 0.5);
+}
+
+.gameplay-feedback-card.is-danger {
+  border-color: rgba(255, 117, 117, 0.52);
+}
+
+.gameplay-feedback-title {
+  color: #f7fbff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.gameplay-feedback-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gameplay-feedback-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #edf4ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.gameplay-feedback-chip.is-up {
+  color: #9df4c7;
+  border-color: rgba(77, 213, 153, 0.28);
+  background: rgba(77, 213, 153, 0.12);
+}
+
+.gameplay-feedback-chip.is-down {
+  color: #ffb4b4;
+  border-color: rgba(255, 117, 117, 0.26);
+  background: rgba(255, 117, 117, 0.12);
+}
+
+.gameplay-feedback-chip.is-warning {
+  color: #ffd890;
+  border-color: rgba(255, 196, 97, 0.28);
+  background: rgba(255, 196, 97, 0.12);
+}
+
+.gameplay-feedback-chip.is-info {
+  color: #b8d8ff;
+  border-color: rgba(116, 174, 255, 0.22);
+  background: rgba(116, 174, 255, 0.1);
+}
+
 /* 3. 텍스트박스: 반투명 RPG 대사창 */
 #textbox {
   position: absolute;
@@ -1031,6 +1128,28 @@ body {
     top: 44px;
     left: 12px;
     max-width: calc(100% - var(--phone-panel-width) - 26px);
+  }
+
+  #gameplay-feedback {
+    left: 12px;
+    right: calc(var(--phone-panel-width) + 14px);
+    bottom: 108px;
+  }
+
+  .gameplay-feedback-card {
+    width: 100%;
+    max-width: 360px;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .gameplay-feedback-title {
+    font-size: 13px;
+  }
+
+  .gameplay-feedback-chip {
+    min-height: 26px;
+    font-size: 11px;
   }
 
   #trash-game-layer {

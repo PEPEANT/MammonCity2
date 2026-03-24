@@ -31,12 +31,15 @@ Raw source assets live here before they are turned into final in-game files.
 - `player-standing-source.png`
 - `mom-reward-source.png`
 
-### `characters/npc/`
+### `characters/npc/romance/`
 
-- `npc-woman-source.png`
-- `high-school-girl-source.png`
 - `convenience-cashier-default-source.png`
 - `convenience-cashier-post-surgery-source.png`
+- `high-school-girl-source.png`
+- `npc-woman-source.png`
+- `girlfriend-default-source.png`
+- `girlfriend-post-surgery-source.png`
+- `girlfriend-student-source.png`
 
 ### `backgrounds/city/`
 
@@ -50,6 +53,7 @@ Raw source assets live here before they are turned into final in-game files.
 
 - `baegeum-hospital-source.png`
 - `convenience-store-source.jpg`
+- `office-source.jpg`
 - `station-interior-source.jpg`
 
 ### `references/`

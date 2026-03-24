@@ -1,15 +1,23 @@
+const SPOON_START_TIER_ALIASES = Object.freeze({
+  bronze: "silver",
+  steel: "dirt",
+});
+
 const SPOON_START_TIERS = Object.freeze([
   Object.freeze({
     id: "gold",
     name: "금수저",
     emblem: "금",
-    probability: 1,
-    bracket: "상위 1%",
-    summary: "부족함 거의 없는 출발",
+    probability: 5,
+    bracket: "상위 5%",
+    summary: "현금과 계좌, 차와 옷까지 처음부터 여유가 있는 출발",
     toneLabel: "금빛",
     initialCash: 300000,
     walletCash: 300000,
     bankBalance: 12000000,
+    starterStockAmount: 0,
+    starterCoinAmount: 100000000,
+    starterCoinType: "BTC",
     starterAssetIds: Object.freeze(["phone-used-premium", "outfit-suit"]),
     starterVehicleId: "used-car",
     safetyNetLevel: "large",
@@ -24,13 +32,16 @@ const SPOON_START_TIERS = Object.freeze([
     id: "silver",
     name: "은수저",
     emblem: "은",
-    probability: 4,
-    bracket: "상위 5%",
-    summary: "안정적인 지원이 있는 출발",
+    probability: 25,
+    bracket: "상위 30%",
+    summary: "차분하게 시작할 수 있는 중산층 출발선",
     toneLabel: "은빛",
     initialCash: 150000,
     walletCash: 150000,
     bankBalance: 4000000,
+    starterStockAmount: 5000000,
+    starterCoinAmount: 0,
+    starterCoinType: "",
     starterAssetIds: Object.freeze(["phone-used-premium", "outfit-suit"]),
     starterVehicleId: "used-motorbike",
     safetyNetLevel: "medium",
@@ -42,58 +53,19 @@ const SPOON_START_TIERS = Object.freeze([
     sceneOverlay: "radial-gradient(circle at 50% 18%, rgba(232, 239, 247, 0.22) 0%, rgba(232, 239, 247, 0) 50%), linear-gradient(180deg, rgba(221, 230, 242, 0.16) 0%, rgba(73, 86, 112, 0.28) 100%)",
   }),
   Object.freeze({
-    id: "bronze",
-    name: "동수저",
-    emblem: "동",
-    probability: 15,
-    bracket: "상위 20%",
-    summary: "무난하지만 직접 굴려야 한다",
-    toneLabel: "동빛",
-    initialCash: 70000,
-    walletCash: 70000,
-    bankBalance: 800000,
-    starterAssetIds: Object.freeze(["outfit-suit"]),
-    starterVehicleId: "bicycle",
-    safetyNetLevel: "small",
-    startHappiness: 48,
-    accent: "#cf7c56",
-    accentSoft: "rgba(207, 124, 86, 0.16)",
-    glow: "rgba(207, 124, 86, 0.28)",
-    screenOverlay: "linear-gradient(180deg, rgba(121, 65, 36, 0.18) 0%, rgba(9, 10, 14, 0.58) 100%)",
-    sceneOverlay: "radial-gradient(circle at 50% 18%, rgba(233, 170, 130, 0.18) 0%, rgba(233, 170, 130, 0) 50%), linear-gradient(180deg, rgba(225, 150, 111, 0.14) 0%, rgba(96, 51, 28, 0.28) 100%)",
-  }),
-  Object.freeze({
-    id: "steel",
-    name: "쇠수저",
-    emblem: "쇠",
-    probability: 30,
-    bracket: "중간권",
-    summary: "버티려면 계산이 필요한 출발",
-    toneLabel: "강철빛",
-    initialCash: 40000,
-    walletCash: 40000,
-    bankBalance: 150000,
-    starterAssetIds: Object.freeze([]),
-    starterVehicleId: "",
-    safetyNetLevel: "thin",
-    startHappiness: 43,
-    accent: "#7f95b2",
-    accentSoft: "rgba(127, 149, 178, 0.16)",
-    glow: "rgba(127, 149, 178, 0.24)",
-    screenOverlay: "linear-gradient(180deg, rgba(52, 65, 88, 0.22) 0%, rgba(8, 10, 18, 0.62) 100%)",
-    sceneOverlay: "radial-gradient(circle at 50% 18%, rgba(156, 178, 212, 0.16) 0%, rgba(156, 178, 212, 0) 50%), linear-gradient(180deg, rgba(123, 146, 182, 0.13) 0%, rgba(39, 50, 72, 0.28) 100%)",
-  }),
-  Object.freeze({
     id: "dirt",
     name: "흙수저",
     emblem: "흙",
-    probability: 50,
-    bracket: "하위권",
-    summary: "가진 건 적지만 뒤집을 여지는 남아 있다",
+    probability: 70,
+    bracket: "기본 70%",
+    summary: "지갑이 얇고 바로 버텨야 하는 현실적인 시작",
     toneLabel: "흙빛",
     initialCash: 20000,
     walletCash: 20000,
-    bankBalance: 0,
+    bankBalance: 200000,
+    starterStockAmount: 0,
+    starterCoinAmount: 0,
+    starterCoinType: "",
     starterAssetIds: Object.freeze([]),
     starterVehicleId: "",
     safetyNetLevel: "none",
@@ -118,26 +90,150 @@ const DEFAULT_SPOON_START_THEME = Object.freeze({
   sceneOverlay: "",
 });
 
+function createSpoonStartBackgroundConfig(
+  image,
+  {
+    overlay = "linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%)",
+    position = "center",
+    size = "cover",
+    repeat = "no-repeat",
+    color = "#050505",
+    className = "custom-location-bg",
+  } = {},
+) {
+  return Object.freeze({
+    image,
+    overlay,
+    position,
+    size,
+    repeat,
+    color,
+    className,
+  });
+}
+
+const SPOON_START_VISUAL_TIER_LOOKUP = Object.freeze({
+  gold: "golden_spoon",
+  silver: "silver_spoon",
+  dirt: "dirt_spoon",
+  bronze: "silver_spoon",
+  steel: "dirt_spoon",
+});
+
+const SPOON_START_HOME_CONFIGS = Object.freeze({
+  dirt_spoon: Object.freeze({
+    id: "dirt_spoon",
+    homeLocationId: "apt-alley",
+    residenceId: "origin-dirt-home",
+    residenceLabel: "배금고시원",
+    spawnBackground: createSpoonStartBackgroundConfig("assets/days/dirt_spoon/dirt_spoon_spawn.png"),
+    roomBackground: createSpoonStartBackgroundConfig("assets/days/dirt_spoon/dirt_spoon_spawn.png"),
+    outsideBackground: createSpoonStartBackgroundConfig("assets/days/dirt_spoon/my_house.png"),
+    lobbyBackground: null,
+    transitBackground: null,
+    roomActorLayout: Object.freeze({
+      left: 72,
+      bottom: -30,
+      height: 115,
+      zIndex: 2,
+    }),
+  }),
+  silver_spoon: Object.freeze({
+    id: "silver_spoon",
+    homeLocationId: "silver-home-front",
+    residenceId: "origin-silver-home",
+    residenceLabel: "배금아파트",
+    spawnBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/silverspoon_spawn.jpg"),
+    roomBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/living_room.png"),
+    outsideBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/my_house.jpg"),
+    lobbyBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/lobby.jpg"),
+    transitBackground: null,
+    roomActorLayout: Object.freeze({
+      left: 50,
+      bottom: -30,
+      height: 115,
+      zIndex: 2,
+    }),
+  }),
+  golden_spoon: Object.freeze({
+    id: "golden_spoon",
+    homeLocationId: "golden-home-front",
+    residenceId: "origin-gold-home",
+    residenceLabel: "배금복합빌딩",
+    spawnBackground: createSpoonStartBackgroundConfig("assets/days/golden_spoon/goldenspoon_spawn.jpg"),
+    roomBackground: createSpoonStartBackgroundConfig("assets/days/golden_spoon/goldenspoon_spawn.jpg"),
+    outsideBackground: createSpoonStartBackgroundConfig("assets/days/golden_spoon/my_house.jpg"),
+    lobbyBackground: createSpoonStartBackgroundConfig("assets/days/golden_spoon/lobby.jpg"),
+    transitBackground: createSpoonStartBackgroundConfig("assets/days/golden_spoon/goldenspoon_Underground_Parking Lot.png"),
+  }),
+});
+
 const SPOON_START_SAFETY_NET_LABELS = Object.freeze({
-  large: "가족 지원 넉넉",
+  large: "가족 지원 든든",
   medium: "가족 지원 있음",
-  small: "소액 지원 가능",
+  small: "작은 지원 가능",
   thin: "지원 거의 없음",
   none: "지원 없음",
 });
 
-function getSpoonStartTier(tierId = "") {
+function normalizeSpoonStartTierId(tierId = "") {
   const normalized = String(tierId || "").trim().toLowerCase();
+  return SPOON_START_TIER_ALIASES[normalized] || normalized;
+}
+
+function getSpoonStartTier(tierId = "") {
+  const normalized = normalizeSpoonStartTierId(tierId);
   return SPOON_START_TIER_LOOKUP[normalized] || null;
 }
 
 function getDefaultSpoonStartTier() {
-  return getSpoonStartTier("steel") || SPOON_START_TIERS[0];
+  return getSpoonStartTier("dirt") || SPOON_START_TIERS[SPOON_START_TIERS.length - 1];
+}
+
+function getSpoonStartVisualTierId(tierId = "") {
+  const normalized = normalizeSpoonStartTierId(tierId);
+  return SPOON_START_VISUAL_TIER_LOOKUP[normalized] || "";
+}
+
+function getSpoonStartHomeConfigByVisualTierId(visualTierId = "") {
+  const normalized = String(visualTierId || "").trim().toLowerCase();
+  return SPOON_START_HOME_CONFIGS[normalized] || null;
+}
+
+function getSpoonStartHomeConfigByResidenceId(residenceId = "") {
+  const normalized = String(residenceId || "").trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  return Object.values(SPOON_START_HOME_CONFIGS).find(
+    (config) => String(config?.residenceId || "").trim().toLowerCase() === normalized
+  ) || null;
+}
+
+function getSpoonStartHomeConfigByHomeLocationId(locationId = "") {
+  const normalized = String(locationId || "").trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  return Object.values(SPOON_START_HOME_CONFIGS).find(
+    (config) => String(config?.homeLocationId || "").trim().toLowerCase() === normalized
+  ) || null;
+}
+
+function cloneSpoonStartBackgroundConfig(background = null) {
+  return background ? { ...background } : null;
+}
+
+function cloneSpoonStartActorLayout(layout = null) {
+  return layout ? { ...layout } : null;
 }
 
 function createDefaultSpoonStartState() {
   return {
     tierId: "",
+    visualTierId: "",
     label: "",
     bracket: "",
     summary: "",
@@ -145,19 +241,26 @@ function createDefaultSpoonStartState() {
     initialCash: 0,
     walletCash: 0,
     bankBalance: 0,
+    starterStockAmount: 0,
+    starterCoinAmount: 0,
+    starterCoinType: "",
     starterAssetIds: [],
     starterVehicleId: "",
     safetyNetLevel: "none",
     startHappiness: 45,
     accent: DEFAULT_SPOON_START_THEME.accent,
+    homeLocationId: "",
     applied: false,
   };
 }
 
 function createAppliedSpoonStartState(tierId = "") {
   const tier = getSpoonStartTier(tierId) || getDefaultSpoonStartTier();
+  const visualTierId = getSpoonStartVisualTierId(tier.id);
+  const homeConfig = getSpoonStartHomeConfigByVisualTierId(visualTierId);
   return {
     tierId: tier.id,
+    visualTierId,
     label: tier.name,
     bracket: tier.bracket,
     summary: tier.summary,
@@ -165,11 +268,15 @@ function createAppliedSpoonStartState(tierId = "") {
     initialCash: tier.initialCash,
     walletCash: tier.walletCash,
     bankBalance: tier.bankBalance,
+    starterStockAmount: Math.max(0, Math.round(Number(tier.starterStockAmount) || 0)),
+    starterCoinAmount: Math.max(0, Math.round(Number(tier.starterCoinAmount) || 0)),
+    starterCoinType: String(tier.starterCoinType || "").trim().toUpperCase(),
     starterAssetIds: [...(tier.starterAssetIds || [])],
     starterVehicleId: tier.starterVehicleId || "",
     safetyNetLevel: tier.safetyNetLevel || "none",
     startHappiness: tier.startHappiness,
     accent: tier.accent,
+    homeLocationId: homeConfig?.homeLocationId || "",
     applied: true,
   };
 }
@@ -179,11 +286,143 @@ function ensureSpoonStartState(targetState = state) {
     return createDefaultSpoonStartState();
   }
 
-  if (!targetState.startingOrigin || typeof targetState.startingOrigin !== "object") {
-    targetState.startingOrigin = createDefaultSpoonStartState();
-  }
+  const currentState = targetState.startingOrigin && typeof targetState.startingOrigin === "object"
+    ? targetState.startingOrigin
+    : createDefaultSpoonStartState();
+  const normalizedTierId = normalizeSpoonStartTierId(currentState.tierId);
+  const derivedState = normalizedTierId
+    ? createAppliedSpoonStartState(normalizedTierId)
+    : createDefaultSpoonStartState();
+  const visualTierId = String(
+    currentState.visualTierId
+    || derivedState.visualTierId
+    || getSpoonStartVisualTierId(normalizedTierId)
+    || ""
+  ).trim().toLowerCase();
+  const homeConfig = getSpoonStartHomeConfigByVisualTierId(visualTierId);
+
+  targetState.startingOrigin = {
+    ...createDefaultSpoonStartState(),
+    ...derivedState,
+    ...currentState,
+    tierId: normalizedTierId,
+    label: derivedState.label || currentState.label || "",
+    bracket: derivedState.bracket || currentState.bracket || "",
+    summary: derivedState.summary || currentState.summary || "",
+    toneLabel: derivedState.toneLabel || currentState.toneLabel || "",
+    accent: derivedState.accent || currentState.accent || DEFAULT_SPOON_START_THEME.accent,
+    safetyNetLevel: derivedState.safetyNetLevel || currentState.safetyNetLevel || "none",
+    visualTierId,
+    applied: Boolean(currentState.applied || normalizedTierId),
+    starterAssetIds: Array.isArray(currentState.starterAssetIds)
+      ? [...currentState.starterAssetIds]
+      : [...(derivedState.starterAssetIds || [])],
+    homeLocationId: String(currentState.homeLocationId || homeConfig?.homeLocationId || derivedState.homeLocationId || "").trim(),
+  };
 
   return targetState.startingOrigin;
+}
+
+function getSpoonStartHomeConfig(targetState = state) {
+  const originState = ensureSpoonStartState(targetState);
+  const visualTierId = String(originState?.visualTierId || "").trim().toLowerCase();
+  const currentResidenceId = String(targetState?.ownership?.residence || "").trim().toLowerCase();
+  const currentHomeLocationId = String(
+    originState?.homeLocationId
+    || targetState?.world?.currentLocation
+    || ""
+  ).trim().toLowerCase();
+  const config = getSpoonStartHomeConfigByVisualTierId(visualTierId)
+    || getSpoonStartHomeConfigByResidenceId(currentResidenceId)
+    || getSpoonStartHomeConfigByHomeLocationId(currentHomeLocationId);
+
+  if (!config) {
+    return null;
+  }
+
+  return {
+    ...config,
+    spawnBackground: cloneSpoonStartBackgroundConfig(config.spawnBackground),
+    roomBackground: cloneSpoonStartBackgroundConfig(config.roomBackground),
+    outsideBackground: cloneSpoonStartBackgroundConfig(config.outsideBackground),
+    lobbyBackground: cloneSpoonStartBackgroundConfig(config.lobbyBackground),
+    transitBackground: cloneSpoonStartBackgroundConfig(config.transitBackground),
+    roomActorLayout: cloneSpoonStartActorLayout(config.roomActorLayout),
+  };
+}
+
+function getSpoonStartRoomActorLayout(targetState = state) {
+  return cloneSpoonStartActorLayout(getSpoonStartHomeConfig(targetState)?.roomActorLayout);
+}
+
+function getSpoonStartHomeLocationId(targetState = state) {
+  return getSpoonStartHomeConfig(targetState)?.homeLocationId || "";
+}
+
+function getAllSpoonStartHomeLocationIds() {
+  return [...new Set(
+    Object.values(SPOON_START_HOME_CONFIGS)
+      .map((config) => String(config?.homeLocationId || "").trim())
+      .filter(Boolean)
+  )];
+}
+
+function getSpoonStartResidenceId(targetState = state) {
+  return String(getSpoonStartHomeConfig(targetState)?.residenceId || "").trim().toLowerCase();
+}
+
+function isSpoonStartResidenceId(residenceId = "") {
+  const normalized = String(residenceId || "").trim().toLowerCase();
+  return Object.values(SPOON_START_HOME_CONFIGS).some((config) => config.residenceId === normalized);
+}
+
+function shouldUseSpoonStartResidence(targetState = state) {
+  const ownershipState = typeof syncOwnershipState === "function"
+    ? syncOwnershipState(targetState)
+    : (targetState?.ownership || null);
+  const currentResidenceId = String(ownershipState?.residence || "").trim().toLowerCase();
+
+  if (ownershipState?.home) {
+    return false;
+  }
+
+  return !currentResidenceId || currentResidenceId === "parents-room" || isSpoonStartResidenceId(currentResidenceId);
+}
+
+function syncSpoonStartResidence(targetState = state) {
+  if (!targetState || typeof targetState !== "object" || typeof syncOwnershipState !== "function") {
+    return "";
+  }
+
+  const ownershipState = syncOwnershipState(targetState);
+  const preferredResidenceId = getSpoonStartResidenceId(targetState);
+  const currentResidenceId = String(ownershipState?.residence || "").trim().toLowerCase();
+
+  if (!preferredResidenceId || ownershipState.home) {
+    return currentResidenceId;
+  }
+
+  if (!currentResidenceId || currentResidenceId === "parents-room" || isSpoonStartResidenceId(currentResidenceId)) {
+    ownershipState.residence = preferredResidenceId;
+  }
+
+  return String(ownershipState.residence || "").trim().toLowerCase();
+}
+
+function getSpoonStartHomeRouteStageIds(targetState = state, direction = "outbound") {
+  const homeConfig = getSpoonStartHomeConfig(targetState);
+  const stageIds = [];
+
+  if (homeConfig?.lobbyBackground) {
+    stageIds.push("lobby");
+  }
+  if (homeConfig?.transitBackground) {
+    stageIds.push("transit");
+  }
+
+  return direction === "inbound"
+    ? [...stageIds].reverse()
+    : stageIds;
 }
 
 function getSpoonStartVisualTheme(tierId = "") {
@@ -197,6 +436,10 @@ function getSpoonStartVisualTheme(tierId = "") {
         sceneOverlay: tier.sceneOverlay,
       }
     : { ...DEFAULT_SPOON_START_THEME };
+}
+
+function getSpoonStartProbabilityLabels() {
+  return SPOON_START_TIERS.map((tier) => `${tier.name.replace("수저", "")} ${tier.probability}%`);
 }
 
 function drawSpoonStartTierId() {
@@ -244,11 +487,26 @@ function getSpoonStartStarterAssetLabels(tierId = "") {
     if (typeof getInventoryItemDefinition !== "function") {
       return;
     }
+
     const definition = getInventoryItemDefinition(itemId);
     if (definition?.label) {
       labels.push(definition.label);
     }
   });
+
+  const starterStockAmount = Math.max(0, Math.round(Number(tier.starterStockAmount) || 0));
+  if (starterStockAmount > 0) {
+    labels.push(`주식 ${formatSpoonStartAmount(starterStockAmount)}`);
+  }
+
+  const starterCoinAmount = Math.max(0, Math.round(Number(tier.starterCoinAmount) || 0));
+  if (starterCoinAmount > 0) {
+    const starterCoinType = String(tier.starterCoinType || "").trim().toUpperCase();
+    const coinLabel = typeof getCoinTypeInfo === "function"
+      ? (getCoinTypeInfo(starterCoinType)?.label || starterCoinType || "코인")
+      : (starterCoinType || "코인");
+    labels.push(`${coinLabel} ${formatSpoonStartAmount(starterCoinAmount)}`);
+  }
 
   return labels;
 }
@@ -262,10 +520,11 @@ function getSpoonStartPackageChipLabels(tierId = "") {
   }
 
   const chips = [
-    `손 현금 ${formatSpoonStartAmount(tier.walletCash)}`,
+    `손현금 ${formatSpoonStartAmount(tier.walletCash)}`,
     `계좌 ${formatSpoonStartAmount(tier.bankBalance)}`,
   ];
   const assetLabels = getSpoonStartStarterAssetLabels(tier);
+
   if (assetLabels.length === 1) {
     chips.push(`시작 자산 ${assetLabels[0]}`);
   } else if (assetLabels.length > 1) {
@@ -273,7 +532,52 @@ function getSpoonStartPackageChipLabels(tierId = "") {
   } else {
     chips.push(getSpoonStartSafetyNetLabel(tier.safetyNetLevel));
   }
+
   return chips;
+}
+
+function getSpoonStartStageBackground(stageId = "", targetState = state, fallbackBackground = null) {
+  const normalizedStageId = String(stageId || "").trim().toLowerCase();
+  const currentDay = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  if (normalizedStageId === "spawn" && currentDay !== 1) {
+    return fallbackBackground;
+  }
+
+  if (normalizedStageId !== "spawn") {
+    syncSpoonStartResidence(targetState);
+    if (!shouldUseSpoonStartResidence(targetState)) {
+      return fallbackBackground;
+    }
+  }
+
+  const homeConfig = getSpoonStartHomeConfig(targetState);
+  let preferredBackground = null;
+
+  switch (normalizedStageId) {
+    case "spawn":
+      preferredBackground = homeConfig?.spawnBackground || null;
+      break;
+    case "room":
+      preferredBackground = homeConfig?.roomBackground || null;
+      break;
+    case "outside-home":
+      preferredBackground = homeConfig?.outsideBackground || null;
+      break;
+    case "lobby":
+      preferredBackground = homeConfig?.lobbyBackground || null;
+      break;
+    case "transit":
+      preferredBackground = homeConfig?.transitBackground || null;
+      break;
+    default:
+      preferredBackground = null;
+      break;
+  }
+
+  const baseBackground = preferredBackground || fallbackBackground;
+  return baseBackground
+    ? getSpoonStartSceneBackground(baseBackground, targetState)
+    : null;
 }
 
 function applySpoonStartPackage(targetState = state, tierId = "") {
@@ -304,12 +608,41 @@ function applySpoonStartPackage(targetState = state, tierId = "") {
 
   if (originState.bankBalance > 0 && typeof recordBankTransaction === "function") {
     recordBankTransaction({
-      title: "출생 자산 예치금",
+      title: "출생 자산 입금",
       amount: originState.bankBalance,
       type: "origin",
       direction: "in",
       note: `${originState.label} 출생 패키지`,
     }, targetState);
+  }
+
+  targetState.stockHolding = null;
+  targetState.coinHolding = null;
+  targetState.stocksUsedToday = false;
+  targetState.coinUsedToday = false;
+
+  if (originState.starterStockAmount > 0) {
+    targetState.stockHolding = {
+      betAmount: originState.starterStockAmount,
+      buyDay: Math.max(1, Math.round(Number(targetState.day) || 1)),
+      source: "origin",
+    };
+  }
+
+  if (originState.starterCoinAmount > 0) {
+    targetState.coinHolding = {
+      betAmount: originState.starterCoinAmount,
+      buyDay: Math.max(1, Math.round(Number(targetState.day) || 1)),
+      coinType: String(originState.starterCoinType || "BTC").trim().toUpperCase(),
+      source: "origin",
+    };
+  }
+
+  if (typeof syncOwnershipState === "function") {
+    const ownershipState = syncOwnershipState(targetState);
+    ownershipState.home = null;
+    ownershipState.homeAsset = null;
+    ownershipState.residence = getSpoonStartResidenceId(targetState) || ownershipState.residence;
   }
 
   if (Array.isArray(originState.starterAssetIds)) {
@@ -344,6 +677,27 @@ function applySpoonStartPackage(targetState = state, tierId = "") {
         : { value: 45, status: "low", dailyDecay: 5, lastModifiedDay: 1 };
     }
     targetState.happiness.value = originState.startHappiness;
+  }
+
+  if (typeof syncWorldState === "function") {
+    const worldState = syncWorldState(targetState);
+    const homeLocationId = originState.homeLocationId || "";
+    const knownHomeLocationIds = getAllSpoonStartHomeLocationIds();
+
+    if (homeLocationId) {
+      worldState.currentLocation = homeLocationId;
+      worldState.currentDistrict = typeof getWorldLocationDistrictId === "function"
+        ? getWorldLocationDistrictId(homeLocationId, targetState.day || 1)
+        : worldState.currentDistrict;
+      worldState.unlockedLocations = (Array.isArray(worldState.unlockedLocations)
+        ? worldState.unlockedLocations
+        : []
+      ).filter((locationId) => !knownHomeLocationIds.includes(locationId) || locationId === homeLocationId);
+
+      if (!worldState.unlockedLocations.includes(homeLocationId)) {
+        worldState.unlockedLocations.unshift(homeLocationId);
+      }
+    }
   }
 
   return targetState.startingOrigin;

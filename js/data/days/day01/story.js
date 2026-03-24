@@ -6,7 +6,7 @@ const DAY01_INTRO_STEPS = [
     character: "",
     startMode: "press-exit",
     background: {
-      image: "1.png",
+      image: "assets/days/day00/prologue-room-exit.png",
       overlay: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 100%)",
       position: "center",
       size: "96% auto",
@@ -15,7 +15,7 @@ const DAY01_INTRO_STEPS = [
       className: "custom-location-bg",
     },
     player: {
-      src: "assets/characters/player/standing.png",
+      src: CHARACTER_ART.player.standing,
       alt: "player",
       startLeft: 50,
       prompt: "E를 눌러 밖으로 나가기",

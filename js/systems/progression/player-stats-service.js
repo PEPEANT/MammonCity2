@@ -18,6 +18,60 @@ const PLAYER_PHONE_TIER_BY_ITEM = Object.freeze({
   "phone-used-premium": 2,
 });
 
+const PLAYER_CHARACTER_PANEL_FLAGS = Object.freeze({
+  showHunger: false,
+  showSocialStats: false,
+  showJobPrepStats: false,
+  showJobUnlockChips: false,
+});
+
+function clampPlayerStatRange(value = 0, min = 0, max = 100) {
+  const normalized = Math.round(Number(value) || 0);
+  return Math.max(min, Math.min(max, normalized));
+}
+
+function normalizePlayerProgressionState(targetState = state) {
+  if (!targetState || typeof targetState !== "object") {
+    return targetState;
+  }
+
+  const staminaMax = typeof SLEEP_STAMINA_MAX === "number" ? SLEEP_STAMINA_MAX : 100;
+  const energyMax = typeof ENERGY_MAX === "number" ? ENERGY_MAX : 100;
+
+  targetState.stamina = clampPlayerStatRange(targetState.stamina, 0, staminaMax);
+  targetState.energy = clampPlayerStatRange(targetState.energy, 0, energyMax);
+  targetState.지능 = clampPlayerStatRange(targetState.지능, 0, 100);
+  targetState.평판 = clampPlayerStatRange(targetState.평판, 0, 100);
+  targetState.범죄도 = clampPlayerStatRange(targetState.범죄도, 0, 100);
+
+  if (typeof syncHappinessState === "function") {
+    syncHappinessState(targetState);
+  }
+
+  if (typeof ensureHungerState === "function") {
+    ensureHungerState(targetState);
+  }
+
+  if (typeof syncJobsDomainState === "function") {
+    syncJobsDomainState(targetState);
+  }
+
+  if (typeof syncOwnershipState === "function") {
+    syncOwnershipState(targetState);
+  }
+
+  if (typeof syncSpoonStartResidence === "function") {
+    syncSpoonStartResidence(targetState);
+  }
+
+  if (typeof syncAppearanceState === "function") {
+    const appearanceState = syncAppearanceState(targetState);
+    appearanceState.attractiveness = clampPlayerStatRange(appearanceState.attractiveness, 0, 100);
+  }
+
+  return targetState;
+}
+
 function getPlayerStatDisplayLabel(statKey = "") {
   const normalized = String(statKey || "").trim().toLowerCase();
   return PLAYER_STAT_LABELS[normalized] || String(statKey || "").trim() || "수치";
@@ -129,6 +183,9 @@ function getPlayerLifestyleSnapshot(targetState = state) {
   const ownershipState = typeof syncOwnershipState === "function"
     ? syncOwnershipState(targetState)
     : (targetState?.ownership || {});
+  if (typeof syncSpoonStartResidence === "function") {
+    syncSpoonStartResidence(targetState);
+  }
   const phoneDefinition = getEquippedInventoryItemDefinition("phone", targetState);
   const outfitDefinition = getEquippedInventoryItemDefinition("outfit", targetState);
   const residenceDefinition = typeof getOwnedHomeDefinition === "function"
@@ -159,7 +216,11 @@ function getPlayerLifestyleSnapshot(targetState = state) {
     bankBalance: typeof getBankBalance === "function"
       ? getBankBalance(targetState)
       : Math.max(0, Number(targetState?.bank?.balance) || 0),
+    liquidFunds,
     netWorth,
+    originLabel: typeof getStartingOriginLabel === "function"
+      ? getStartingOriginLabel(targetState)
+      : (targetState?.startingOrigin?.label || "수저 미정"),
     homeLabel: residenceDefinition?.label || ownershipState?.residence || "거처 없음",
     vehicleLabel: vehicleDefinition?.label || "이동수단 없음",
     phoneLabel: phoneDefinition?.label || "기본 스마트폰",
@@ -170,7 +231,10 @@ function getPlayerLifestyleSnapshot(targetState = state) {
 function getPlayerHardGateStatuses(targetState = state) {
   const certifications = typeof getCareerCertificationSnapshotForState === "function"
     ? getCareerCertificationSnapshotForState(targetState)
-    : { driverLicense: false, computerCert: false };
+    : { driverLicense: false, computerCert: false, universityDegree: false };
+  const prepState = typeof getCareerPrepSnapshotForState === "function"
+    ? getCareerPrepSnapshotForState(targetState)
+    : { labor: 0, office: 0, academic: 0 };
   const ownershipState = typeof syncOwnershipState === "function"
     ? syncOwnershipState(targetState)
     : (targetState?.ownership || {});
@@ -188,11 +252,16 @@ function getPlayerHardGateStatuses(targetState = state) {
     { label: "근거리 배달", ready: hasBike },
     { label: "오토바이 배달", ready: hasMotorbike },
     { label: "장거리 퀵", ready: hasCar && Boolean(certifications.driverLicense) },
-    { label: "사무지원", ready: hasSuit && Boolean(certifications.computerCert) && intelligence >= 18 },
+    { label: "대학 졸업", ready: Boolean(certifications.universityDegree) },
+    { label: "생산직 면접", ready: Boolean(certifications.universityDegree) && (prepState.labor || 0) >= 0 },
+    { label: "사무직 면접", ready: hasSuit && Boolean(certifications.universityDegree) && Boolean(certifications.computerCert) && intelligence >= 20 && (prepState.office || 0) >= 3 },
+    { label: "연구직 면접", ready: hasSuit && Boolean(certifications.universityDegree) && Boolean(certifications.computerCert) && intelligence >= 30 && (prepState.academic || 0) >= 4 },
   ];
 }
 
 function createPlayerStatSections(targetState = state) {
+  normalizePlayerProgressionState(targetState);
+
   const happinessState = typeof syncHappinessState === "function"
     ? syncHappinessState(targetState)
     : createDefaultHappinessState();
@@ -201,21 +270,14 @@ function createPlayerStatSections(targetState = state) {
     : "";
   const hungerState = typeof ensureHungerState === "function"
     ? ensureHungerState(targetState)
-    : { value: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3 };
+    : { value: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100 };
   const hungerMeta = typeof getHungerStatusLabel === "function"
     ? getHungerStatusLabel(targetState)
     : "";
   const hungerMetaCls = typeof getHungerStatusTone === "function"
     ? getHungerStatusTone(targetState)
     : "";
-  const certifications = typeof getCareerCertificationSnapshotForState === "function"
-    ? getCareerCertificationSnapshotForState(targetState)
-    : { driverLicense: false, computerCert: false };
-  const prepState = typeof getCareerPrepSnapshotForState === "function"
-    ? getCareerPrepSnapshotForState(targetState)
-    : { service: 0, labor: 0, office: 0, academic: 0 };
   const lifestyle = getPlayerLifestyleSnapshot(targetState);
-  const hardGateStatuses = getPlayerHardGateStatuses(targetState);
 
   const formatDisplayValue = (value) => {
     if (typeof formatCash === "function" && Number.isFinite(value)) {
@@ -223,54 +285,80 @@ function createPlayerStatSections(targetState = state) {
     }
     return String(value ?? "");
   };
+  const simplifiedLifestyleSummaries = [
+    { label: "수저", value: lifestyle.originLabel },
+    { label: "외모도", value: typeof getPlayerAppearanceLevelLabel === "function" ? getPlayerAppearanceLevelLabel(targetState) : "1LV" },
+    { label: "보유자산", value: formatDisplayValue(lifestyle.liquidFunds) },
+    { label: "거주", value: lifestyle.homeLabel },
+    { label: "이동수단", value: lifestyle.vehicleLabel },
+  ];
 
   return [
     {
       id: "life",
       label: "생활",
       bars: [
-        { key: "stamina", label: "체력", cls: "stamina", max: typeof SLEEP_STAMINA_MAX === "number" ? SLEEP_STAMINA_MAX : 200, value: getPlayerNumericStatValue("stamina", targetState) },
-        { key: "energy", label: "에너지", cls: "energy", max: typeof ENERGY_MAX === "number" ? ENERGY_MAX : 200, value: getPlayerNumericStatValue("energy", targetState) },
+        { key: "stamina", label: "체력", cls: "stamina", max: typeof SLEEP_STAMINA_MAX === "number" ? SLEEP_STAMINA_MAX : 100, value: getPlayerNumericStatValue("stamina", targetState) },
+        { key: "energy", label: "에너지", cls: "energy", max: typeof ENERGY_MAX === "number" ? ENERGY_MAX : 100, value: getPlayerNumericStatValue("energy", targetState) },
         { key: "happiness", label: "행복도", cls: "happiness", max: 100, value: happinessState.value, meta: happinessMeta, metaCls: happinessState.status },
-        { key: "hunger", label: "배고픔", cls: "hunger", max: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 3, value: hungerState.value, meta: hungerMeta, metaCls: hungerMetaCls },
+        ...(PLAYER_CHARACTER_PANEL_FLAGS.showHunger
+          ? [{ key: "hunger", label: "배고픔", cls: "hunger", max: typeof HUNGER_MAX === "number" ? HUNGER_MAX : 100, value: hungerState.value, meta: hungerMeta, metaCls: hungerMetaCls }]
+          : []),
       ],
     },
-    {
-      id: "social",
-      label: "사회",
-      bars: [
-        { key: "intelligence", label: "지능", cls: "intelligence", max: 100, value: getPlayerNumericStatValue("intelligence", targetState) },
-        { key: "reputation", label: "평판", cls: "reputation", max: 100, value: getPlayerNumericStatValue("reputation", targetState) },
-        { key: "crime", label: "범죄도", cls: "crime", max: 100, value: getPlayerNumericStatValue("crime", targetState) },
-        { key: "attractiveness", label: "외모", cls: "attractiveness", max: 100, value: getPlayerNumericStatValue("attractiveness", targetState) },
-      ],
-    },
-    {
-      id: "jobs",
-      label: "직업",
-      bars: [
-        { key: "career-prep-service", label: "서비스", cls: "service", max: 9, value: prepState.service },
-        { key: "career-prep-labor", label: "현장", cls: "labor", max: 9, value: prepState.labor },
-        { key: "career-prep-office", label: "사무", cls: "office", max: 9, value: prepState.office },
-        { key: "career-prep-academic", label: "학업", cls: "academic", max: 9, value: prepState.academic },
-      ],
-      chips: [
-        ...Object.entries(certifications).map(([certKey, owned]) => ({
-          label: `${typeof getCareerCertificationLabel === "function"
-            ? getCareerCertificationLabel(certKey)
-            : certKey} ${owned ? "보유" : "없음"}`,
-          tone: owned ? "ready" : "missing",
-        })),
-        ...hardGateStatuses.map((gate) => ({
-          label: `${gate.label} ${gate.ready ? "가능" : "잠김"}`,
-          tone: gate.ready ? "ready" : "missing",
-        })),
-      ],
-    },
+    ...(PLAYER_CHARACTER_PANEL_FLAGS.showSocialStats
+      ? [{
+          id: "social",
+          label: "사회",
+          bars: [
+            { key: "intelligence", label: "지능", cls: "intelligence", max: 100, value: getPlayerNumericStatValue("intelligence", targetState) },
+            { key: "reputation", label: "평판", cls: "reputation", max: 100, value: getPlayerNumericStatValue("reputation", targetState) },
+            { key: "crime", label: "범죄도", cls: "crime", max: 100, value: getPlayerNumericStatValue("crime", targetState) },
+            { key: "attractiveness", label: "외모", cls: "attractiveness", max: 100, value: getPlayerNumericStatValue("attractiveness", targetState) },
+          ],
+        }]
+      : []),
+    ...(PLAYER_CHARACTER_PANEL_FLAGS.showJobPrepStats
+      ? (() => {
+          const certifications = typeof getCareerCertificationSnapshotForState === "function"
+            ? getCareerCertificationSnapshotForState(targetState)
+            : { driverLicense: false, computerCert: false };
+          const prepState = typeof getCareerPrepSnapshotForState === "function"
+            ? getCareerPrepSnapshotForState(targetState)
+            : { service: 0, labor: 0, office: 0, academic: 0 };
+          const hardGateStatuses = getPlayerHardGateStatuses(targetState);
+
+          return [{
+            id: "jobs",
+            label: "직업",
+            bars: [
+              { key: "career-prep-service", label: "서비스", cls: "service", max: 9, value: prepState.service },
+              { key: "career-prep-labor", label: "현장", cls: "labor", max: 9, value: prepState.labor },
+              { key: "career-prep-office", label: "사무", cls: "office", max: 9, value: prepState.office },
+              { key: "career-prep-academic", label: "학업", cls: "academic", max: 9, value: prepState.academic },
+            ],
+            chips: PLAYER_CHARACTER_PANEL_FLAGS.showJobUnlockChips
+              ? [
+                  ...Object.entries(certifications).map(([certKey, owned]) => ({
+                    label: `${typeof getCareerCertificationLabel === "function"
+                      ? getCareerCertificationLabel(certKey)
+                      : certKey} ${owned ? "보유" : "없음"}`,
+                    tone: owned ? "ready" : "missing",
+                  })),
+                  ...hardGateStatuses.map((gate) => ({
+                    label: `${gate.label} ${gate.ready ? "가능" : "잠김"}`,
+                    tone: gate.ready ? "ready" : "missing",
+                  })),
+                ]
+              : [],
+          }];
+        })()
+      : []),
     {
       id: "lifestyle",
-      label: "생활수준",
+      label: "생활 요약",
       summaries: [
+        { label: "수저", value: lifestyle.originLabel },
         { label: "손 현금", value: formatDisplayValue(lifestyle.cashOnHand) },
         { label: "계좌 잔고", value: formatDisplayValue(lifestyle.bankBalance) },
         { label: "순자산", value: formatDisplayValue(lifestyle.netWorth) },
@@ -279,6 +367,7 @@ function createPlayerStatSections(targetState = state) {
         { label: "폰", value: lifestyle.phoneLabel },
         { label: "복장", value: lifestyle.outfitLabel },
       ],
+      summaries: simplifiedLifestyleSummaries,
     },
   ];
 }

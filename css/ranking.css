@@ -56,6 +56,11 @@
   gap: 8px;
 }
 
+.ranking-my-card.is-preview {
+  border-color: rgba(160, 174, 192, 0.36);
+  background: linear-gradient(135deg, #171a24 0%, #111827 100%);
+}
+
 .ranking-my-label {
   font-size: 0.65rem;
   letter-spacing: 0.1em;
@@ -85,6 +90,12 @@
 .ranking-my-job {
   font-size: 0.8rem;
   color: #aaa;
+}
+
+.ranking-preview-note {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #b8c1cf;
 }
 
 .ranking-job-stack {
@@ -193,6 +204,12 @@
   border-bottom: none;
 }
 
+.ranking-empty {
+  padding: 22px 16px;
+  text-align: center;
+  color: #7e8798;
+}
+
 /* 내 행 강조 */
 .ranking-row--me td {
   background: rgba(240, 192, 64, 0.07);
@@ -250,6 +267,8 @@
 .ranking-actions {
   display: flex;
   justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
   padding-bottom: 8px;
 }
 
@@ -268,4 +287,10 @@
 
 .ranking-btn:hover {
   opacity: 0.85;
+}
+
+.ranking-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }

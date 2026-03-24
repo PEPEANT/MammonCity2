@@ -318,8 +318,8 @@
 
     const stats = [
       { label: "현금", id: "dev-money", min: 0, max: 9999999, step: 10000, get: () => state.money, set: (v) => { state.money = v; } },
-      { label: "체력", id: "dev-stamina", min: 0, max: 200, step: 10, get: () => state.stamina, set: (v) => { state.stamina = v; } },
-      { label: "에너지", id: "dev-energy", min: 0, max: 200, step: 10, get: () => state.energy, set: (v) => { state.energy = v; } },
+      { label: "체력", id: "dev-stamina", min: 0, max: 100, step: 10, get: () => state.stamina, set: (v) => { state.stamina = v; } },
+      { label: "에너지", id: "dev-energy", min: 0, max: 100, step: 10, get: () => state.energy, set: (v) => { state.energy = v; } },
     ];
 
     stats.push({

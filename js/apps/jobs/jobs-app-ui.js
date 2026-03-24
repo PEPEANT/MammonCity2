@@ -12,9 +12,10 @@ function escapeJobsAppHtml(text) {
 }
 
 function formatJobsAppCash(amount) {
+  const normalizedAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
   return typeof formatCash === "function"
-    ? formatCash(amount)
-    : `${(Number.isFinite(amount) ? amount : 0).toLocaleString("ko-KR")}원`;
+    ? formatCash(normalizedAmount)
+    : `${normalizedAmount.toLocaleString("ko-KR")}원`;
 }
 
 function formatJobsAppPercent(value) {
@@ -33,27 +34,44 @@ function getCareerJobsOfferWorkplaceSummary(offer, targetState = state) {
     : null;
 }
 
+function getJobsOfferDefinition(offer) {
+  return typeof getOfferRuntimeDefinition === "function"
+    ? (getOfferRuntimeDefinition(offer) || { title: "근무", emoji: "💼", tags: [], category: "직장" })
+    : (JOB_LOOKUP?.[offer?.jobId] || { title: "근무", emoji: "💼", tags: [], category: "직장" });
+}
+
+function buildJobsTagMarkup(tags = [], limit = 3) {
+  return tags
+    .filter(Boolean)
+    .slice(0, limit)
+    .map((tag) => `<span class="phone-job-tag">${escapeJobsAppHtml(tag)}</span>`)
+    .join("");
+}
+
 function buildJobsWorkplaceInfoMarkup(workplace = null) {
   if (!workplace) {
     return "";
   }
 
-  const heading = [workplace.employerName, workplace.workplaceName].filter(Boolean).join(" · ");
-  const subLineParts = [workplace.locationLabel, workplace.districtLabel].filter(Boolean);
+  const title = workplace.workplaceName || workplace.employerName || "근무지";
+  const meta = [
+    workplace.employerName && workplace.employerName !== title ? workplace.employerName : "",
+    workplace.locationLabel,
+    workplace.districtLabel,
+  ].filter(Boolean);
 
   return `
     <div class="phone-job-workplace">
-      <div class="phone-job-workplace-title">${escapeJobsAppHtml(heading)}</div>
-      ${subLineParts.length ? `<div class="phone-job-workplace-meta">${escapeJobsAppHtml(subLineParts.join(" · "))}</div>` : ""}
-      ${workplace.commuteHint ? `<div class="phone-job-card-note">${escapeJobsAppHtml(workplace.commuteHint)}</div>` : ""}
+      <div class="phone-job-workplace-title">${escapeJobsAppHtml(title)}</div>
+      ${meta.length ? `<div class="phone-job-workplace-meta">${escapeJobsAppHtml(meta.join(" · "))}</div>` : ""}
     </div>
   `;
 }
 
 function buildJobsAppTrackTabs(activeTrack = "short-term") {
   const tracks = [
-    { id: "short-term", label: "단기알바" },
-    { id: "career", label: "직장지원" },
+    { id: "short-term", label: "알바" },
+    { id: "career", label: "직장" },
   ];
 
   return `
@@ -74,19 +92,125 @@ function buildJobsAppTrackTabs(activeTrack = "short-term") {
   `;
 }
 
+function buildJobsStatusCardMarkup({
+  toneClass = "is-booked",
+  labelLeft = "",
+  labelRight = "",
+  title = "",
+  body = "",
+  workplace = null,
+  actionMarkup = "",
+}) {
+  return `
+    <section class="phone-job-status-card ${escapeJobsAppHtml(toneClass)}">
+      <div class="phone-job-status-label">
+        <span>${escapeJobsAppHtml(labelLeft)}</span>
+        <span>${escapeJobsAppHtml(labelRight)}</span>
+      </div>
+      <div class="phone-job-status-title">${escapeJobsAppHtml(title)}</div>
+      ${body ? `<div class="phone-job-status-body">${escapeJobsAppHtml(body)}</div>` : ""}
+      ${buildJobsWorkplaceInfoMarkup(workplace)}
+      ${actionMarkup}
+    </section>
+  `;
+}
+
+function getTodayShiftCardConfig(targetState = state) {
+  const shiftUi = typeof getScheduledShiftUiModel === "function"
+    ? getScheduledShiftUiModel(targetState)
+    : null;
+  const workplaceLabel = shiftUi?.workplaceLabel || shiftUi?.workplace?.workplaceName || "근무지";
+
+  if (!shiftUi) {
+    return {
+      toneClass: "is-booked",
+      label: "예약",
+      body: "예약 근무 확인 불가",
+      actionMarkup: "",
+    };
+  }
+
+  if (shiftUi.phase === "missed") {
+    return {
+      toneClass: "is-fail",
+      label: "지각",
+      body: `${workplaceLabel} 시간 지남`,
+      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="skip-shift">결근</button>',
+    };
+  }
+
+  if (shiftUi.canStart) {
+    return {
+      toneClass: "is-success",
+      label: "출근",
+      body: `${workplaceLabel} 바로 출근`,
+      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="go-shift">출근</button>',
+    };
+  }
+
+  if (shiftUi.canWait) {
+    return {
+      toneClass: "is-booked",
+      label: "도착",
+      body: `${workplaceLabel} 대기 중`,
+      actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="go-shift">대기</button>',
+    };
+  }
+
+  return {
+    toneClass: "is-booked",
+    label: "이동",
+    body: `${workplaceLabel} 먼저 이동`,
+    actionMarkup: '<button class="phone-job-apply" type="button" data-phone-action="jobs-open-shift-route">경로</button>',
+  };
+}
+
+function buildBookedShiftStatusMarkup(bookedShift, day) {
+  if (!bookedShift?.offer) {
+    return "";
+  }
+
+  const job = getJobsOfferDefinition(bookedShift.offer);
+  const workplace = getJobsOfferWorkplaceSummary(bookedShift.offer);
+  const dueToday = bookedShift.day === day;
+  const todayShiftCard = dueToday ? getTodayShiftCardConfig(state) : null;
+
+  return buildJobsStatusCardMarkup({
+    toneClass: todayShiftCard?.toneClass || "is-booked",
+    labelLeft: dueToday ? (todayShiftCard?.label || "예약") : "예약",
+    labelRight: typeof formatTurnBadge === "function"
+      ? formatTurnBadge(bookedShift.day)
+      : `TURN ${String(bookedShift.day).padStart(2, "0")}`,
+    title: `${job.emoji} ${job.title}`,
+    body: dueToday
+      ? (todayShiftCard?.body || "오늘 출근 확인")
+      : `${typeof formatTurnLabel === "function" ? formatTurnLabel(bookedShift.day) : `${bookedShift.day}턴`} 출근 예약`,
+    workplace,
+    actionMarkup: dueToday ? (todayShiftCard?.actionMarkup || "") : "",
+  });
+}
+
 function buildShortTermJobsContent(viewModel) {
+  const bookedShift = viewModel.bookedShift?.offer?.careerPostingId
+    ? null
+    : viewModel.bookedShift;
   const offerCards = viewModel.offers.map((offer, index) => {
-    const job = JOB_LOOKUP[offer.jobId];
+    const job = getJobsOfferDefinition(offer);
     const workplace = getJobsOfferWorkplaceSummary(offer);
-    const jobTags = (job.tags || []).slice(0, 2).map((tag) => `<span class="phone-job-tag">${escapeJobsAppHtml(tag)}</span>`);
-    const requirementTags = (offer.requirementTags || []).map((tag) => `<span class="phone-job-tag">${escapeJobsAppHtml(tag)}</span>`);
-    const tags = [...jobTags, ...requirementTags].join("");
-    const disabledReason = viewModel.bookedShift
-      ? "예약된 출근이 있어 지금은 새 알바를 넣을 수 없습니다."
+    const tags = buildJobsTagMarkup([...(job.tags || []).slice(0, 1), ...((offer.requirementTags || []).slice(0, 2))]);
+    const disabledReason = viewModel.career?.status === "employed"
+      ? "재직중"
+      : bookedShift
+      ? "예약 근무 있음"
       : viewModel.applicationDoneToday
-        ? "오늘은 이미 단기알바 지원을 마쳤습니다."
-        : (!offer.eligible ? `필요 조건: ${(offer.unmetRequirements || []).join(", ")}` : "");
+        ? "오늘 신청 완료"
+        : (!offer.eligible ? `요건 부족: ${(offer.unmetRequirements || []).join(", ")}` : "");
     const disabled = !viewModel.canApply || !offer.eligible;
+    const buttonLabel = !viewModel.canApply
+      ? "마감"
+      : offer.eligible
+        ? "지원"
+        : "요건";
 
     return `
       <article class="phone-job-card">
@@ -105,7 +229,7 @@ function buildShortTermJobsContent(viewModel) {
             ${disabled ? "disabled" : ""}
             title="${escapeJobsAppHtml(disabledReason)}"
           >
-            ${viewModel.canApply ? (offer.eligible ? "지원" : "조건 부족") : "마감"}
+            ${escapeJobsAppHtml(buttonLabel)}
           </button>
         </div>
       </article>
@@ -114,45 +238,26 @@ function buildShortTermJobsContent(viewModel) {
 
   const statusCards = [];
 
-  if (viewModel.bookedShift) {
-    const job = JOB_LOOKUP[viewModel.bookedShift.offer.jobId];
-    const workplace = getJobsOfferWorkplaceSummary(viewModel.bookedShift.offer);
-    const dueToday = viewModel.bookedShift.day === viewModel.day;
-    statusCards.push(`
-      <section class="phone-job-status-card is-booked">
-        <div class="phone-job-status-label">
-          <span>${dueToday ? "TODAY SHIFT" : "BOOKED SHIFT"}</span>
-          <span>${typeof formatTurnBadge === "function" ? formatTurnBadge(viewModel.bookedShift.day) : `TURN ${String(viewModel.bookedShift.day).padStart(2, "0")}`}</span>
-        </div>
-        <div class="phone-job-status-title">${escapeJobsAppHtml(job.emoji)} ${escapeJobsAppHtml(job.title)}</div>
-        <div class="phone-job-status-body">
-          ${dueToday ? "오늘은 이 알바로 출근할 수 있다." : `${typeof formatTurnLabel === "function" ? formatTurnLabel(viewModel.bookedShift.day) : `${viewModel.bookedShift.day}턴`} 출근이 예약돼 있다.`}
-        </div>
-        ${buildJobsWorkplaceInfoMarkup(workplace)}
-        ${dueToday ? '<button class="phone-job-apply" type="button" data-phone-action="go-shift">출근하기</button>' : ""}
-      </section>
-    `);
+  if (bookedShift) {
+    statusCards.push(buildBookedShiftStatusMarkup(bookedShift, viewModel.day));
   }
 
   if (viewModel.result) {
-    const job = JOB_LOOKUP[viewModel.result.offer.jobId];
+    const job = getJobsOfferDefinition(viewModel.result.offer);
     const workplace = getJobsOfferWorkplaceSummary(viewModel.result.offer);
-    statusCards.push(`
-      <section class="phone-job-status-card ${viewModel.result.success ? "is-success" : "is-fail"}">
-        <div class="phone-job-status-label">
-          <span>${viewModel.result.success ? "INTERVIEW PASS" : "INTERVIEW FAIL"}</span>
-          <span>${Math.round((viewModel.result.chance || 0) * 100)}%</span>
-        </div>
-        <div class="phone-job-status-title">${escapeJobsAppHtml(job.emoji)} ${escapeJobsAppHtml(job.title)}</div>
-        <div class="phone-job-status-body">${escapeJobsAppHtml((viewModel.result.lines || []).join(" "))}</div>
-        ${buildJobsWorkplaceInfoMarkup(workplace)}
-      </section>
-    `);
+    statusCards.push(buildJobsStatusCardMarkup({
+      toneClass: viewModel.result.success ? "is-success" : "is-fail",
+      labelLeft: viewModel.result.success ? "합격" : "불합격",
+      labelRight: formatJobsAppPercent(viewModel.result.chance || 0),
+      title: `${job.emoji} ${job.title}`,
+      body: viewModel.result.success ? "오늘 근무 가능" : "이번 지원 탈락",
+      workplace,
+    }));
   }
 
   return `
     ${statusCards.join("")}
-    ${offerCards || '<div class="phone-job-empty">오늘 확인할 단기알바가 없습니다.</div>'}
+    ${offerCards || '<div class="phone-job-empty">오늘 알바 공고 없음</div>'}
   `;
 }
 
@@ -166,15 +271,14 @@ function buildCareerPrepSummary(viewModel) {
 
   const certTags = Object.entries(viewModel.certifications || {})
     .filter(([, owned]) => owned)
-    .map(([certKey]) => `<span class="phone-job-tag">${escapeJobsAppHtml(getCareerCertificationLabel(certKey))}</span>`)
-    .join("");
+    .map(([certKey]) => getCareerCertificationLabel(certKey));
 
   return `
     <section class="phone-app-card is-accent">
-      <div class="phone-app-card-title">준비</div>
+      <div class="phone-app-card-title">준비도</div>
       <div class="phone-career-summary-grid">${prepCards}</div>
       <div class="phone-career-cert-row">
-        ${certTags || '<span class="phone-job-tag">보유 자격 없음</span>'}
+        ${buildJobsTagMarkup(certTags, 3) || '<span class="phone-job-tag">자격 없음</span>'}
       </div>
     </section>
   `;
@@ -187,43 +291,39 @@ function buildCareerStatusCards(viewModel) {
     ? getCareerPostingById(career.postingId)
     : null;
   const workplace = getCareerJobsOfferWorkplaceSummary(currentPosting);
+  const title = `${currentPosting?.emoji || "💼"} ${currentPosting?.title || "직장"}`;
 
   if (viewModel.careerOutcome) {
-    cards.push(`
-      <section class="phone-job-status-card ${viewModel.careerOutcome.lastOutcome === "employed" ? "is-success" : "is-fail"}">
-        <div class="phone-job-status-label">
-          <span>${viewModel.careerOutcome.lastOutcome === "employed" ? "CAREER PASS" : "CAREER FAIL"}</span>
-          <span>${viewModel.careerOutcome.resultChance != null ? formatJobsAppPercent(viewModel.careerOutcome.resultChance) : "-"}</span>
-        </div>
-        <div class="phone-job-status-title">${escapeJobsAppHtml(currentPosting?.emoji || "💼")} ${escapeJobsAppHtml(currentPosting?.title || "직장지원")}</div>
-        <div class="phone-job-status-body">${escapeJobsAppHtml((viewModel.careerOutcome.lastLines || []).join(" "))}</div>
-        ${buildJobsWorkplaceInfoMarkup(workplace)}
-      </section>
-    `);
+    cards.push(buildJobsStatusCardMarkup({
+      toneClass: viewModel.careerOutcome.lastOutcome === "employed" ? "is-success" : "is-fail",
+      labelLeft: viewModel.careerOutcome.lastOutcome === "employed" ? "합격" : "불합격",
+      labelRight: viewModel.careerOutcome.resultChance != null
+        ? formatJobsAppPercent(viewModel.careerOutcome.resultChance)
+        : "-",
+      title,
+      body: viewModel.careerOutcome.lastOutcome === "employed" ? "입사 완료" : "이번 면접 탈락",
+      workplace,
+    }));
   } else if (career.status === "applied" && Number.isFinite(career.resultDay) && career.resultDay > viewModel.day) {
-    cards.push(`
-      <section class="phone-job-status-card is-booked">
-        <div class="phone-job-status-label">
-          <span>CAREER REVIEW</span>
-          <span>${typeof formatTurnBadge === "function" ? formatTurnBadge(career.resultDay) : `TURN ${String(career.resultDay).padStart(2, "0")}`}</span>
-        </div>
-        <div class="phone-job-status-title">${escapeJobsAppHtml(currentPosting?.emoji || "💼")} ${escapeJobsAppHtml(currentPosting?.title || "직장지원")}</div>
-        <div class="phone-job-status-body">지원서는 접수됐다. 결과는 다음 턴 확인할 수 있다.</div>
-        ${buildJobsWorkplaceInfoMarkup(workplace)}
-      </section>
-    `);
+    cards.push(buildJobsStatusCardMarkup({
+      toneClass: "is-booked",
+      labelLeft: "심사중",
+      labelRight: typeof formatTurnBadge === "function"
+        ? formatTurnBadge(career.resultDay)
+        : `TURN ${String(career.resultDay).padStart(2, "0")}`,
+      title,
+      body: "다음 턴 결과",
+      workplace,
+    }));
   } else if (career.status === "employed") {
-    cards.push(`
-      <section class="phone-job-status-card is-booked">
-        <div class="phone-job-status-label">
-          <span>CAREER ACTIVE</span>
-          <span>OPEN</span>
-        </div>
-        <div class="phone-job-status-title">${escapeJobsAppHtml(currentPosting?.emoji || "💼")} ${escapeJobsAppHtml(currentPosting?.title || "직장지원")}</div>
-        <div class="phone-job-status-body">장기 루트가 열린 상태다. 더 좋은 공고가 풀리기 시작했다.</div>
-        ${buildJobsWorkplaceInfoMarkup(workplace)}
-      </section>
-    `);
+    cards.push(buildJobsStatusCardMarkup({
+      toneClass: "is-booked",
+      labelLeft: "재직중",
+      labelRight: "OPEN",
+      title,
+      body: "입사 완료",
+      workplace,
+    }));
   }
 
   return cards.join("");
@@ -231,25 +331,31 @@ function buildCareerStatusCards(viewModel) {
 
 function buildCareerJobsContent(viewModel) {
   const careerStatusCards = buildCareerStatusCards(viewModel);
+  const scheduledCareerShift = viewModel.bookedShift?.offer?.careerPostingId
+    ? buildBookedShiftStatusMarkup(viewModel.bookedShift, viewModel.day)
+    : "";
   const offerCards = viewModel.careerOffers.map((offer, index) => {
     const workplace = getCareerJobsOfferWorkplaceSummary(offer);
+    const requirementLine = (offer.unmetRequirements || []).join(", ");
     const disabledReason = viewModel.career.status === "employed"
-      ? "이미 장기 근무 루트가 열린 상태입니다."
+      ? "이미 재직중"
       : viewModel.career.status === "applied"
-        ? "심사 결과가 나올 때까지는 새 직장지원을 넣을 수 없습니다."
+        ? "면접 결과 대기중"
         : viewModel.careerApplicationDoneToday
-          ? "오늘은 이미 직장지원을 넣었습니다."
-          : (!offer.eligible ? `필요 조건: ${offer.unmetRequirements.join(", ")}` : "");
-    const disabled = !viewModel.careerCanApply || !offer.eligible;
+          ? "오늘 신청 완료"
+          : (!offer.eligible ? `요건 부족: ${requirementLine}` : "");
+    const disabled = !viewModel.careerCanApply;
     const buttonLabel = viewModel.career.status === "employed"
-      ? "재직중"
+      ? "재직"
       : viewModel.career.status === "applied"
-        ? "심사중"
+        ? "대기"
         : viewModel.careerApplicationDoneToday
-          ? "다음 턴 지원"
-          : offer.eligible
-            ? "지원"
-            : "조건 부족";
+          ? "내일"
+          : "신청";
+    const tags = buildJobsTagMarkup([
+      offer.categoryLabel,
+      ...((offer.requirementTags || []).slice(0, 2)),
+    ]);
 
     return `
       <article class="phone-job-card">
@@ -259,9 +365,7 @@ function buildCareerJobsContent(viewModel) {
         </div>
         ${buildJobsWorkplaceInfoMarkup(workplace)}
         <div class="phone-job-meta">
-          <div class="phone-job-tags">
-            ${(offer.requirementTags || []).map((tag) => `<span class="phone-job-tag">${escapeJobsAppHtml(tag)}</span>`).join("")}
-          </div>
+          <div class="phone-job-tags">${tags}</div>
           <button
             class="phone-job-apply"
             type="button"
@@ -280,7 +384,8 @@ function buildCareerJobsContent(viewModel) {
   return `
     ${buildCareerPrepSummary(viewModel)}
     ${careerStatusCards}
-    ${offerCards || '<div class="phone-job-empty">지금 열려 있는 직장지원 공고가 없습니다.</div>'}
+    ${scheduledCareerShift}
+    ${offerCards || '<div class="phone-job-empty">오늘 직장 공고 없음</div>'}
   `;
 }
 
@@ -304,12 +409,11 @@ function buildJobsAppScreenMarkup({ showHomeButton = true, stageMode = false } =
         career: { status: "idle" },
         careerOutcome: null,
         careerPrep: { service: 0, labor: 0, office: 0, academic: 0 },
-        certifications: { driverLicense: false, computerCert: false },
+        certifications: { driverLicense: false, computerCert: false, universityDegree: false },
         careerApplicationDoneToday: false,
         careerCanApply: typeof canApplyForCareerOffer === "function" ? canApplyForCareerOffer() : false,
       };
 
-  const trackTitle = viewModel.activeTrack === "career" ? "직장지원" : "단기알바";
   const contentMarkup = viewModel.activeTrack === "career"
     ? buildCareerJobsContent(viewModel)
     : buildShortTermJobsContent(viewModel);
@@ -317,7 +421,7 @@ function buildJobsAppScreenMarkup({ showHomeButton = true, stageMode = false } =
   return `
     <div class="phone-app-screen-top ${stageMode ? "is-stage-mode" : ""}">
       <div class="phone-app-screen-copy">
-        <div class="phone-app-screen-title">${escapeJobsAppHtml(trackTitle)}</div>
+        <div class="phone-app-screen-title">공고</div>
       </div>
       ${showHomeButton ? '<button class="phone-app-mini-btn" type="button" data-phone-action="close-phone-view">홈</button>' : ""}
     </div>

@@ -61,6 +61,7 @@ function sanitizeCertificationSnapshot(certifications = {}) {
   const defaults = {
     driverLicense: false,
     computerCert: false,
+    universityDegree: false,
   };
 
   return Object.fromEntries(
@@ -145,7 +146,7 @@ function syncJobsDomainState(targetState = state) {
       ? legacyApplicationDoneToday
       : (typeof nested.applicationDoneToday === "boolean" ? nested.applicationDoneToday : defaults.applicationDoneToday),
     activeTrack: nested.activeTrack === "career" ? "career" : defaults.activeTrack,
-    careerOffers: Array.isArray(nested.careerOffers)
+    careerOffers: Array.isArray(nested.careerOffers) && nested.careerOffers.length
       ? nested.careerOffers.map(cloneCareerOfferSnapshot)
       : (typeof buildCareerOffersForState === "function"
         ? buildCareerOffersForState(targetState)

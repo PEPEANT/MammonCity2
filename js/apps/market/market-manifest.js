@@ -151,6 +151,83 @@ function buildMarketBottomNavMarkup(activeTab = "home") {
   `;
 }
 
+function buildMarketCompactHomeMarkup(routeState, { targetState = state } = {}) {
+  const listings = typeof getMarketVisibleListings === "function"
+    ? getMarketVisibleListings(routeState.activeTab, targetState)
+    : [];
+  const compactListings = listings.slice(0, 2);
+  const title = routeState.activeTab === "vehicles"
+    ? "차량 직거래"
+    : routeState.activeTab === "homes"
+      ? "부동산 직거래"
+      : routeState.activeTab === "premium"
+        ? "프리미엄 매물"
+        : "지금 뜬 매물";
+  const statusMarkup = typeof buildPhoneAppStatusMarkup === "function"
+    ? buildPhoneAppStatusMarkup("market")
+    : "";
+
+  return `
+    <section class="market-compact-shell">
+      <div class="market-compact-head">
+        <div class="market-compact-kicker">MARKET</div>
+        <div class="market-compact-title">호박마켓</div>
+        <div class="market-compact-note">작은 화면에서는 핵심 매물만 빠르게 봅니다.</div>
+      </div>
+      ${statusMarkup}
+      <div class="market-compact-tabs">
+        ${[
+          { route: "market/home", label: "홈", id: "home" },
+          { route: "market/vehicles", label: "차량", id: "vehicles" },
+          { route: "market/homes", label: "부동산", id: "homes" },
+        ].map((tab) => buildPhoneRouteButtonMarkup({
+          route: tab.route,
+          label: tab.label,
+          className: `market-compact-tab${routeState.activeTab === tab.id ? " is-active" : ""}`,
+        })).join("")}
+      </div>
+      <div class="market-compact-section-head">
+        <span>${escapePhoneAppHtml(title)}</span>
+        <span>${escapePhoneAppHtml(`${compactListings.length}건`)}</span>
+      </div>
+      <div class="market-compact-list">
+        ${compactListings.length
+          ? compactListings.map((listing) => `
+            <button
+              class="market-compact-card"
+              type="button"
+              data-phone-route="${escapePhoneAppHtml(buildMarketRoute(`item-${listing.id}`))}"
+            >
+              <div class="market-compact-card-top">
+                <span class="market-compact-card-title">${escapePhoneAppHtml(listing.title)}</span>
+                <span class="market-compact-card-price">${escapePhoneAppHtml(getMarketPriceText(listing.price))}</span>
+              </div>
+              <div class="market-compact-card-meta">${escapePhoneAppHtml(`${listing.location} · ${listing.timeLabel}`)}</div>
+            </button>
+          `).join("")
+          : '<div class="market-empty-state"><div class="market-empty-state-title">표시할 매물이 없습니다.</div><div class="market-empty-state-body">다른 탭으로 바꿔서 다시 확인해 보세요.</div></div>'}
+      </div>
+      <div class="market-compact-actions">
+        ${buildPhoneRouteButtonMarkup({
+          route: "market/chat",
+          label: "채팅",
+          className: "market-compact-action",
+        })}
+        ${buildPhoneRouteButtonMarkup({
+          route: "market/my",
+          label: "내 거래",
+          className: "market-compact-action",
+        })}
+        ${buildPhoneRouteButtonMarkup({
+          route: "market/write",
+          label: "글쓰기",
+          className: "market-compact-action",
+        })}
+      </div>
+    </section>
+  `;
+}
+
 function buildMarketHomeViewMarkup(routeState, { targetState = state } = {}) {
   const listings = typeof getMarketVisibleListings === "function"
     ? getMarketVisibleListings(routeState.activeTab, targetState)
@@ -397,8 +474,12 @@ function buildMarketMyViewMarkup(targetState = state) {
   `;
 }
 
-function buildMarketAppScreenMarkup({ screenId = "home", targetState = state } = {}) {
+function buildMarketAppScreenMarkup({ screenId = "home", stageMode = false, targetState = state } = {}) {
   const routeState = parseMarketRouteState(screenId);
+
+  if (!stageMode && routeState.view === "home") {
+    return buildMarketCompactHomeMarkup(routeState, { targetState });
+  }
 
   if (routeState.view === "write") {
     return buildMarketWriteViewMarkup();
@@ -438,9 +519,10 @@ function getMarketAppManifest(targetState = state) {
         ? canUsePhoneApps(targetState)
         : true
     ),
-    buildScreenMarkup: ({ screenId = "home", targetState: routeTargetState = targetState } = {}) => (
+    buildScreenMarkup: ({ screenId = "home", stageMode = false, targetState: routeTargetState = targetState } = {}) => (
       buildMarketAppScreenMarkup({
         screenId,
+        stageMode,
         targetState: routeTargetState,
       })
     ),

@@ -1,5 +1,15 @@
 const DIGGLE_SEARCH_ROUTE_REGISTRY = Object.freeze([
   Object.freeze({
+    id: "dis-singularity-gallery",
+    keywords: ["특이점", "특이점이 온다", "디특이점갤러리", "singularity", "agi", "갤러리"],
+    appId: "dis",
+    route: "dis/singularity",
+    fallbackRoute: "dis/home",
+    title: "특이점이 온다 갤러리",
+    body: "실시간 글과 댓글이 올라오는 디특이점갤러리로 바로 이동합니다.",
+    tags: ["Diggle", "디특이점갤러리", "특이점", "AGI", "실시간"],
+  }),
+  Object.freeze({
     id: "market-premium",
     keywords: ["외제차", "고급차", "프리미엄"],
     appId: "market",
@@ -52,6 +62,10 @@ const DIGGLE_SEARCH_ROUTE_REGISTRY = Object.freeze([
 ]);
 
 const DIGGLE_HISTORY_ROUTE_ENTRIES = Object.freeze([
+  Object.freeze({
+    label: "디특이점갤러리",
+    route: "dis/singularity",
+  }),
   Object.freeze({
     label: "호박마켓",
     route: "market/home",

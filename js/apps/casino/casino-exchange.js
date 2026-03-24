@@ -4,6 +4,40 @@ function getCasinoExchangeInputId(direction) {
     : "casino-exchange-buy-input";
 }
 
+function isCasinoExchangeInputVisible(input) {
+  if (!input) {
+    return false;
+  }
+
+  return Boolean(input.offsetParent || input.getClientRects().length);
+}
+
+function getCasinoExchangeInputElement(direction, targetState = state) {
+  const inputId = getCasinoExchangeInputId(direction);
+  const selector = `[id="${inputId}"]`;
+  const candidates = [...document.querySelectorAll(selector)];
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  if (String(targetState?.scene || "").trim().toLowerCase() === "casino-floor") {
+    return candidates.find((input) => input.closest(".casino-venue-shell"))
+      || candidates.find((input) => isCasinoExchangeInputVisible(input))
+      || candidates[candidates.length - 1];
+  }
+
+  if (Boolean(targetState?.phoneStageExpanded)) {
+    return candidates.find((input) => input.closest(".phone-stage-app-screen"))
+      || candidates.find((input) => isCasinoExchangeInputVisible(input))
+      || candidates[0];
+  }
+
+  return candidates.find((input) => input.closest("#phone-app-screen"))
+    || candidates.find((input) => isCasinoExchangeInputVisible(input))
+    || candidates[0];
+}
+
 function updateCasinoExchangeDraft(direction, amount, targetState = state) {
   const casinoState = syncCasinoState(targetState);
   const normalized = Math.max(0, Math.floor(Number(amount) || 0));
@@ -13,14 +47,14 @@ function updateCasinoExchangeDraft(direction, amount, targetState = state) {
 
 function fillCasinoExchangeDraft(direction, amount, targetState = state) {
   const value = updateCasinoExchangeDraft(direction, amount, targetState);
-  const input = document.getElementById(getCasinoExchangeInputId(direction));
+  const input = getCasinoExchangeInputElement(direction, targetState);
   if (input) {
     input.value = value;
   }
 }
 
 function readCasinoExchangeAmount(direction, targetState = state) {
-  const input = document.getElementById(getCasinoExchangeInputId(direction));
+  const input = getCasinoExchangeInputElement(direction, targetState);
   if (input) {
     updateCasinoExchangeDraft(direction, input.value, targetState);
   }

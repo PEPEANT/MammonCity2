@@ -2,7 +2,8 @@ const STARTING_JOB_IDS = [
   "convenience",
   "delivery",
   "tutoring",
-  "cafe",
+  "mcd-counter",
+  "mcd-kitchen",
   "warehouse",
   "cleaning",
 ];
@@ -28,6 +29,41 @@ const JOB_SCENE_BACKGROUNDS = {
     position: "center center",
     size: "cover",
     overlay: "linear-gradient(180deg, rgba(9, 12, 20, 0.26) 0%, rgba(9, 12, 20, 0.58) 100%)",
+  },
+  fastFood: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/commercial/mcdonalds-counter.png",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(14, 9, 8, 0.16) 0%, rgba(14, 9, 8, 0.4) 100%)",
+  },
+  logistics: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/commercial/logistics-center-exterior.png",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(9, 12, 20, 0.18) 0%, rgba(9, 12, 20, 0.42) 100%)",
+  },
+  production: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/industrial/production-line.jpg",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(9, 12, 20, 0.18) 0%, rgba(9, 12, 20, 0.42) 100%)",
+  },
+  office: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/industrial/office-work.jpg",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(7, 13, 24, 0.14) 0%, rgba(7, 13, 24, 0.3) 100%)",
+  },
+  research: {
+    className: "custom-location-bg",
+    image: "assets/backgrounds/day01/industrial/research-lab-interior.jpg",
+    position: "center center",
+    size: "cover",
+    overlay: "linear-gradient(180deg, rgba(8, 12, 20, 0.14) 0%, rgba(8, 12, 20, 0.32) 100%)",
   },
 };
 
@@ -96,6 +132,132 @@ const JOB_MINIGAME_DEFINITIONS = {
       { id: "warehouse-stack", icon: "🧱", shortLabel: "분류", label: "무게 맞춰 박스 분류", x: 41, y: 60, size: 112, target: true, tone: "warn" },
       { id: "warehouse-break", icon: "🪑", shortLabel: "휴게", label: "휴게 의자부터 찾기", x: 16, y: 67, size: 92, target: false, tone: "danger" },
       { id: "warehouse-misload", icon: "⚠️", shortLabel: "오입고", label: "잘못 온 상자에 시간 쓰기", x: 82, y: 67, size: 96, target: false, tone: "danger" },
+    ],
+  },
+  fastKitchen: {
+    // TODO: 조리 미니게임 - 유저가 제공 예정
+    id: "fast-food-kitchen-rush",
+    title: "조리 준비",
+    intro: "오픈 전 주방 재료와 라인을 빠르게 세팅한다.",
+    note: "필요한 카드만 눌러 주방을 정리한다.",
+    baseBonus: 10000,
+    penaltyPerMistake: 2600,
+    perfectBonus: 6500,
+    performanceLabels: {
+      perfect: "주방 라인을 완벽하게 맞춰 추가 수당이 붙었다.",
+      success: "주방 세팅을 무난하게 마쳐 추가 수당이 붙었다.",
+      fail: "조리 순서가 꼬여 추가 수당은 놓쳤다.",
+    },
+    items: [], // TODO: 조리 미니게임 카드 추가 예정
+  },
+  fastFood: {
+    id: "fast-food-counter-rush",
+    title: "주문 정리",
+    intro: "카운터가 열리기 전에 주문 흐름을 빠르게 맞춘다.",
+    note: "필요한 카드만 눌러 카운터를 정리한다.",
+    baseBonus: 9000,
+    penaltyPerMistake: 2400,
+    perfectBonus: 6000,
+    performanceLabels: {
+      perfect: "주문 흐름을 깔끔하게 맞춰 첫 손님부터 빠르게 받았다.",
+      success: "카운터 흐름을 무난하게 정리해 추가 수당이 붙었다.",
+      fail: "주문 동선이 꼬여 추가 수당은 놓쳤다.",
+    },
+    items: [
+      { id: "fastfood-order", icon: "ORD", shortLabel: "주문", label: "주문판 정리", x: 24, y: 28, size: 106, target: true, tone: "primary" },
+      { id: "fastfood-fries", icon: "FRY", shortLabel: "감튀", label: "감자 튀김 준비", x: 57, y: 24, size: 104, target: true, tone: "primary" },
+      { id: "fastfood-drink", icon: "DRK", shortLabel: "음료", label: "음료 컵 세팅", x: 73, y: 48, size: 102, target: true, tone: "primary" },
+      { id: "fastfood-receipt", icon: "RCP", shortLabel: "영수", label: "영수증 프린트 확인", x: 42, y: 62, size: 108, target: true, tone: "primary" },
+      { id: "fastfood-selfie", icon: "SNS", shortLabel: "사진", label: "카운터 사진 찍기", x: 16, y: 68, size: 92, target: false, tone: "danger" },
+      { id: "fastfood-break", icon: "BRK", shortLabel: "휴식", label: "쉬는 시간 먼저 찾기", x: 84, y: 68, size: 94, target: false, tone: "danger" },
+    ],
+  },
+  logistics: {
+    id: "logistics-sort-rush",
+    title: "출고 분류",
+    intro: "트럭 출발 전에 박스와 라벨을 빠르게 맞춘다.",
+    note: "출고 카드만 눌러 상차 흐름을 정리한다.",
+    baseBonus: 10200,
+    penaltyPerMistake: 2800,
+    perfectBonus: 7000,
+    performanceLabels: {
+      perfect: "출고 흐름을 한 번에 맞춰 반장이 보너스를 얹어줬다.",
+      success: "물류 라인을 무난하게 맞춰 추가 수당이 붙었다.",
+      fail: "박스 흐름이 꼬여 추가 수당은 놓쳤다.",
+    },
+    items: [
+      { id: "logistics-box", icon: "BOX", shortLabel: "박스", label: "출고 박스 정렬", x: 23, y: 31, size: 114, target: true, tone: "warn" },
+      { id: "logistics-label", icon: "TAG", shortLabel: "라벨", label: "출고 라벨 확인", x: 56, y: 27, size: 104, target: true, tone: "warn" },
+      { id: "logistics-route", icon: "LAN", shortLabel: "동선", label: "상차 라인 맞추기", x: 74, y: 49, size: 110, target: true, tone: "warn" },
+      { id: "logistics-scan", icon: "SCN", shortLabel: "스캔", label: "바코드 스캔 정리", x: 40, y: 61, size: 108, target: true, tone: "warn" },
+      { id: "logistics-chat", icon: "MSG", shortLabel: "잡담", label: "라인 옆 잡담 끼기", x: 17, y: 67, size: 92, target: false, tone: "danger" },
+      { id: "logistics-mix", icon: "ERR", shortLabel: "오적", label: "다른 구역 박스 끼우기", x: 83, y: 67, size: 96, target: false, tone: "danger" },
+    ],
+  },
+  production: {
+    id: "production-line-setup",
+    title: "라인 준비",
+    intro: "라인 가동 전에 부품과 점검표를 맞춘다.",
+    note: "필요한 준비 카드만 눌러 생산 라인을 맞춘다.",
+    baseBonus: 12000,
+    penaltyPerMistake: 3200,
+    perfectBonus: 8000,
+    performanceLabels: {
+      perfect: "라인 준비가 완벽해 첫 사이클부터 속도가 붙었다.",
+      success: "생산 라인을 무난하게 맞춰 추가 수당이 붙었다.",
+      fail: "준비 흐름이 흔들려 추가 수당은 놓쳤다.",
+    },
+    items: [
+      { id: "production-parts", icon: "PRT", shortLabel: "부품", label: "부품 카트 맞추기", x: 24, y: 30, size: 114, target: true, tone: "warn" },
+      { id: "production-check", icon: "CHK", shortLabel: "점검", label: "안전 점검표 확인", x: 56, y: 25, size: 104, target: true, tone: "warn" },
+      { id: "production-line", icon: "LIN", shortLabel: "라인", label: "라인 속도 세팅", x: 74, y: 48, size: 112, target: true, tone: "warn" },
+      { id: "production-pack", icon: "PKG", shortLabel: "포장", label: "완성품 트레이 정리", x: 41, y: 61, size: 110, target: true, tone: "warn" },
+      { id: "production-phone", icon: "APP", shortLabel: "폰", label: "작업 중 폰 보기", x: 17, y: 67, size: 92, target: false, tone: "danger" },
+      { id: "production-delay", icon: "LAG", shortLabel: "지연", label: "빈 라인 멍하니 보기", x: 83, y: 67, size: 96, target: false, tone: "danger" },
+    ],
+  },
+  office: {
+    id: "office-desk-open",
+    title: "사무 정리",
+    intro: "업무 시작 전에 문서와 메일을 정리한다.",
+    note: "필요한 업무 카드만 눌러 책상을 정리한다.",
+    baseBonus: 11000,
+    penaltyPerMistake: 2600,
+    perfectBonus: 7000,
+    performanceLabels: {
+      perfect: "업무 흐름을 깔끔하게 정리해 팀장이 바로 맡겼다.",
+      success: "사무 흐름을 안정적으로 맞춰 추가 수당이 붙었다.",
+      fail: "문서 흐름이 꼬여 추가 수당은 놓쳤다.",
+    },
+    items: [
+      { id: "office-mail", icon: "MAIL", shortLabel: "메일", label: "메일함 정리", x: 24, y: 29, size: 108, target: true, tone: "primary" },
+      { id: "office-sheet", icon: "DOC", shortLabel: "문서", label: "문서 파일 열기", x: 58, y: 25, size: 104, target: true, tone: "primary" },
+      { id: "office-plan", icon: "PLAN", shortLabel: "일정", label: "일정표 확인", x: 74, y: 48, size: 110, target: true, tone: "primary" },
+      { id: "office-report", icon: "REP", shortLabel: "보고", label: "보고서 초안 정리", x: 42, y: 61, size: 110, target: true, tone: "primary" },
+      { id: "office-feed", icon: "SNS", shortLabel: "피드", label: "사내 피드만 보기", x: 17, y: 67, size: 92, target: false, tone: "danger" },
+      { id: "office-coffee", icon: "BRK", shortLabel: "휴식", label: "커피만 다시 타기", x: 83, y: 67, size: 94, target: false, tone: "danger" },
+    ],
+  },
+  research: {
+    id: "research-lab-setup",
+    title: "실험 준비",
+    intro: "실험 시작 전에 시료와 기록표를 맞춘다.",
+    note: "필요한 준비 카드만 눌러 실험실을 정리한다.",
+    baseBonus: 13200,
+    penaltyPerMistake: 3200,
+    perfectBonus: 9000,
+    performanceLabels: {
+      perfect: "실험 준비가 깔끔해 오늘 데이터가 안정적으로 나왔다.",
+      success: "연구실 흐름을 잘 맞춰 추가 수당이 붙었다.",
+      fail: "준비 흐름이 흔들려 추가 수당은 놓쳤다.",
+    },
+    items: [
+      { id: "research-sample", icon: "SMP", shortLabel: "시료", label: "시료 트레이 정리", x: 24, y: 29, size: 110, target: true, tone: "success" },
+      { id: "research-log", icon: "LOG", shortLabel: "기록", label: "실험 기록표 확인", x: 56, y: 25, size: 104, target: true, tone: "success" },
+      { id: "research-mix", icon: "MIX", shortLabel: "배합", label: "배합 순서 점검", x: 74, y: 48, size: 110, target: true, tone: "success" },
+      { id: "research-scan", icon: "SCN", shortLabel: "측정", label: "측정 장비 준비", x: 42, y: 61, size: 110, target: true, tone: "success" },
+      { id: "research-break", icon: "BRK", shortLabel: "잡담", label: "실험 전 잡담하기", x: 17, y: 67, size: 92, target: false, tone: "danger" },
+      { id: "research-skip", icon: "SKP", shortLabel: "생략", label: "기록표 건너뛰기", x: 83, y: 67, size: 96, target: false, tone: "danger" },
     ],
   },
 };
@@ -190,15 +352,30 @@ const JOBS = [
     tags: ["설명", "학부모", "준비물"],
   },
   {
-    id: "cafe",
-    title: "오픈 카페",
-    emoji: "☕",
+    id: "mcd-counter",
+    title: "맥도날드 카운터",
+    emoji: "🍔",
     tone: "berry",
     category: "서비스",
-    payMin: 70000,
-    payMax: 90000,
-    description: "오픈 준비, 홀 정리, 주문 응대를 같이 하는 오전 근무.",
-    tags: ["오픈", "주문", "응대"],
+    payMin: 72000,
+    payMax: 92000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.fastFood,
+    minigame: JOB_MINIGAME_DEFINITIONS.fastFood,
+    description: "맥도날드 카운터에서 주문, 음료, 픽업 흐름을 맞추는 알바.",
+    tags: ["맥도날드", "카운터", "주문"],
+  },
+  {
+    id: "mcd-kitchen",
+    title: "맥도날드 조리",
+    emoji: "🍟",
+    tone: "berry",
+    category: "서비스",
+    payMin: 75000,
+    payMax: 96000,
+    sceneBackground: JOB_SCENE_BACKGROUNDS.fastFood,
+    minigame: JOB_MINIGAME_DEFINITIONS.fastKitchen,
+    description: "맥도날드 주방에서 조리 라인을 맞추는 알바.",
+    tags: ["맥도날드", "조리", "주방"],
   },
   {
     id: "warehouse",
@@ -329,32 +506,116 @@ const JOBS = [
 
 const JOB_LOOKUP = Object.fromEntries(JOBS.map((job) => [job.id, job]));
 
+// ── 맥도날드 주방 미니게임 데이터 ──────────────────────────────
+const MCD_KITCHEN_INGREDIENT_POOL = [
+  { id: "bottom-bun",    icon: "🍞", shortLabel: "아래빵",    label: "아래 빵 세팅" },
+  { id: "top-bun",       icon: "🍔", shortLabel: "위빵",      label: "참깨빵 올리기" },
+  { id: "middle-bun",    icon: "🥖", shortLabel: "중간빵",    label: "중간 빵 넣기" },
+  { id: "beef-patty",    icon: "🥩", shortLabel: "소고기패티", label: "소고기 패티 굽기" },
+  { id: "chicken-patty", icon: "🍗", shortLabel: "치킨패티",  label: "치킨 패티 튀기기" },
+  { id: "cheese",        icon: "🧀", shortLabel: "치즈",      label: "치즈 슬라이스" },
+  { id: "lettuce",       icon: "🥬", shortLabel: "양상추",    label: "양상추 올리기" },
+  { id: "tomato",        icon: "🍅", shortLabel: "토마토",    label: "토마토 슬라이스" },
+  { id: "pickle",        icon: "🥒", shortLabel: "피클",      label: "피클 올리기" },
+  { id: "onion",         icon: "🧅", shortLabel: "양파",      label: "양파 넣기" },
+  { id: "ketchup",       icon: "🟥", shortLabel: "케첩",      label: "케첩 뿌리기" },
+  { id: "mayo",          icon: "⬜", shortLabel: "마요",      label: "마요네즈 바르기" },
+  { id: "mac-sauce",     icon: "🟧", shortLabel: "빅맥소스",  label: "빅맥소스 바르기" },
+];
+
+const MCD_KITCHEN_RECIPES = [
+  {
+    id: "cheeseburger",
+    name: "치즈버거",
+    targetIds: ["bottom-bun", "beef-patty", "cheese", "pickle", "ketchup", "top-bun"],
+  },
+  {
+    id: "bulgogi",
+    name: "불고기버거",
+    targetIds: ["bottom-bun", "beef-patty", "mac-sauce", "lettuce", "top-bun"],
+  },
+  {
+    id: "mcchicken",
+    name: "맥치킨",
+    targetIds: ["bottom-bun", "chicken-patty", "lettuce", "mayo", "top-bun"],
+  },
+  {
+    id: "bigmac",
+    name: "빅맥",
+    targetIds: ["bottom-bun", "beef-patty", "cheese", "middle-bun", "pickle", "lettuce", "mac-sauce", "top-bun"],
+  },
+  {
+    id: "shanghai",
+    name: "상하이버거",
+    targetIds: ["bottom-bun", "chicken-patty", "tomato", "lettuce", "mayo", "top-bun"],
+  },
+];
+
+if (JOB_LOOKUP.warehouse) {
+  Object.assign(JOB_LOOKUP.warehouse, {
+    title: "배금 물류센터",
+    sceneBackground: JOB_SCENE_BACKGROUNDS.logistics,
+    minigame: JOB_MINIGAME_DEFINITIONS.logistics,
+    description: "배금 물류센터에서 상차 전 박스와 라벨을 맞추는 물류 알바.",
+    tags: ["물류센터", "상차", "분류"],
+  });
+}
+
 const CAREER_PREP_LABELS = {
   service: "서비스 준비",
-  labor: "현장 준비",
-  office: "사무 준비",
-  academic: "학업 준비",
+  labor: "생산직 준비",
+  office: "사무직 준비",
+  academic: "연구직 준비",
 };
 
 const CAREER_CERTIFICATION_LABELS = {
   driverLicense: "운전면허",
   computerCert: "컴퓨터 자격",
+  universityDegree: "대학 졸업",
 };
 
 const CAREER_JOB_POSTINGS = [
   {
-    id: "office-assistant",
-    title: "사무보조 계약직",
+    id: "factory-operator",
+    title: "배금전자 생산직 신입",
+    emoji: "🏭",
+    tone: "steel",
+    categoryLabel: "생산직",
+    payMin: 138000,
+    payMax: 176000,
+    shiftStartSlot: 18,
+    shiftDurationSlots: 12,
+    prepKey: "labor",
+    requiredPrep: 0,
+    requiredCerts: ["universityDegree"],
+    requirements: [
+      {
+        type: "stat-min",
+        statKey: "stamina",
+        min: 45,
+      },
+    ],
+    baseChance: 0.28,
+    description: "배금디지털단지 외곽 생산동에서 교대 라인과 설비 보조를 맡을 신입을 찾는다. 대학 졸업은 기본이고 체력도 받쳐줘야 한다.",
+  },
+  {
+    id: "baegeum-electronics-office",
+    title: "배금전자 사무직 신입",
     emoji: "💼",
     tone: "cobalt",
+    categoryLabel: "사무직",
+    payMin: 152000,
+    payMax: 194000,
+    shiftStartSlot: 19,
+    shiftDurationSlots: 10,
     prepKey: "office",
     requiredPrep: 3,
-    requiredCerts: ["computerCert"],
+    requiredCerts: ["universityDegree", "computerCert"],
     requirements: [
       {
         type: "stat-min",
         statKey: "intelligence",
-        min: 18,
+        min: 20,
       },
       {
         type: "equipped-item",
@@ -362,23 +623,27 @@ const CAREER_JOB_POSTINGS = [
         label: "정장 세트",
       },
     ],
-    baseChance: 0.46,
-    unlockJobId: "dispatch_monitor",
-    description: "문서 정리와 안내 업무를 맡을 지원자를 찾는다. 도서관 준비도와 컴퓨터 자격이 필요하다.",
+    baseChance: 0.22,
+    description: "배금전자 사무동에서 문서, 일정, 부서 행정을 맡을 신입 채용이다. 대학 졸업과 사무 준비도가 먼저 요구된다.",
   },
   {
-    id: "learning-center-clerk",
-    title: "학원 운영 보조",
-    emoji: "📚",
+    id: "baegeum-research-lab",
+    title: "배금연구소 연구직 신입",
+    emoji: "🧪",
     tone: "mint",
+    categoryLabel: "연구직",
+    payMin: 178000,
+    payMax: 228000,
+    shiftStartSlot: 20,
+    shiftDurationSlots: 10,
     prepKey: "academic",
-    requiredPrep: 3,
-    requiredCerts: ["computerCert"],
+    requiredPrep: 4,
+    requiredCerts: ["universityDegree", "computerCert"],
     requirements: [
       {
         type: "stat-min",
         statKey: "intelligence",
-        min: 22,
+        min: 30,
       },
       {
         type: "equipped-item",
@@ -386,33 +651,8 @@ const CAREER_JOB_POSTINGS = [
         label: "정장 세트",
       },
     ],
-    baseChance: 0.44,
-    unlockJobId: "study_coach",
-    description: "학원 프런트와 수업 지원을 맡는 장기 루트다. 수업 준비 경험과 문서 처리가 중요하다.",
-  },
-  {
-    id: "field-runner",
-    title: "현장 순회 계약직",
-    emoji: "🛵",
-    tone: "steel",
-    prepKey: "service",
-    requiredPrep: 0,
-    requiredCerts: ["driverLicense"],
-    requirements: [
-      {
-        type: "owned-vehicle-any-of",
-        vehicleIds: ["used-motorbike", "used-car", "foreign-car"],
-        label: "오토바이 또는 차량",
-      },
-      {
-        type: "stat-min",
-        statKey: "reputation",
-        min: 10,
-      },
-    ],
-    baseChance: 0.42,
-    unlockJobId: "smart_store",
-    description: "여러 현장을 오가며 점검과 전달 업무를 맡는 루트다. 운전면허가 있어야 지원할 수 있다.",
+    baseChance: 0.16,
+    description: "배금연구소에서 데이터 정리와 실험 보조를 맡는 연구직 루트다. 대학 졸업과 높은 연구 준비도가 없으면 면접에서 계속 떨어진다.",
   },
 ];
 
@@ -420,6 +660,106 @@ const CAREER_JOB_POSTING_LOOKUP = Object.fromEntries(
   CAREER_JOB_POSTINGS.map((posting) => [posting.id, posting]),
 );
 
+if (CAREER_JOB_POSTING_LOOKUP["factory-operator"]) {
+  Object.assign(CAREER_JOB_POSTING_LOOKUP["factory-operator"], {
+    sceneBackground: JOB_SCENE_BACKGROUNDS.production,
+    minigame: JOB_MINIGAME_DEFINITIONS.production,
+  });
+}
+
+if (CAREER_JOB_POSTING_LOOKUP["baegeum-electronics-office"]) {
+  Object.assign(CAREER_JOB_POSTING_LOOKUP["baegeum-electronics-office"], {
+    sceneBackground: JOB_SCENE_BACKGROUNDS.office,
+    minigame: JOB_MINIGAME_DEFINITIONS.office,
+  });
+}
+
+if (CAREER_JOB_POSTING_LOOKUP["baegeum-research-lab"]) {
+  Object.assign(CAREER_JOB_POSTING_LOOKUP["baegeum-research-lab"], {
+    sceneBackground: JOB_SCENE_BACKGROUNDS.research,
+    minigame: JOB_MINIGAME_DEFINITIONS.research,
+  });
+}
+
 function getCareerPostingById(postingId) {
   return CAREER_JOB_POSTING_LOOKUP[postingId] || null;
+}
+
+function isCareerShiftOffer(offer = null) {
+  return Boolean(offer?.careerPostingId);
+}
+
+function getOfferKey(offer = null) {
+  if (!offer) {
+    return "";
+  }
+
+  if (offer.careerPostingId) {
+    return String(offer.careerPostingId || "").trim();
+  }
+
+  return String(offer.jobId || "").trim();
+}
+
+function getOfferRuntimeDefinition(offer = null) {
+  if (!offer) {
+    return null;
+  }
+
+  if (isCareerShiftOffer(offer)) {
+    const posting = getCareerPostingById(offer.careerPostingId);
+    return {
+      ...(posting || {}),
+      id: offer.careerPostingId,
+      title: offer.title || posting?.title || "직장",
+      emoji: offer.emoji || posting?.emoji || "💼",
+      tone: offer.tone || posting?.tone || "cobalt",
+      category: offer.category || posting?.categoryLabel || "직장",
+      isCareer: true,
+    };
+  }
+
+  const job = JOB_LOOKUP[offer.jobId] || null;
+  return job
+    ? {
+        ...job,
+        title: offer.title || job.title,
+        emoji: offer.emoji || job.emoji,
+        tone: offer.tone || job.tone,
+        category: offer.category || job.category,
+        isCareer: false,
+      }
+    : null;
+}
+
+function getOfferMiniGameDefinition(offer = null) {
+  const runtimeDefinition = getOfferRuntimeDefinition(offer);
+  return runtimeDefinition?.minigame || null;
+}
+
+function createCareerShiftOffer(postingId = "", targetState = state) {
+  const posting = getCareerPostingById(postingId);
+  if (!posting) {
+    return null;
+  }
+
+  const basePay = typeof randomBetween === "function"
+    ? randomBetween(posting.payMin, posting.payMax)
+    : posting.payMin;
+  const roundedPay = typeof roundToHundred === "function"
+    ? roundToHundred(basePay)
+    : basePay;
+
+  return {
+    careerPostingId: posting.id,
+    title: posting.title,
+    emoji: posting.emoji,
+    tone: posting.tone,
+    category: posting.categoryLabel || "직장",
+    pay: typeof getAdjustedWage === "function"
+      ? getAdjustedWage(roundedPay, targetState)
+      : roundedPay,
+    shiftStartSlot: Number.isFinite(posting.shiftStartSlot) ? posting.shiftStartSlot : DAY_START_TIME_SLOT,
+    shiftDurationSlots: Number.isFinite(posting.shiftDurationSlots) ? posting.shiftDurationSlots : 8,
+  };
 }

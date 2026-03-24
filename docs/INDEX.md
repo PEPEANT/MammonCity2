@@ -49,6 +49,9 @@
 - [memory-system.md](./memory-system.md)  
   기억 버튼, 기록 규칙, 유지 범위를 설명하는 문서.
 
+- [next-turn-briefing.md](./next-turn-briefing.md)  
+  다음날 턴 시작 전에 개인 사건을 검은 화면 요약으로 한 장씩 보여주는 공용 브리핑 구조 문서.
+
 - [phone-system.md](./phone-system.md)  
   스마트폰 잠금 해제 이후 앱 접근과 공고 흐름 문서.
 
@@ -57,6 +60,20 @@
 
 - [save-system.md](./save-system.md)  
   `localStorage` 기반 저장 구조 문서.
+
+## 진행 중 작업 계획
+
+- [gameplay-beta-plan.md](./gameplay-beta-plan.md)  
+  베타에서 재미와 플레이성을 먼저 살리기 위한 우선순위와 첫 구현 방향을 정리한 실행 계획 문서.
+
+- [npc-romance-implementation-plan.md](./npc-romance-implementation-plan.md)  
+  여자친구 1차 루프의 현재 구현 상태와 `길거리 조우 -> 연락처 -> 약속 -> 데이트 -> 집 초대` 흐름을 정리한 문서.
+
+- [stats-balance-feedback-plan.md](./stats-balance-feedback-plan.md)  
+  배고픔 100 스케일, 스탯 공용 보정, 중앙 하단 행동 피드 구조를 같이 정리하는 실행 계획 문서.
+
+- [workplace-shift-loop-plan.md](./workplace-shift-loop-plan.md)  
+  오늘 구현 범위를 `근무지 도착형 출근 루프` 기준으로 자른 실행 계획 문서.
 
 ## 설계 아이디어 문서
 
@@ -85,7 +102,7 @@
   인벤토리/보유품 시스템의 현재 구현 기준 문서.
 
 - [design/job-tracks.md](./design/job-tracks.md)  
-  공고 앱을 `단기알바 / 직장지원` 2트랙으로 나누는 최소 설계 문서.
+  공고 앱을 `단기알바 / 직장` 2트랙으로 나누는 최소 설계 문서.
 
 - [design/logic-split-plan.md](./design/logic-split-plan.md)  
   `logic.js`를 오케스트레이션 파일로 제한하고 월드/배고픔 등 도메인 로직을 시스템 파일로 옮기는 분리 기준 문서.
