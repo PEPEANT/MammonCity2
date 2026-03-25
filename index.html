@@ -11,7 +11,8 @@
   <link rel="stylesheet" href="css/city-map.css?v=20260325-mapmobile2">
   <link rel="stylesheet" href="css/phone.css?v=20260325-mapquick1">
   <link rel="stylesheet" href="css/market.css?v=20260323-assets1">
-  <link rel="stylesheet" href="css/ranking.css?v=20260324-rankingpreview1">
+  <link rel="stylesheet" href="css/ranking.css?v=20260326-ending1">
+  <link rel="stylesheet" href="css/settlement.css?v=20260326-ending1">
 </head>
 <body>
   <div id="dev-panel" style="display:none">
@@ -196,7 +197,7 @@
     </div>
 
     <div id="start-screen">
-      <div class="start-version-badge">V0.2</div>
+      <div class="start-version-badge">V0.3</div>
       <button
         id="ranking-preview-button"
         class="start-ranking-trigger"
@@ -262,6 +263,19 @@
         <button id="spd-draw-btn" class="spd-draw-btn" type="button">🥄 수저 뽑기</button>
         <button id="spd-start-btn" class="spd-start-btn" type="button" hidden>이 수저로 시작하기</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 최종 정산 애니메이션 화면 -->
+  <div id="settlement-screen" class="settlement-screen" hidden aria-modal="true" role="dialog" aria-label="최종 정산">
+    <div class="settlement-inner">
+      <div class="settlement-header">
+        <div class="settlement-badge">FINAL</div>
+        <div class="settlement-title-text" id="settlement-title-text">12턴 최종 정산</div>
+      </div>
+      <div class="settlement-rows" id="settlement-rows"></div>
+      <div class="settlement-rank-area" id="settlement-rank-area"></div>
+      <div class="settlement-actions" id="settlement-actions"></div>
     </div>
   </div>
 
@@ -409,10 +423,10 @@
   <script src="js/devices/phone/phone-app-registry.js?v=20260324-casinomove1"></script>
   <script src="js/devices/phone/phone-shell-ui.js?v=20260325-mapquick1"></script>
   <script src="js/devices/phone/phone-router.js"></script>
-  <script src="js/ui.js?v=20260325-nosleep1"></script>
+  <script src="js/ui.js?v=20260326-ending1"></script>
   <script src="js/ui/city-map/city-map-ui.js?v=20260325-mapquick1"></script>
   <script src="js/systems/progression/turn-briefing-service.js?v=20260325-lottoscratch1"></script>
-  <script src="js/logic.js?v=20260325-rentfix4"></script>
+  <script src="js/logic.js?v=20260326-ending1"></script>
   <script src="js/dev.js?v=20260324-statcap1"></script>
 </body>
 </html>

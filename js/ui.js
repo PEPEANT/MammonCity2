@@ -158,6 +158,11 @@ function cacheUi() {
   ui.rankingMyCard = document.getElementById("ranking-my-card");
   ui.rankingCloseBtn = document.getElementById("ranking-close-btn");
   ui.rankingRestartBtn = document.getElementById("ranking-restart-btn");
+  ui.settlementScreen = document.getElementById("settlement-screen");
+  ui.settlementTitleText = document.getElementById("settlement-title-text");
+  ui.settlementRows = document.getElementById("settlement-rows");
+  ui.settlementRankArea = document.getElementById("settlement-rank-area");
+  ui.settlementActions = document.getElementById("settlement-actions");
   if (ui.rankingCloseBtn) {
     ui.rankingCloseBtn.addEventListener("click", () => {
       closeRankingScreen();
@@ -4434,6 +4439,10 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
     if (previewMode) {
       ui.rankingMyCard.innerHTML = ``;
     } else if (safeMyEntry) {
+      const myHappiness = Number(safeMyEntry.happiness) || 0;
+      const myHappinessBadge = myHappiness > 0
+        ? `<span class="ranking-my-happiness">행복도 ${Math.round(myHappiness)}점</span>`
+        : "";
       ui.rankingMyCard.innerHTML = `
         <div class="ranking-my-label">내 결과</div>
         <div class="ranking-my-name">${escapeHtml(safeMyEntry.name)}</div>
@@ -4442,6 +4451,7 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
           <span class="ranking-my-job">${escapeHtml(safeMyEntry.job)}</span>
           <span class="ranking-spoon-badge ${mySpoonClass}">${mySpoon}</span>
           <span class="ranking-my-rank ranking-rank--${String(safeMyEntry.rank || "d").toLowerCase()}">${safeMyEntry.rank}</span>
+          ${myHappinessBadge}
         </div>
       `;
     } else {
@@ -4507,6 +4517,149 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
 
   ui.rankingScreen.hidden = false;
   ui.rankingScreen.setAttribute("aria-hidden", "false");
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   정산 화면 (Settlement Screen)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function showSettlementScreen(summary, onDone) {
+  if (!ui.settlementScreen) {
+    onDone?.();
+    return;
+  }
+
+  if (ui.settlementTitleText) {
+    ui.settlementTitleText.textContent = `${MAX_DAYS}턴 최종 정산`;
+  }
+
+  // 이전 상태 초기화
+  if (ui.settlementRows) ui.settlementRows.innerHTML = "";
+  if (ui.settlementRankArea) {
+    ui.settlementRankArea.innerHTML = "";
+    ui.settlementRankArea.classList.remove("is-visible");
+  }
+  if (ui.settlementActions) {
+    ui.settlementActions.innerHTML = "";
+    ui.settlementActions.classList.remove("is-visible");
+  }
+
+  ui.settlementScreen.hidden = false;
+  ui.settlementScreen.scrollTop = 0;
+
+  const DELAY_BASE = 400;
+  const DELAY_PER_ROW = 260;
+
+  const rows = Array.isArray(summary?.settlementRows) ? summary.settlementRows : [];
+  const totalRow = { id: "net-worth", label: "순자산", amount: summary?.netWorth ?? 0, isTotal: true };
+  const allRows = [...rows, totalRow];
+
+  // ── 행 렌더링 ──
+  allRows.forEach((row, idx) => {
+    if (!ui.settlementRows) return;
+    const delay = DELAY_BASE + idx * DELAY_PER_ROW;
+    const el = document.createElement("div");
+
+    if (row.isTotal) {
+      el.className = "settlement-row settlement-row--total";
+    } else if (row.id === "debt") {
+      el.className = "settlement-row settlement-row--debt";
+    } else {
+      el.className = "settlement-row";
+    }
+
+    el.style.setProperty("--row-delay", `${delay}ms`);
+
+    if (row.isTotal) {
+      el.innerHTML = `<span class="settlement-row-label">${escapeHtml(row.label)}</span><span class="settlement-row-right"><span class="settlement-row-amount settlement-total-amount" data-final="${row.amount}">${formatMoney(0)}</span></span>`;
+    } else {
+      const sign = row.amount >= 0 ? "+" : "";
+      const amountText = `${sign}${typeof formatMoney === "function" ? formatMoney(Math.abs(row.amount)) : String(Math.abs(row.amount)) + "원"}`;
+      const finalAmount = row.id === "debt"
+        ? `<span class="settlement-row-amount">-${typeof formatMoney === "function" ? formatMoney(Math.abs(row.amount)) : String(Math.abs(row.amount)) + "원"}</span>`
+        : `<span class="settlement-row-amount">${amountText}</span>`;
+      let pnlMarkup = "";
+      if (row.pnl !== undefined) {
+        const pnlSign = row.pnl >= 0 ? "+" : "";
+        const pnlClass = row.pnl >= 0 ? "is-pos" : "is-neg";
+        pnlMarkup = `<span class="settlement-row-pnl ${pnlClass}">(${pnlSign}${typeof formatMoney === "function" ? formatMoney(row.pnl) : String(row.pnl) + "원"})</span>`;
+      }
+      el.innerHTML = `<span class="settlement-row-label">${escapeHtml(row.label)}</span><span class="settlement-row-right">${finalAmount}${pnlMarkup}</span>`;
+    }
+
+    ui.settlementRows.appendChild(el);
+  });
+
+  // ── 순자산 카운트업 애니메이션 ──
+  const totalDelay = DELAY_BASE + (allRows.length - 1) * DELAY_PER_ROW + 200;
+  setTimeout(() => {
+    const totalAmountEl = ui.settlementRows?.querySelector(".settlement-total-amount");
+    if (totalAmountEl) {
+      settlementCountUp(totalAmountEl, summary?.netWorth ?? 0, 900);
+    }
+  }, totalDelay);
+
+  // ── 행복도 + 랭크 표시 ──
+  const rankDelay = totalDelay + 700;
+  setTimeout(() => {
+    if (!ui.settlementRankArea) return;
+    const happinessVal = Math.round(Number(summary?.happiness) || 0);
+    const happinessStatus = escapeHtml(String(summary?.happinessLabel || summary?.happinessStatus || "보통"));
+    const rankLabel = String(summary?.rank?.label || "D");
+    const rankTitle = escapeHtml(String(summary?.rank?.title || ""));
+    const rankClass = `settlement-rank--${rankLabel.toLowerCase()}`;
+
+    ui.settlementRankArea.innerHTML = `
+      <div class="settlement-happiness">
+        <span class="settlement-happiness-label">행복도</span>
+        <span class="settlement-happiness-value">${happinessVal}점</span>
+        <span class="settlement-happiness-status">${happinessStatus}</span>
+      </div>
+      <div class="settlement-divider"></div>
+      <div class="settlement-rank ${rankClass}">
+        <span class="settlement-rank-label">랭크</span>
+        <span class="settlement-rank-grade">${escapeHtml(rankLabel)}</span>
+        <span class="settlement-rank-title">${rankTitle}</span>
+      </div>
+    `;
+    ui.settlementRankArea.classList.add("is-visible");
+  }, rankDelay);
+
+  // ── "랭킹 보기" 버튼 ──
+  const btnDelay = rankDelay + 600;
+  setTimeout(() => {
+    if (!ui.settlementActions) return;
+    const btn = document.createElement("button");
+    btn.className = "settlement-btn";
+    btn.type = "button";
+    btn.textContent = "랭킹 보기";
+    btn.addEventListener("click", () => {
+      if (ui.settlementScreen) ui.settlementScreen.hidden = true;
+      onDone?.();
+    });
+    ui.settlementActions.appendChild(btn);
+    ui.settlementActions.classList.add("is-visible");
+  }, btnDelay);
+}
+
+function settlementCountUp(el, finalValue, duration) {
+  const start = Date.now();
+  const fmt = typeof formatMoney === "function" ? formatMoney : (v) => `${v}원`;
+
+  function step() {
+    const elapsed = Date.now() - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(finalValue * eased);
+    el.textContent = fmt(current);
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = fmt(finalValue);
+    }
+  }
+
+  requestAnimationFrame(step);
 }
 
 function escapeHtml(text) {

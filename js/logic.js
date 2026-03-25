@@ -684,6 +684,7 @@ function applyRealEstateVenueSceneState(resolvedScene, locationId = "", targetSt
       ? {
           ...option,
           title: `${buildingDefinition.label}을 ${formatMoney(buildingDefinition.price)}에 매입한다`,
+          earnText: `매입가 ${formatMoney(buildingDefinition.price)}`,
         }
       : option
   );
@@ -693,6 +694,7 @@ function applyRealEstateVenueSceneState(resolvedScene, locationId = "", targetSt
     prependSceneOption(resolvedScene.options, {
       title: "보유 건물 수익 현황을 확인한다",
       action: "review-downtown-building",
+      earnText: `턴 수익 ${formatMoney(ownedBuilding.incomePerTurn)}`,
     });
     if (!resolvedScene.tags.includes("건물주")) {
       resolvedScene.tags.push("건물주");
@@ -705,6 +707,14 @@ function applyRealEstateVenueSceneState(resolvedScene, locationId = "", targetSt
 function reviewDowntownRealEstateBuilding(targetState = state) {
   const ownedBuilding = getOwnedRealEstateInvestmentSummary(targetState);
   if (!ownedBuilding) {
+    if (typeof queueGameplayFeedback === "function") {
+      queueGameplayFeedback({
+        title: "매입 건물 없음",
+        body: "아직 매입한 건물이 없다. 부동산 내부에서 먼저 계약을 진행해야 한다.",
+        tone: "fail",
+        duration: 2600,
+      });
+    }
     targetState.headline = {
       badge: "매물 조회",
       text: "아직 매입한 건물이 없다. 안쪽 계약 테이블에서 수익형 빌딩을 살 수 있다.",
@@ -11722,11 +11732,30 @@ function prepareDayState(targetState = state) {
   }
 }
 
+function isStocksPhoneApp(appId = "") {
+  return String(appId || "").trim().toLowerCase() === "stocks";
+}
+
+function isStocksPhoneRoute(route = "") {
+  const normalizedRoute = typeof normalizePhoneRoute === "function"
+    ? normalizePhoneRoute(route)
+    : String(route || "").trim().toLowerCase();
+  return normalizedRoute === "stocks" || normalizedRoute.startsWith("stocks/");
+}
+
+function isStocksPhoneAction(phoneAction = "") {
+  return String(phoneAction || "").trim().toLowerCase().startsWith("stock-market-");
+}
+
 function handlePhoneScreenClick(event) {
+  const currentPhoneRoute = typeof normalizePhoneRoute === "function"
+    ? normalizePhoneRoute(state.phoneView || "home")
+    : String(state.phoneView || "home");
   const appTarget = event.target.closest("[data-phone-app]");
   if (appTarget) {
     runGuardedUiAction(() => {
-      if (spendPhoneInteractionTime()) {
+      const skipPhoneTimeSpend = isStocksPhoneApp(appTarget.dataset.phoneApp) || isStocksPhoneRoute(currentPhoneRoute);
+      if (!skipPhoneTimeSpend && spendPhoneInteractionTime()) {
         return;
       }
       usePhoneApp(appTarget.dataset.phoneApp);
@@ -11741,7 +11770,8 @@ function handlePhoneScreenClick(event) {
   const routeTarget = event.target.closest("[data-phone-route]");
   if (routeTarget) {
     runGuardedUiAction(() => {
-      if (spendPhoneInteractionTime()) {
+      const skipPhoneTimeSpend = isStocksPhoneRoute(routeTarget.dataset.phoneRoute) || isStocksPhoneRoute(currentPhoneRoute);
+      if (!skipPhoneTimeSpend && spendPhoneInteractionTime()) {
         return;
       }
       if (typeof openPhoneRoute === "function" && openPhoneRoute(routeTarget.dataset.phoneRoute, state)) {
@@ -11768,7 +11798,8 @@ function handlePhoneScreenClick(event) {
   } = actionTarget.dataset;
 
   runGuardedUiAction(() => {
-    if (spendPhoneInteractionTime()) {
+    const skipPhoneTimeSpend = isStocksPhoneAction(phoneAction) || isStocksPhoneRoute(currentPhoneRoute);
+    if (!skipPhoneTimeSpend && spendPhoneInteractionTime()) {
       return;
     }
 
@@ -13623,25 +13654,11 @@ function finishRun() {
   state.endingSummary = buildEndingSummary();
   state.headline = {
     badge: "최종 정산",
-    text: `${MAX_DAYS}턴이 끝났다. 현금과 계좌를 합친 보유 자금으로 마지막 랭킹이 매겨진다.`,
-  };
-
-  const summary = state.endingSummary;
-  if (summary && Array.isArray(summary.lines) && Number.isFinite(summary.happinessBonus)) {
-    const hasHappinessBonusLine = summary.lines.some((line) => String(line || "").includes("행복 보너스"));
-    if (!hasHappinessBonusLine) {
-      const rankingLineIndex = summary.lines.findIndex((line) =>
-        String(line || "").includes(String(summary.rankingMetricLabel || "").trim())
-      );
-      const insertIndex = rankingLineIndex >= 0 ? rankingLineIndex : Math.min(5, summary.lines.length);
-      summary.lines.splice(insertIndex, 0, `행복 보너스 ${formatMoney(summary.happinessBonus)}`);
-    }
-  }
-  state.headline = {
-    badge: "최종 정산",
-    text: `${MAX_DAYS}일이 끝났다. 최종 순자산과 행복 보너스를 합산해 마지막 순위를 정한다.`,
+    text: `${MAX_DAYS}일이 끝났다. 모든 자산을 정산해 마지막 순위를 정한다.`,
   };
   persistState("finish-run");
+
+  const summary = state.endingSummary;
   const myEntry = {
     entryKey: `local:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
     name: summary.playerName,
@@ -13654,9 +13671,22 @@ function finishRun() {
     metricLabel: summary.rankingMetricLabel,
   };
 
-  if (typeof stopRankingRealtimeSubscription === "function") {
-    stopRankingRealtimeSubscription();
-  }
+  // Firebase 제출을 백그라운드에서 시작, 결과를 캐시에 보관
+  let cachedRankingEntries = null;
+  let rankingReady = false;
+  let rankingReadyCallbacks = [];
+
+  const onRankingReady = (cb) => {
+    if (rankingReady) { cb(cachedRankingEntries); return; }
+    rankingReadyCallbacks.push(cb);
+  };
+
+  const resolveRanking = (entries) => {
+    cachedRankingEntries = entries;
+    rankingReady = true;
+    rankingReadyCallbacks.forEach((cb) => cb(entries));
+    rankingReadyCallbacks = [];
+  };
 
   const showRankingFallbackEnding = (reason = "랭킹 연결 실패") => {
     if (typeof closeRankingScreen === "function") {
@@ -13679,7 +13709,6 @@ function finishRun() {
       showRankingFallbackEnding("랭킹 화면 로드 실패");
       return;
     }
-
     try {
       showRankingScreen(myEntry, entries);
     } catch (error) {
@@ -13688,30 +13717,40 @@ function finishRun() {
   };
 
   const beginRankingRealtime = () => {
-    if (typeof subscribeTopRankings !== "function") {
-      return;
-    }
-
+    if (typeof subscribeTopRankings !== "function") return;
     subscribeTopRankings((entries) => {
       renderRankingEntries(entries);
     });
   };
 
+  // Firebase 백그라운드 제출
   if (typeof submitRanking === "function" && typeof fetchTopRankings === "function") {
     submitRanking(myEntry).then((submittedId) => {
-      if (submittedId) {
-        myEntry.id = submittedId;
-      }
+      if (submittedId) myEntry.id = submittedId;
       return fetchTopRankings();
     }).then((entries) => {
-      renderRankingEntries(entries);
+      resolveRanking(entries);
       beginRankingRealtime();
     }).catch(() => {
-      renderRankingEntries([myEntry]);
+      resolveRanking([myEntry]);
       beginRankingRealtime();
     });
-  } else if (typeof showRankingScreen === "function") {
-    renderRankingEntries([myEntry]);
+  } else {
+    resolveRanking([myEntry]);
+  }
+
+  // 정산 화면 먼저 보여주기 → 사용자가 "랭킹 보기" 클릭 시 랭킹 화면으로 전환
+  if (typeof showSettlementScreen === "function") {
+    showSettlementScreen(summary, () => {
+      onRankingReady((entries) => {
+        renderRankingEntries(entries);
+      });
+    });
+  } else {
+    // fallback: 정산 화면 없으면 바로 랭킹
+    onRankingReady((entries) => {
+      renderRankingEntries(entries);
+    });
   }
 }
 
@@ -13743,42 +13782,75 @@ function buildEndingSummary() {
   const totalLiquidFunds = typeof getTotalLiquidFunds === "function"
     ? getTotalLiquidFunds(state)
     : Math.max(0, Number(state.money) || 0) + Math.max(0, Number(state.bank?.balance) || 0);
-  const assetValue = typeof getOwnershipTotalAssetValue === "function"
-    ? getOwnershipTotalAssetValue(state)
-    : 0;
-  const debtOutstanding = typeof getBankLoanSummary === "function"
-    ? Math.max(0, Number(getBankLoanSummary(state)?.totalOutstanding) || 0)
-    : 0;
-  const netWorth = totalLiquidFunds + assetValue - debtOutstanding;
   const cashOnHand = typeof getWalletBalance === "function"
     ? getWalletBalance(state)
     : Math.max(0, Number(state.money) || 0);
   const bankBalance = typeof getBankBalance === "function"
     ? getBankBalance(state)
     : Math.max(0, Number(state.bank?.balance) || 0);
+  const debtOutstanding = typeof getBankLoanSummary === "function"
+    ? Math.max(0, Number(getBankLoanSummary(state)?.totalOutstanding) || 0)
+    : 0;
+
+  // ── 투자 자산 정산 행 (주식 / 코인) ──
+  const investmentRows = [];
+  if (state.stockHolding) {
+    const principal = Math.max(0, Math.round(Number(state.stockHolding.betAmount) || 0));
+    const market = typeof getStockMarketSnapshot === "function" ? getStockMarketSnapshot(state) : null;
+    const returnRate = Number(market?.stockDailyReturnRate) || 0;
+    const value = Math.max(0, Math.round(principal * (1 + returnRate)));
+    investmentRows.push({ id: "stock", label: "주식 정산", amount: value, pnl: value - principal });
+  }
+  if (state.coinHolding) {
+    const principal = Math.max(0, Math.round(Number(state.coinHolding.betAmount) || 0));
+    const coinType = String(state.coinHolding.coinType || "").trim().toUpperCase();
+    const returnRate = typeof getCoinDailyReturnRate === "function"
+      ? (Number(getCoinDailyReturnRate(coinType, state)) || 0) : 0;
+    const value = Math.max(0, Math.round(principal * (1 + returnRate)));
+    const coinInfo = typeof getCoinTypeInfo === "function" ? getCoinTypeInfo(coinType) : null;
+    const coinLabel = coinInfo?.label || coinType || "코인";
+    investmentRows.push({ id: `coin:${coinType}`, label: `${coinLabel} 정산`, amount: value, pnl: value - principal });
+  }
+
+  // ── 소유 자산 정산 행 (집 / 차량 / 부동산) ──
+  const ownershipRows = typeof getOwnershipAssetPortfolio === "function"
+    ? getOwnershipAssetPortfolio(state)
+        .filter((item) => (item?.estimatedValue || 0) > 0)
+        .map((item) => ({ id: item.id, label: item.label, amount: item.estimatedValue }))
+    : [];
+
+  const assetValue = typeof getOwnershipTotalAssetValue === "function"
+    ? getOwnershipTotalAssetValue(state)
+    : 0;
+  const netWorth = totalLiquidFunds + assetValue - debtOutstanding;
+
+  // ── 랭킹 기준: 순자산 (행복도 금액 보너스 없음) ──
+  const rankingValue = netWorth;
+  const rank = getRankByMoney(rankingValue);
+  const rankingMetricLabel = "최종 순자산";
+
   const employedPostingId = getCareerEmploymentPostingId(state);
   const employedPosting = employedPostingId && typeof getCareerPostingById === "function"
-    ? getCareerPostingById(employedPostingId)
-    : null;
+    ? getCareerPostingById(employedPostingId) : null;
   const lastJob = JOB_LOOKUP[state.lastWorkedJobId];
   const jobTitle = employedPosting?.title || lastJob?.title || "무직";
   const originLabel = getStartingOriginLabel(state);
   const originTierId = getStartingOriginTierId(state);
   const happinessState = typeof syncHappinessState === "function"
-    ? syncHappinessState(state)
-    : createDefaultHappinessState();
-  const happinessBonus = Math.max(0, Number(happinessState.value) || 0) * 10000;
-  const ownedRealEstate = typeof getOwnedRealEstateInvestmentSummary === "function"
-    ? getOwnedRealEstateInvestmentSummary(state)
-    : null;
-  const rankingValue = netWorth + happinessBonus;
-  const rank = getRankByMoney(rankingValue);
-  const rankingMetricLabel = "최종 순자산 + 행복 보너스";
+    ? syncHappinessState(state) : createDefaultHappinessState();
   const happinessLabel = typeof getHappinessStatusLabel === "function"
-    ? getHappinessStatusLabel(happinessState.status)
-    : happinessState.status;
-  let happinessComment = "돈은 모였지만 마음까지 채우지는 못했다.";
+    ? getHappinessStatusLabel(happinessState.status) : happinessState.status;
 
+  // ── 정산 화면 행 배열 ──
+  const settlementRows = [
+    { id: "cash", label: "현금", amount: cashOnHand },
+    { id: "bank", label: "계좌 잔고", amount: bankBalance },
+    ...investmentRows,
+    ...ownershipRows,
+    ...(debtOutstanding > 0 ? [{ id: "debt", label: "대출 잔액", amount: -debtOutstanding }] : []),
+  ];
+
+  let happinessComment = "돈은 모였지만 마음까지 채우지는 못했다.";
   if (happinessState.status === "steady") {
     happinessComment = "아슬아슬했지만 마지막까지 버텨낼 정도의 균형은 남겼다.";
   } else if (happinessState.status === "depressed") {
@@ -13790,39 +13862,36 @@ function buildEndingSummary() {
     cashOnHand,
     bankBalance,
     assetValue,
-    realEstateValue: ownedRealEstate?.estimatedValue || 0,
-    realEstateProfit: ownedRealEstate?.cumulativeProfit || 0,
-    realEstateLabel: ownedRealEstate?.label || "",
     debtOutstanding,
     netWorth,
-    happinessBonus,
     rank,
     rankingMetricLabel,
+    settlementRows,
+    investmentRows,
+    ownershipRows,
     jobTitle,
     playerName: state.playerName,
     originLabel,
     originTierId,
     happiness: happinessState.value,
     happinessStatus: happinessState.status,
+    happinessLabel,
     title: `${rankingMetricLabel} ${formatMoney(rankingValue)}`,
     lines: [
-      `${MAX_DAYS}턴 동안 모은 돈을 간단히 정산했다.`,
+      `${MAX_DAYS}턴이 끝났다. 모든 자산을 정산한다.`,
       `현금 ${formatMoney(cashOnHand)}`,
       `계좌 잔고 ${formatMoney(bankBalance)}`,
-      `보유 자산 가치 ${formatMoney(assetValue)}`,
-      ...(ownedRealEstate
-        ? [
-            `${ownedRealEstate.label} 자산 가치 ${formatMoney(ownedRealEstate.estimatedValue)}`,
-            `${ownedRealEstate.label} 누적 수익 ${formatMoney(ownedRealEstate.cumulativeProfit)}`,
-          ]
-        : []),
-      `대출 잔액 ${formatMoney(debtOutstanding)}`,
-      `${rankingMetricLabel} ${formatMoney(rankingValue)}`,
+      ...investmentRows.map((r) => {
+        const sign = r.pnl >= 0 ? "+" : "";
+        return `${r.label} ${formatMoney(r.amount)} (손익 ${sign}${formatMoney(r.pnl)})`;
+      }),
+      ...ownershipRows.map((r) => `${r.label} ${formatMoney(r.amount)}`),
+      ...(debtOutstanding > 0 ? [`대출 잔액 -${formatMoney(debtOutstanding)}`] : []),
+      `순자산 ${formatMoney(netWorth)}`,
       `현재 직업 ${jobTitle}`,
       `출신 수저 ${originLabel}`,
-      `최종 행복도 ${happinessState.value} (${happinessLabel})`,
+      `최종 행복도 ${happinessState.value}점 (${happinessLabel})`,
       `최종 랭크 ${rank.label} / ${rank.title}`,
-      `랭킹 기준은 ${rankingMetricLabel}이다.`,
       rank.comment,
       happinessComment,
     ],
