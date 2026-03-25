@@ -489,6 +489,15 @@ function createDefaultRealEstateInvestmentState() {
   };
 }
 
+function clearPendingRealEstateIncomeEvents(targetState = state) {
+  if (!Array.isArray(targetState?.pendingTurnEvents)) {
+    return;
+  }
+  targetState.pendingTurnEvents = targetState.pendingTurnEvents.filter((entry) =>
+    !String(entry?.id || "").startsWith("real-estate-income-")
+  );
+}
+
 function isValidRealEstateInvestmentState(currentState = null) {
   const ownedBuildingId = String(currentState?.ownedBuildingId || "").trim();
   if (!ownedBuildingId) {
@@ -571,6 +580,7 @@ function syncRealEstateInvestmentState(targetState = state) {
   if (!isValidRealEstateInvestmentState(businessState.realEstate)
     || (!businessState.realEstate.contractToken && !hasContractEvidence)) {
     businessState.realEstate = { ...defaults };
+    clearPendingRealEstateIncomeEvents(targetState);
     return businessState.realEstate;
   }
 
@@ -597,8 +607,15 @@ function syncRealEstateInvestmentState(targetState = state) {
   return businessState.realEstate;
 }
 
+function getDefaultDowntownRealEstateBuildingDefinition() {
+  return DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION;
+}
+
 function getDowntownRealEstateBuildingDefinition(buildingId = "") {
-  const normalizedBuildingId = String(buildingId || DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION.id).trim();
+  const normalizedBuildingId = String(buildingId || "").trim();
+  if (!normalizedBuildingId) {
+    return null;
+  }
   return normalizedBuildingId === DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION.id
     ? DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION
     : null;
@@ -629,7 +646,7 @@ function buildRealEstateVenueStatusLine(locationId = "", targetState = state) {
     return `${ownedBuilding.label} 계약이 유지 중이다. 매 턴 ${formatMoney(ownedBuilding.incomePerTurn)} 임대수익이 계좌로 들어오고, 누적 수익은 ${formatMoney(ownedBuilding.cumulativeProfit)}이다.`;
   }
 
-  const buildingDefinition = getDowntownRealEstateBuildingDefinition();
+  const buildingDefinition = getDefaultDowntownRealEstateBuildingDefinition();
   if (locationId === "real-estate-interior") {
     return `${buildingDefinition.label} 매입가는 ${formatMoney(buildingDefinition.price)}이고, 매 턴 예상 임대수익은 ${formatMoney(buildingDefinition.incomePerTurn)}이다.`;
   }
@@ -644,7 +661,7 @@ function applyRealEstateVenueSceneState(resolvedScene, locationId = "", targetSt
   }
 
   const ownedBuilding = getOwnedRealEstateInvestmentSummary(targetState);
-  const buildingDefinition = getDowntownRealEstateBuildingDefinition();
+  const buildingDefinition = getDefaultDowntownRealEstateBuildingDefinition();
   const statusLine = buildRealEstateVenueStatusLine(normalizedLocationId, targetState);
   if (statusLine) {
     const leadLine = resolvedScene.lines[0] || "";
@@ -723,7 +740,7 @@ function buyDowntownRealEstateBuilding(targetState = state) {
     return reviewDowntownRealEstateBuilding(targetState);
   }
 
-  const buildingDefinition = getDowntownRealEstateBuildingDefinition();
+  const buildingDefinition = getDefaultDowntownRealEstateBuildingDefinition();
   const bankBalance = typeof getBankBalance === "function"
     ? getBankBalance(targetState)
     : Math.max(0, Number(targetState?.bank?.balance) || 0);
