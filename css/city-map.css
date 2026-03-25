@@ -1,20 +1,3 @@
-.choice-btn.choice-btn-city-map {
-  border-color: rgba(255, 211, 90, 0.34);
-  background:
-    linear-gradient(180deg, rgba(255, 211, 90, 0.1), rgba(255, 176, 32, 0.06)),
-    rgba(14, 16, 22, 0.94);
-  color: #ffd35a;
-  box-shadow:
-    0 12px 22px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 245, 219, 0.08);
-}
-
-.choice-btn.choice-btn-city-map:hover {
-  background:
-    linear-gradient(180deg, rgba(255, 211, 90, 0.16), rgba(255, 176, 32, 0.1)),
-    rgba(16, 18, 24, 0.98);
-}
-
 #city-map-overlay {
   position: fixed;
   inset: 0;

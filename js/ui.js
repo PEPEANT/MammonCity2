@@ -2907,22 +2907,6 @@ function renderOutsideScene() {
     ui.choices.classList.add("is-bus-route");
   }
 
-  if (typeof canShowCityMapForState === "function" && canShowCityMapForState(state)) {
-    createChoiceButton({
-      title: shiftUi?.needsTravel
-        ? `${shiftUi.workplaceLabel} 경로 보기`
-        : "지도 보기",
-      buttonClassName: "choice-btn-city-map",
-      onClick: () => {
-        if (shiftUi?.needsTravel && typeof openCityMapOverlayToLocation === "function") {
-          openCityMapOverlayToLocation(shiftUi.workplace.locationId, state);
-        } else if (typeof openCityMapOverlay === "function") {
-          openCityMapOverlay(state);
-        }
-      },
-    });
-  }
-
   if (shiftUi?.canWait && !suppressGenericShiftButtons) {
     createChoiceButton({
       title: "근무지에서 출근 시간까지 기다린다",
