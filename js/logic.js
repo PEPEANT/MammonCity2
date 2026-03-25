@@ -486,6 +486,28 @@ function createDefaultRealEstateInvestmentState() {
   };
 }
 
+function isValidRealEstateInvestmentState(currentState = null) {
+  const ownedBuildingId = String(currentState?.ownedBuildingId || "").trim();
+  if (!ownedBuildingId) {
+    return false;
+  }
+
+  const definition = getDowntownRealEstateBuildingDefinition(ownedBuildingId);
+  if (!definition) {
+    return false;
+  }
+
+  const purchasedDay = Math.max(0, Math.round(Number(currentState?.purchasedDay) || 0));
+  const purchasePrice = Math.max(0, Math.round(Number(currentState?.purchasePrice) || 0));
+  const estimatedValue = Math.max(0, Math.round(Number(currentState?.estimatedValue) || 0));
+  const incomePerTurn = Math.max(0, Math.round(Number(currentState?.incomePerTurn) || 0));
+
+  return purchasedDay >= 1
+    && purchasePrice > 0
+    && estimatedValue > 0
+    && incomePerTurn > 0;
+}
+
 function syncRealEstateInvestmentState(targetState = state) {
   ensureMetaRunStateReady(targetState);
   const businessState = targetState.business && typeof targetState.business === "object"
@@ -508,6 +530,28 @@ function syncRealEstateInvestmentState(targetState = state) {
     estimatedValue: Math.max(0, Math.round(Number(currentState.estimatedValue) || 0)),
     incomePerTurn: Math.max(0, Math.round(Number(currentState.incomePerTurn) || 0)),
   };
+
+  if (!isValidRealEstateInvestmentState(businessState.realEstate)) {
+    businessState.realEstate = { ...defaults };
+    return businessState.realEstate;
+  }
+
+  const definition = getDowntownRealEstateBuildingDefinition(businessState.realEstate.ownedBuildingId);
+  if (definition) {
+    businessState.realEstate.buildingLabel = businessState.realEstate.buildingLabel || definition.label;
+    businessState.realEstate.purchasePrice = Math.max(
+      businessState.realEstate.purchasePrice,
+      1,
+    );
+    businessState.realEstate.estimatedValue = Math.max(
+      businessState.realEstate.estimatedValue,
+      definition.estimatedValue,
+    );
+    businessState.realEstate.incomePerTurn = Math.max(
+      businessState.realEstate.incomePerTurn,
+      definition.incomePerTurn,
+    );
+  }
 
   return businessState.realEstate;
 }
@@ -6629,6 +6673,15 @@ function normalizeStateForCurrentRules() {
 
   if (typeof syncMetaRunState === "function") {
     syncMetaRunState(state);
+  }
+
+  if (typeof syncRealEstateInvestmentState === "function") {
+    const realEstateState = syncRealEstateInvestmentState(state);
+    if (!realEstateState.ownedBuildingId && Array.isArray(state.pendingTurnEvents)) {
+      state.pendingTurnEvents = state.pendingTurnEvents.filter((entry) =>
+        !String(entry?.id || "").startsWith("real-estate-income-")
+      );
+    }
   }
 
   if (typeof syncHappinessState === "function") {
