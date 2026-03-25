@@ -3599,6 +3599,9 @@ function renderLottoPickScene() {
         </button>
       `;
     }).join("");
+    const oddsLines = typeof buildLottoPrizeGuideLines === "function"
+      ? buildLottoPrizeGuideLines()
+      : [];
     const oddsMarkup = oddsLines.map((line) => `
       <div class="lotto-scratch-odds-row">${escapeHtml(line)}</div>
     `).join("");
