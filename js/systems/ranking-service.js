@@ -205,16 +205,6 @@ async function submitRanking({ name, money, rank, job, spoon, spoonId, metricLab
     const existingEntry = existingSnapshot.exists
       ? normalizeRankingEntry(existingSnapshot.id, existingSnapshot.data())
       : null;
-    const shouldUpdate = !existingEntry
-      || normalizedMoney > Number(existingEntry.money || 0)
-      || (
-        normalizedMoney === Number(existingEntry.money || 0)
-        && normalizedHappiness >= Number(existingEntry.happiness || 0)
-      );
-
-    if (!shouldUpdate) {
-      return documentId;
-    }
 
     const payload = {
       identityKey,

@@ -32,6 +32,13 @@ const textChecks = [
     failMessage: "`showRankingScreen` should be defined exactly once in `js/ui.js`.",
   },
   {
+    label: "ranking service keeps latest browser entry",
+    file: "js/systems/ranking-service.js",
+    test: (text) => text.includes("const identityKey = getRankingIdentityKey();")
+      && !text.includes("const shouldUpdate ="),
+    failMessage: "`submitRanking()` should overwrite the current browser entry instead of skipping lower or tied runs.",
+  },
+  {
     label: "save scene sanitizer exists",
     file: "js/logic.js",
     test: (text) => text.includes("function buildPersistenceSceneFrame("),
