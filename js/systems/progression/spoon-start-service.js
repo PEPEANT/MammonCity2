@@ -696,6 +696,30 @@ function applySpoonStartPackage(targetState = state, tierId = "") {
     ownershipState.residence = getSpoonStartResidenceId(targetState) || ownershipState.residence;
   }
 
+  if (targetState.business && typeof targetState.business === "object") {
+    targetState.business.realEstate = typeof createDefaultRealEstateInvestmentState === "function"
+      ? createDefaultRealEstateInvestmentState()
+      : {
+          ownedBuildingId: "",
+          buildingLabel: "",
+          contractSigned: false,
+          contractSource: "",
+          contractToken: "",
+          purchasedDay: 0,
+          cumulativeProfit: 0,
+          lastProcessedTurnDay: 0,
+          purchasePrice: 0,
+          estimatedValue: 0,
+          incomePerTurn: 0,
+        };
+  }
+
+  if (Array.isArray(targetState.pendingTurnEvents)) {
+    targetState.pendingTurnEvents = targetState.pendingTurnEvents.filter((entry) =>
+      !String(entry?.id || "").startsWith("real-estate-income-")
+    );
+  }
+
   if (Array.isArray(originState.starterAssetIds)) {
     originState.starterAssetIds.forEach((itemId) => {
       if (typeof grantInventoryItem === "function") {

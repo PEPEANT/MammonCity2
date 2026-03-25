@@ -479,6 +479,7 @@ function createDefaultRealEstateInvestmentState() {
     buildingLabel: "",
     contractSigned: false,
     contractSource: "",
+    contractToken: "",
     purchasedDay: 0,
     cumulativeProfit: 0,
     lastProcessedTurnDay: 0,
@@ -510,11 +511,11 @@ function isValidRealEstateInvestmentState(currentState = null) {
     && incomePerTurn > 0;
 }
 
-function hasConfirmedRealEstateContract(targetState = state, currentState = null) {
-  if (Boolean(currentState?.contractSigned)) {
-    return true;
-  }
+function getRealEstateContractToken() {
+  return `real-estate-contract-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
+function hasConfirmedRealEstateContract(targetState = state, currentState = null) {
   const ownedBuildingId = String(currentState?.ownedBuildingId || "").trim();
   const definition = getDowntownRealEstateBuildingDefinition(ownedBuildingId);
   if (!definition) {
@@ -557,6 +558,7 @@ function syncRealEstateInvestmentState(targetState = state) {
     buildingLabel: String(currentState.buildingLabel || "").trim(),
     contractSigned: Boolean(currentState.contractSigned),
     contractSource: String(currentState.contractSource || "").trim(),
+    contractToken: String(currentState.contractToken || "").trim(),
     purchasedDay: Math.max(0, Math.round(Number(currentState.purchasedDay) || 0)),
     cumulativeProfit: Math.max(0, Math.round(Number(currentState.cumulativeProfit) || 0)),
     lastProcessedTurnDay: Math.max(0, Math.round(Number(currentState.lastProcessedTurnDay) || 0)),
@@ -565,14 +567,16 @@ function syncRealEstateInvestmentState(targetState = state) {
     incomePerTurn: Math.max(0, Math.round(Number(currentState.incomePerTurn) || 0)),
   };
 
+  const hasContractEvidence = hasConfirmedRealEstateContract(targetState, businessState.realEstate);
   if (!isValidRealEstateInvestmentState(businessState.realEstate)
-    || !hasConfirmedRealEstateContract(targetState, businessState.realEstate)) {
+    || (!businessState.realEstate.contractToken && !hasContractEvidence)) {
     businessState.realEstate = { ...defaults };
     return businessState.realEstate;
   }
 
   const definition = getDowntownRealEstateBuildingDefinition(businessState.realEstate.ownedBuildingId);
   if (definition) {
+    businessState.realEstate.contractToken = businessState.realEstate.contractToken || getRealEstateContractToken();
     businessState.realEstate.contractSigned = true;
     businessState.realEstate.contractSource = businessState.realEstate.contractSource || "downtown-real-estate";
     businessState.realEstate.buildingLabel = businessState.realEstate.buildingLabel || definition.label;
@@ -766,6 +770,7 @@ function buyDowntownRealEstateBuilding(targetState = state) {
   investmentState.buildingLabel = buildingDefinition.label;
   investmentState.contractSigned = true;
   investmentState.contractSource = "downtown-real-estate";
+  investmentState.contractToken = getRealEstateContractToken();
   investmentState.purchasedDay = Math.max(1, Math.round(Number(targetState.day) || 1));
   investmentState.lastProcessedTurnDay = Math.max(0, investmentState.purchasedDay - 1);
   investmentState.purchasePrice = buildingDefinition.price;
