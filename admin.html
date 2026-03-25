@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>배금도시 관리자</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      color-scheme: dark;
+      --bg: #0a0e16;
+      --panel: #141b2a;
+      --panel-soft: #0f1420;
+      --line: rgba(150, 180, 255, 0.16);
+      --text: #e7efff;
+      --muted: rgba(200, 214, 255, 0.62);
+      --accent: #75a8ff;
+      --success: #71d194;
+      --warn: #f1c173;
+      --danger: #ff8d8d;
+    }
+
+    body {
+      margin: 0;
+      padding: 28px 18px 60px;
+      background:
+        radial-gradient(circle at top, rgba(68, 104, 182, 0.22), transparent 32%),
+        linear-gradient(180deg, #111726 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    .shell {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero,
+    .panel {
+      background: rgba(20, 27, 42, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .status-box {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .status-box.is-success {
+      border-color: rgba(113, 209, 148, 0.35);
+      color: var(--success);
+    }
+
+    .status-box.is-error {
+      border-color: rgba(255, 141, 141, 0.35);
+      color: var(--danger);
+    }
+
+    .status-box.is-warn {
+      border-color: rgba(241, 193, 115, 0.35);
+      color: var(--warn);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .section-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .meta-row,
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    button {
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #76a7ff 0%, #3c71f3 100%);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-danger {
+      background: linear-gradient(180deg, #ff7a7a 0%, #da4040 100%);
+      color: #fff;
+    }
+
+    .btn-small {
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      background: var(--panel-soft);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 880px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      text-align: left;
+      font-size: 12px;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .empty-cell {
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 16px;
+    }
+
+    .doc-id {
+      font-family: Consolas, monospace;
+      color: rgba(180, 198, 235, 0.56);
+      font-size: 11px;
+      word-break: break-all;
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(255, 214, 46, 0.12);
+      color: #ffd62e;
+      font-weight: 800;
+    }
+
+    .rules-box {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .rules-box strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #cddcff;
+      font-size: 12px;
+      line-height: 1.6;
+      font-family: Consolas, monospace;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 18px 12px 40px;
+      }
+
+      .hero,
+      .panel {
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <h1>배금도시 관리자</h1>
+      <div class="subtitle">랭킹과 디시 게시글을 Firebase에서 직접 확인하고 삭제할 수 있는 관리자 페이지입니다. 호스팅에 같이 올라가면 <code>/admin.html</code>로 접속할 수 있습니다.</div>
+    </section>
+
+    <div class="status-box" id="status-box">Firebase 연결 중...</div>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">랭킹 관리</h2>
+          <div class="section-note">중복 엔트리 확인과 전체 초기화를 여기서 처리합니다.</div>
+        </div>
+        <div class="meta-row">
+          <span class="meta-pill" id="ranking-count">0건</span>
+        </div>
+      </div>
+      <div class="button-row">
+        <button class="btn-primary" id="btn-load-rankings" disabled>랭킹 불러오기</button>
+        <button class="btn-danger" id="btn-reset-rankings" disabled>랭킹 전체 삭제</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>이름</th>
+              <th>순자산</th>
+              <th>랭크</th>
+              <th>직업</th>
+              <th>수저</th>
+              <th>행복도</th>
+              <th>문서 ID</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body">
+            <tr><td class="empty-cell" colspan="8">아직 불러온 랭킹이 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">디시 게시글 관리</h2>
+          <div class="section-note">게시글 목록을 확인하고 개별 삭제 또는 전체 삭제를 할 수 있습니다.</div>
+        </div>
+        <div class="meta-row">
+          <span class="meta-pill" id="post-count">0건</span>
+        </div>
+      </div>
+      <div class="button-row">
+        <button class="btn-primary" id="btn-load-posts" disabled>게시글 불러오기</button>
+        <button class="btn-danger" id="btn-reset-posts" disabled>게시글 전체 삭제</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>제목</th>
+              <th>작성자</th>
+              <th>추천</th>
+              <th>댓글</th>
+              <th>작성 시각</th>
+              <th>문서 ID</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="post-body">
+            <tr><td class="empty-cell" colspan="8">아직 불러온 게시글이 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="rules-box">
+        <strong>Firestore 규칙 주의</strong>
+        <pre>match /artifacts/{appId}/public/data/dcSingularityPosts/{postId} {
+  allow read: if true;
+  allow create: if request.auth != null;
+  allow update: if request.auth != null;
+  allow delete: if request.auth != null;
+}</pre>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyA1rS4hMdzIInEyaKjsMkJxPOi8ihPeuxs",
+      authDomain: "mammoncity.firebaseapp.com",
+      projectId: "mammoncity",
+      storageBucket: "mammoncity.firebasestorage.app",
+      messagingSenderId: "85158535723",
+      appId: "1:85158535723:web:e77f5d3abeed8d97ad006e",
+    };
+
+    const APP_ID = "mammoncity";
+    const BATCH_SIZE = 400;
+
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const statusBox = document.getElementById("status-box");
+    const rankingCount = document.getElementById("ranking-count");
+    const postCount = document.getElementById("post-count");
+    const rankingBody = document.getElementById("ranking-body");
+    const postBody = document.getElementById("post-body");
+    const btnLoadRankings = document.getElementById("btn-load-rankings");
+    const btnResetRankings = document.getElementById("btn-reset-rankings");
+    const btnLoadPosts = document.getElementById("btn-load-posts");
+    const btnResetPosts = document.getElementById("btn-reset-posts");
+
+    let cachedRankings = [];
+    let cachedPosts = [];
+
+    function setStatus(message, tone = "") {
+      statusBox.textContent = message;
+      statusBox.className = tone ? `status-box is-${tone}` : "status-box";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function formatMoney(value) {
+      return `${Number(value || 0).toLocaleString("ko-KR")}원`;
+    }
+
+    function formatTimestamp(value) {
+      let timestamp = Number(value || 0);
+      if (value && typeof value.toMillis === "function") {
+        timestamp = value.toMillis();
+      } else if (value && typeof value.seconds === "number") {
+        timestamp = value.seconds * 1000;
+      }
+
+      if (!timestamp) {
+        return "-";
+      }
+
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function getRankingCollection() {
+      return db
+        .collection("artifacts")
+        .doc(APP_ID)
+        .collection("public")
+        .doc("data")
+        .collection("rankings");
+    }
+
+    function getPostCollection() {
+      return db
+        .collection("artifacts")
+        .doc(APP_ID)
+        .collection("public")
+        .doc("data")
+        .collection("dcSingularityPosts");
+    }
+
+    function renderRankings() {
+      rankingCount.textContent = `${cachedRankings.length}건`;
+      if (!cachedRankings.length) {
+        rankingBody.innerHTML = '<tr><td class="empty-cell" colspan="8">랭킹 데이터가 없습니다.</td></tr>';
+        btnResetRankings.disabled = true;
+        return;
+      }
+
+      rankingBody.innerHTML = cachedRankings.map((entry, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(entry.name || "무명")}</td>
+          <td>${escapeHtml(formatMoney(entry.money || 0))}</td>
+          <td><span class="rank-badge">${escapeHtml(String(entry.rank || "D").toUpperCase())}</span></td>
+          <td>${escapeHtml(entry.job || "무직")}</td>
+          <td>${escapeHtml(entry.spoon || "-")}</td>
+          <td>${escapeHtml(String(Math.round(Number(entry.happiness) || 0)))}</td>
+          <td class="doc-id">${escapeHtml(entry.id)}</td>
+        </tr>
+      `).join("");
+      btnResetRankings.disabled = false;
+    }
+
+    function renderPosts() {
+      postCount.textContent = `${cachedPosts.length}건`;
+      if (!cachedPosts.length) {
+        postBody.innerHTML = '<tr><td class="empty-cell" colspan="8">게시글 데이터가 없습니다.</td></tr>';
+        btnResetPosts.disabled = true;
+        return;
+      }
+
+      postBody.innerHTML = cachedPosts.map((entry, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(entry.title || "(제목 없음)")}</td>
+          <td>${escapeHtml(entry.author || "익명")}</td>
+          <td>${escapeHtml(String(entry.likes || 0))}</td>
+          <td>${escapeHtml(String(Array.isArray(entry.comments) ? entry.comments.length : 0))}</td>
+          <td>${escapeHtml(formatTimestamp(entry.createdAt))}</td>
+          <td class="doc-id">${escapeHtml(entry.id)}</td>
+          <td>
+            <button class="btn-danger btn-small" type="button" data-post-delete="${escapeHtml(entry.id)}">삭제</button>
+          </td>
+        </tr>
+      `).join("");
+      btnResetPosts.disabled = false;
+    }
+
+    async function loadRankings() {
+      btnLoadRankings.disabled = true;
+      setStatus("랭킹을 불러오는 중입니다...");
+
+      try {
+        const snapshot = await getRankingCollection().orderBy("money", "desc").get();
+        cachedRankings = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        renderRankings();
+        setStatus(`랭킹 ${cachedRankings.length}건을 불러왔습니다.`, "success");
+      } catch (error) {
+        setStatus(`랭킹 불러오기 실패: ${error.message}`, "error");
+      } finally {
+        btnLoadRankings.disabled = false;
+      }
+    }
+
+    async function loadPosts() {
+      btnLoadPosts.disabled = true;
+      setStatus("게시글을 불러오는 중입니다...");
+
+      try {
+        const snapshot = await getPostCollection().orderBy("createdAt", "desc").get();
+        cachedPosts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        renderPosts();
+        setStatus(`게시글 ${cachedPosts.length}건을 불러왔습니다.`, "success");
+      } catch (error) {
+        setStatus(`게시글 불러오기 실패: ${error.message}`, "error");
+      } finally {
+        btnLoadPosts.disabled = false;
+      }
+    }
+
+    async function deleteDocsInBatches(collectionRef, docs, label) {
+      if (!docs.length) {
+        setStatus(`${label} 데이터가 없습니다.`, "warn");
+        return;
+      }
+
+      let deletedCount = 0;
+      for (let index = 0; index < docs.length; index += BATCH_SIZE) {
+        const chunk = docs.slice(index, index + BATCH_SIZE);
+        const batch = db.batch();
+        chunk.forEach((entry) => {
+          batch.delete(collectionRef.doc(entry.id));
+        });
+        await batch.commit();
+        deletedCount += chunk.length;
+        setStatus(`${label} 삭제 중... ${deletedCount}/${docs.length}`);
+      }
+    }
+
+    async function resetRankings() {
+      if (!cachedRankings.length) {
+        await loadRankings();
+      }
+
+      const confirmed = window.prompt("랭킹 전체 삭제를 진행하려면 RESET 을 입력하세요.", "");
+      if (confirmed !== "RESET") {
+        setStatus("랭킹 전체 삭제를 취소했습니다.", "warn");
+        return;
+      }
+
+      btnResetRankings.disabled = true;
+      btnLoadRankings.disabled = true;
+
+      try {
+        await deleteDocsInBatches(getRankingCollection(), cachedRankings, "랭킹");
+        cachedRankings = [];
+        renderRankings();
+        setStatus("랭킹 전체 삭제가 완료되었습니다.", "success");
+      } catch (error) {
+        setStatus(`랭킹 삭제 실패: ${error.message}`, "error");
+      } finally {
+        btnLoadRankings.disabled = false;
+        btnResetRankings.disabled = false;
+      }
+    }
+
+    async function resetPosts() {
+      if (!cachedPosts.length) {
+        await loadPosts();
+      }
+
+      const confirmed = window.prompt("게시글 전체 삭제를 진행하려면 DELETE 를 입력하세요.", "");
+      if (confirmed !== "DELETE") {
+        setStatus("게시글 전체 삭제를 취소했습니다.", "warn");
+        return;
+      }
+
+      btnResetPosts.disabled = true;
+      btnLoadPosts.disabled = true;
+
+      try {
+        await deleteDocsInBatches(getPostCollection(), cachedPosts, "게시글");
+        cachedPosts = [];
+        renderPosts();
+        setStatus("게시글 전체 삭제가 완료되었습니다.", "success");
+      } catch (error) {
+        setStatus(`게시글 삭제 실패: ${error.message}`, "error");
+      } finally {
+        btnLoadPosts.disabled = false;
+        btnResetPosts.disabled = false;
+      }
+    }
+
+    async function deleteSinglePost(postId) {
+      const normalizedPostId = String(postId || "").trim();
+      if (!normalizedPostId) {
+        return;
+      }
+
+      const confirmed = window.confirm(`게시글 ${normalizedPostId} 를 삭제할까요?`);
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await getPostCollection().doc(normalizedPostId).delete();
+        cachedPosts = cachedPosts.filter((entry) => entry.id !== normalizedPostId);
+        renderPosts();
+        setStatus(`게시글 ${normalizedPostId} 를 삭제했습니다.`, "success");
+      } catch (error) {
+        setStatus(`게시글 삭제 실패: ${error.message}`, "error");
+      }
+    }
+
+    btnLoadRankings.addEventListener("click", loadRankings);
+    btnResetRankings.addEventListener("click", resetRankings);
+    btnLoadPosts.addEventListener("click", loadPosts);
+    btnResetPosts.addEventListener("click", resetPosts);
+    postBody.addEventListener("click", (event) => {
+      const deleteButton = event.target.closest("[data-post-delete]");
+      if (!deleteButton) {
+        return;
+      }
+      deleteSinglePost(deleteButton.dataset.postDelete);
+    });
+
+    auth.signInAnonymously()
+      .then(() => {
+        btnLoadRankings.disabled = false;
+        btnLoadPosts.disabled = false;
+        setStatus("Firebase 연결 성공. 랭킹과 게시글을 관리할 수 있습니다.", "success");
+      })
+      .catch((error) => {
+        setStatus(`Firebase 인증 실패: ${error.message}`, "error");
+      });
+  </script>
+</body>
+</html>

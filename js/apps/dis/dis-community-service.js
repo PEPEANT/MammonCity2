@@ -1,4 +1,6 @@
 const DIS_COMMUNITY_APP_ID_STORAGE_KEY = "mammoncity.firebaseAppId";
+const DIS_COMMUNITY_IDENTITY_STORAGE_KEY = "mammoncity.disCommunityIdentityKey";
+const DIS_COMMUNITY_LIKE_HISTORY_STORAGE_KEY = "mammoncity.disCommunityLikeHistory";
 const DIS_COMMUNITY_COLLECTION_ID = "dcSingularityPosts";
 const DIS_COMMUNITY_MAX_POSTS = 40;
 let disCommunityAuthPromise = null;
@@ -13,6 +15,185 @@ let disCommunityConnectionState = {
   detail: "Firebase 연결 전",
   userId: "",
 };
+
+function createDisCommunityIdentityKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `diggle:${crypto.randomUUID()}`;
+  }
+
+  return `diggle:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getDisCommunityIdentityKey() {
+  if (typeof localStorage === "undefined") {
+    return "";
+  }
+
+  const storedKey = String(localStorage.getItem(DIS_COMMUNITY_IDENTITY_STORAGE_KEY) || "").trim();
+  if (storedKey) {
+    return storedKey;
+  }
+
+  const generatedKey = createDisCommunityIdentityKey();
+  try {
+    localStorage.setItem(DIS_COMMUNITY_IDENTITY_STORAGE_KEY, generatedKey);
+  } catch (error) {
+    console.warn("[dis-community] identity 저장 실패:", error);
+  }
+  return generatedKey;
+}
+
+function getDisCommunityTodayKey() {
+  try {
+    return new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch (error) {
+    const now = new Date();
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const seoulTime = new Date(utcTime + (9 * 60 * 60 * 1000));
+    const year = seoulTime.getFullYear();
+    const month = String(seoulTime.getMonth() + 1).padStart(2, "0");
+    const day = String(seoulTime.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+}
+
+function getDisCommunityLikeHistory() {
+  if (typeof localStorage === "undefined") {
+    return {};
+  }
+
+  try {
+    const rawValue = localStorage.getItem(DIS_COMMUNITY_LIKE_HISTORY_STORAGE_KEY);
+    if (!rawValue) {
+      return {};
+    }
+
+    const parsed = JSON.parse(rawValue);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn("[dis-community] 추천 기록 파싱 실패:", error);
+    return {};
+  }
+}
+
+function persistDisCommunityLikeHistory(history = {}) {
+  if (typeof localStorage === "undefined") {
+    return history;
+  }
+
+  const safeHistory = history && typeof history === "object" && !Array.isArray(history)
+    ? history
+    : {};
+
+  try {
+    localStorage.setItem(DIS_COMMUNITY_LIKE_HISTORY_STORAGE_KEY, JSON.stringify(safeHistory));
+  } catch (error) {
+    console.warn("[dis-community] 추천 기록 저장 실패:", error);
+  }
+
+  return safeHistory;
+}
+
+function pruneDisCommunityLikeHistory(history = {}) {
+  const normalizedHistory = history && typeof history === "object" && !Array.isArray(history)
+    ? history
+    : {};
+  const todayKey = getDisCommunityTodayKey();
+  const recentDays = [todayKey];
+
+  try {
+    const todayDate = new Date(`${todayKey}T00:00:00+09:00`);
+    for (let offset = 1; offset <= 6; offset += 1) {
+      const nextDate = new Date(todayDate.getTime() - (offset * 24 * 60 * 60 * 1000));
+      const year = nextDate.getUTCFullYear();
+      const month = String(nextDate.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(nextDate.getUTCDate()).padStart(2, "0");
+      recentDays.push(`${year}-${month}-${day}`);
+    }
+  } catch (error) {
+    return normalizedHistory;
+  }
+
+  const prunedHistory = {};
+  recentDays.forEach((dayKey) => {
+    const dayEntry = normalizedHistory[dayKey];
+    if (dayEntry && typeof dayEntry === "object" && !Array.isArray(dayEntry)) {
+      prunedHistory[dayKey] = dayEntry;
+    }
+  });
+
+  return prunedHistory;
+}
+
+function hasDisCommunityLikedToday(postId = "") {
+  const normalizedPostId = String(postId || "").trim();
+  if (!normalizedPostId) {
+    return false;
+  }
+
+  const identityKey = getDisCommunityIdentityKey();
+  const todayKey = getDisCommunityTodayKey();
+  const likeHistory = pruneDisCommunityLikeHistory(getDisCommunityLikeHistory());
+  const dayEntry = likeHistory[todayKey];
+
+  if (!dayEntry || typeof dayEntry !== "object") {
+    return false;
+  }
+
+  return String(dayEntry[normalizedPostId] || "") === identityKey;
+}
+
+function markDisCommunityLikedToday(postId = "") {
+  const normalizedPostId = String(postId || "").trim();
+  if (!normalizedPostId) {
+    return false;
+  }
+
+  const identityKey = getDisCommunityIdentityKey();
+  const todayKey = getDisCommunityTodayKey();
+  const likeHistory = pruneDisCommunityLikeHistory(getDisCommunityLikeHistory());
+  const dayEntry = likeHistory[todayKey] && typeof likeHistory[todayKey] === "object"
+    ? { ...likeHistory[todayKey] }
+    : {};
+
+  dayEntry[normalizedPostId] = identityKey;
+  likeHistory[todayKey] = dayEntry;
+  persistDisCommunityLikeHistory(likeHistory);
+  return true;
+}
+
+function unmarkDisCommunityLikedToday(postId = "") {
+  const normalizedPostId = String(postId || "").trim();
+  if (!normalizedPostId) {
+    return false;
+  }
+
+  const todayKey = getDisCommunityTodayKey();
+  const likeHistory = pruneDisCommunityLikeHistory(getDisCommunityLikeHistory());
+  const dayEntry = likeHistory[todayKey];
+
+  if (!dayEntry || typeof dayEntry !== "object" || !Object.prototype.hasOwnProperty.call(dayEntry, normalizedPostId)) {
+    return false;
+  }
+
+  delete dayEntry[normalizedPostId];
+  if (Object.keys(dayEntry).length) {
+    likeHistory[todayKey] = dayEntry;
+  } else {
+    delete likeHistory[todayKey];
+  }
+  persistDisCommunityLikeHistory(likeHistory);
+  return true;
+}
 
 function getDisCommunityStateTarget(targetState = null) {
   if (targetState && typeof targetState === "object") {
@@ -585,6 +766,43 @@ function incrementDisCommunityPostView(postId = "") {
   return incrementDisCommunityPostMetric(postId, "views", 1);
 }
 
-function likeDisCommunityPost(postId = "") {
-  return incrementDisCommunityPostMetric(postId, "likes", 1);
+async function likeDisCommunityPost(postId = "") {
+  const normalizedPostId = String(postId || "").trim();
+  if (!normalizedPostId) {
+    return {
+      ok: false,
+      reason: "missing",
+    };
+  }
+
+  const currentPost = getDisCommunityPostById(normalizedPostId);
+  if (!currentPost) {
+    return {
+      ok: false,
+      reason: "missing",
+    };
+  }
+
+  if (hasDisCommunityLikedToday(normalizedPostId)) {
+    return {
+      ok: false,
+      reason: "daily-limit",
+    };
+  }
+
+  markDisCommunityLikedToday(normalizedPostId);
+  const incremented = await incrementDisCommunityPostMetric(normalizedPostId, "likes", 1);
+
+  if (!incremented) {
+    unmarkDisCommunityLikedToday(normalizedPostId);
+    return {
+      ok: false,
+      reason: "missing",
+    };
+  }
+
+  return {
+    ok: true,
+    reason: "liked",
+  };
 }

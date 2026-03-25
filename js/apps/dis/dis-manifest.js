@@ -691,6 +691,9 @@ function buildDisCommunityReadStageMarkup(targetState = state) {
   }
 
   const isBest = (post.likes || 0) >= DIS_COMMUNITY_BEST_THRESHOLD;
+  const likedToday = typeof hasDisCommunityLikedToday === "function"
+    ? hasDisCommunityLikedToday(post.id)
+    : false;
 
   return `
     <div class="dis-community-shell">
@@ -728,6 +731,7 @@ function buildDisCommunityReadStageMarkup(targetState = state) {
         <div class="dis-community-read-actions">
           ${buildPhoneAppActionButtonMarkup({
             action: "dis-like-community-post",
+            disabled: likedToday,
             label: `👍 추천 ${post.likes || 0}`,
             data: { postId: post.id },
             className: "dis-community-action-btn is-primary",

@@ -7,6 +7,7 @@ const distRoot = path.join(projectRoot, "dist");
 const entriesToCopy = [
   "index.html",
   "game.html",
+  "admin.html",
   "css",
   "js",
   "assets",

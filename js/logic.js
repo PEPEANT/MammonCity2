@@ -7194,6 +7194,9 @@ function bindStaticEvents() {
   });
   window.addEventListener("keydown", handleWorldKeyDown);
   window.addEventListener("resize", () => {
+    if (shouldSkipResizeRenderForActiveEditor()) {
+      return;
+    }
     renderGame();
   });
   window.addEventListener("scroll", handlePhoneScrollableInteraction, true);
@@ -7282,6 +7285,19 @@ function bindStaticEvents() {
   ui.phoneStage?.addEventListener("click", handlePhoneScreenClick);
   ui.phonePanel?.addEventListener("input", handlePhoneScreenInput);
   ui.phoneStage?.addEventListener("input", handlePhoneScreenInput);
+}
+
+function shouldSkipResizeRenderForActiveEditor() {
+  const activeElement = document.activeElement;
+  if (!activeElement) {
+    return false;
+  }
+
+  const activeTag = String(activeElement.tagName || "").toUpperCase();
+  return Boolean(
+    activeElement.isContentEditable
+    || ["INPUT", "TEXTAREA", "SELECT"].includes(activeTag)
+  );
 }
 
 function beginStartScreenDraw() {
@@ -11878,7 +11894,26 @@ function handlePhoneScreenClick(event) {
 
   if (phoneAction === "dis-like-community-post") {
     if (typeof likeDisCommunityPost === "function") {
-      likeDisCommunityPost(actionTarget.dataset.postId);
+      Promise.resolve(likeDisCommunityPost(actionTarget.dataset.postId, state))
+        .then((result) => {
+          state.headline = {
+            badge: "Diggle",
+            text: result?.ok
+              ? "추천을 눌렀다."
+              : (result?.reason === "daily-limit"
+                ? "추천은 글마다 하루에 한 번만 가능하다."
+                : "추천할 글을 찾지 못했다."),
+          };
+          renderGame();
+        })
+        .catch(() => {
+          state.headline = {
+            badge: "Diggle",
+            text: "추천 처리에 실패했다.",
+          };
+          renderGame();
+        });
+      return;
     }
     state.headline = {
       badge: "Diggle",
