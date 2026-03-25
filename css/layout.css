@@ -1089,6 +1089,25 @@ body {
   padding: clamp(24px, 6vw, 48px);
 }
 
+.start-version-badge {
+  position: absolute;
+  top: clamp(14px, 2vw, 22px);
+  left: clamp(14px, 2vw, 22px);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(8, 12, 20, 0.56);
+  color: rgba(244, 247, 255, 0.88);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
 #start-screen[data-screen-mode="origin"] {
   background: #000;
   align-items: center;
