@@ -104,6 +104,14 @@ function resolveMarketCycleTurnClose({
   tick = 0,
   targetState = state,
 } = {}) {
+  const turnCloseOverrides = definition?.turnCloseOverrides;
+  if (turnCloseOverrides && typeof turnCloseOverrides === "object") {
+    const overriddenClose = Number(turnCloseOverrides[turn] ?? turnCloseOverrides[String(turn)]);
+    if (Number.isFinite(overriddenClose) && overriddenClose > 0) {
+      return snapMarketCycleSessionPrice(overriddenClose, tick);
+    }
+  }
+
   const turnReturn = appId === "stock-market"
     ? resolveStockMarketTurnReturn(definition, turn, targetState)
     : resolveTradingTerminalTurnReturn(appId, definition, turn, targetState);
