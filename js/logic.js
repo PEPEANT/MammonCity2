@@ -477,6 +477,8 @@ function createDefaultRealEstateInvestmentState() {
   return {
     ownedBuildingId: "",
     buildingLabel: "",
+    contractSigned: false,
+    contractSource: "",
     purchasedDay: 0,
     cumulativeProfit: 0,
     lastProcessedTurnDay: 0,
@@ -508,6 +510,36 @@ function isValidRealEstateInvestmentState(currentState = null) {
     && incomePerTurn > 0;
 }
 
+function hasConfirmedRealEstateContract(targetState = state, currentState = null) {
+  if (Boolean(currentState?.contractSigned)) {
+    return true;
+  }
+
+  const ownedBuildingId = String(currentState?.ownedBuildingId || "").trim();
+  const definition = getDowntownRealEstateBuildingDefinition(ownedBuildingId);
+  if (!definition) {
+    return false;
+  }
+
+  const bankState = typeof syncBankDomainState === "function"
+    ? syncBankDomainState(targetState)
+    : (targetState?.bank || null);
+  const transactions = Array.isArray(bankState?.transactions)
+    ? bankState.transactions
+    : [];
+
+  return transactions.some((transaction) => {
+    const title = String(transaction?.title || "").trim();
+    const note = String(transaction?.note || "").trim();
+    const amount = Math.abs(Math.round(Number(transaction?.amount) || 0));
+    return title === "다운타운 부동산 건물 매입"
+      || (
+        amount === definition.price
+        && note.includes(definition.label)
+      );
+  });
+}
+
 function syncRealEstateInvestmentState(targetState = state) {
   ensureMetaRunStateReady(targetState);
   const businessState = targetState.business && typeof targetState.business === "object"
@@ -523,6 +555,8 @@ function syncRealEstateInvestmentState(targetState = state) {
     ...currentState,
     ownedBuildingId: String(currentState.ownedBuildingId || "").trim(),
     buildingLabel: String(currentState.buildingLabel || "").trim(),
+    contractSigned: Boolean(currentState.contractSigned),
+    contractSource: String(currentState.contractSource || "").trim(),
     purchasedDay: Math.max(0, Math.round(Number(currentState.purchasedDay) || 0)),
     cumulativeProfit: Math.max(0, Math.round(Number(currentState.cumulativeProfit) || 0)),
     lastProcessedTurnDay: Math.max(0, Math.round(Number(currentState.lastProcessedTurnDay) || 0)),
@@ -531,13 +565,16 @@ function syncRealEstateInvestmentState(targetState = state) {
     incomePerTurn: Math.max(0, Math.round(Number(currentState.incomePerTurn) || 0)),
   };
 
-  if (!isValidRealEstateInvestmentState(businessState.realEstate)) {
+  if (!isValidRealEstateInvestmentState(businessState.realEstate)
+    || !hasConfirmedRealEstateContract(targetState, businessState.realEstate)) {
     businessState.realEstate = { ...defaults };
     return businessState.realEstate;
   }
 
   const definition = getDowntownRealEstateBuildingDefinition(businessState.realEstate.ownedBuildingId);
   if (definition) {
+    businessState.realEstate.contractSigned = true;
+    businessState.realEstate.contractSource = businessState.realEstate.contractSource || "downtown-real-estate";
     businessState.realEstate.buildingLabel = businessState.realEstate.buildingLabel || definition.label;
     businessState.realEstate.purchasePrice = Math.max(
       businessState.realEstate.purchasePrice,
@@ -727,6 +764,8 @@ function buyDowntownRealEstateBuilding(targetState = state) {
   const investmentState = syncRealEstateInvestmentState(targetState);
   investmentState.ownedBuildingId = buildingDefinition.id;
   investmentState.buildingLabel = buildingDefinition.label;
+  investmentState.contractSigned = true;
+  investmentState.contractSource = "downtown-real-estate";
   investmentState.purchasedDay = Math.max(1, Math.round(Number(targetState.day) || 1));
   investmentState.lastProcessedTurnDay = Math.max(0, investmentState.purchasedDay - 1);
   investmentState.purchasePrice = buildingDefinition.price;
