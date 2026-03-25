@@ -2,7 +2,6 @@ services:
   - type: web
     name: mammoncity
     runtime: static
-    plan: free
     buildCommand: npm run build:render
     staticPublishPath: ./dist
     envVars:
