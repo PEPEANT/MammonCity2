@@ -135,6 +135,11 @@ function sortRankingEntries(entries = []) {
       return moneyGap;
     }
 
+    const happinessGap = Number(right?.happiness || 0) - Number(left?.happiness || 0);
+    if (happinessGap !== 0) {
+      return happinessGap;
+    }
+
     const createdAtGap = Number(left?.createdAt || 0) - Number(right?.createdAt || 0);
     if (createdAtGap !== 0) {
       return createdAtGap;

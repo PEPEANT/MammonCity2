@@ -4410,6 +4410,7 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
 
     return String(entry.name || "") === String(safeMyEntry.name || "")
       && Number(entry.money || 0) === Number(safeMyEntry.money || 0)
+      && Number(entry.happiness || 0) === Number(safeMyEntry.happiness || 0)
       && String(entry.job || "") === String(safeMyEntry.job || "")
       && String(entry.rank || "") === String(safeMyEntry.rank || "")
       && String(entry.spoonId || entry.spoon || "") === String(safeMyEntry.spoonId || safeMyEntry.spoon || "");
@@ -4453,8 +4454,8 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
           <span class="ranking-my-money">${metricLabel} ${formatMoney(safeMyEntry.money)}</span>
           <span class="ranking-my-job">${escapeHtml(safeMyEntry.job)}</span>
           <span class="ranking-spoon-badge ${mySpoonClass}">${mySpoon}</span>
-          <span class="ranking-my-rank ranking-rank--${String(safeMyEntry.rank || "d").toLowerCase()}">${safeMyEntry.rank}</span>
           ${myHappinessBadge}
+          <span class="ranking-my-rank ranking-rank--${String(safeMyEntry.rank || "d").toLowerCase()}">${safeMyEntry.rank}</span>
         </div>
       `;
     } else {
@@ -4463,11 +4464,19 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
   }
 
   if (ui.rankingList) {
-    const sorted = mergedEntries.sort((a, b) => (b.money || 0) - (a.money || 0));
+    const sorted = typeof sortRankingEntries === "function"
+      ? sortRankingEntries(mergedEntries)
+      : [...mergedEntries].sort((a, b) => {
+        const moneyGap = Number(b?.money || 0) - Number(a?.money || 0);
+        if (moneyGap !== 0) {
+          return moneyGap;
+        }
+        return Number(b?.happiness || 0) - Number(a?.happiness || 0);
+      });
     if (!sorted.length) {
       ui.rankingList.innerHTML = `
         <tr class="ranking-row ranking-row--empty">
-          <td class="ranking-empty" colspan="5">아직 등록된 랭킹이 없습니다.</td>
+          <td class="ranking-empty" colspan="6">아직 등록된 랭킹이 없습니다.</td>
         </tr>
       `;
     } else {
@@ -4485,6 +4494,7 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
 
         const matched = String(entry.name || "") === String(safeMyEntry.name || "")
           && Number(entry.money || 0) === Number(safeMyEntry.money || 0)
+          && Number(entry.happiness || 0) === Number(safeMyEntry.happiness || 0)
           && String(entry.job || "") === String(safeMyEntry.job || "")
           && String(entry.rank || "") === String(safeMyEntry.rank || "")
           && String(entry.spoonId || entry.spoon || "") === String(safeMyEntry.spoonId || safeMyEntry.spoon || "");
@@ -4511,6 +4521,7 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
                 <span class="ranking-spoon-badge ${spoonClass}">${spoonLabel}</span>
               </div>
             </td>
+            <td class="ranking-happiness">${Math.round(Number(entry.happiness) || 0)}점</td>
             <td class="ranking-rank ranking-rank--${(entry.rank || "d").toLowerCase()}">${entry.rank || "D"}</td>
           </tr>`;
         })

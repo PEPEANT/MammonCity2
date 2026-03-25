@@ -178,6 +178,12 @@
   padding: 2px 10px;
 }
 
+.ranking-happiness {
+  color: rgba(140, 200, 255, 0.84);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* 랭킹 테이블 */
 .ranking-list-wrap {
   overflow-x: auto;

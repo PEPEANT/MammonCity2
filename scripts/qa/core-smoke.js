@@ -32,6 +32,13 @@ const textChecks = [
     failMessage: "`showRankingScreen` should be defined exactly once in `js/ui.js`.",
   },
   {
+    label: "ranking table includes happiness before rank",
+    file: "index.html",
+    test: (text) => text.includes("<th>행복도</th>")
+      && text.indexOf("<th>행복도</th>") < text.indexOf("<th>랭크</th>"),
+    failMessage: "Ranking table should show a happiness column before the rank column.",
+  },
+  {
     label: "ranking service keeps latest browser entry",
     file: "js/systems/ranking-service.js",
     test: (text) => text.includes("const identityKey = getRankingIdentityKey();")
