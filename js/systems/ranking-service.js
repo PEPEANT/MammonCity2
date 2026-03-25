@@ -294,37 +294,3 @@ function subscribeTopRankings(onUpdate, limit = RANKING_LIMIT) {
     stopRankingRealtimeSubscription();
   };
 }
-
-async function deleteCurrentRankingEntry() {
-  if (!isFirebaseReady()) {
-    return false;
-  }
-
-  try {
-    await ensureRankingAuth();
-    const collectionRef = getRankingCollectionRef();
-    const identityKey = getRankingIdentityKey();
-    const documentId = getRankingDocumentId(identityKey);
-    if (!collectionRef || !documentId) {
-      return false;
-    }
-
-    await collectionRef.doc(documentId).delete();
-    return true;
-  } catch (error) {
-    console.warn("[ranking] 기존 랭킹 삭제 실패:", error);
-    return false;
-  }
-}
-
-if (typeof document !== "undefined") {
-  document.addEventListener("click", (event) => {
-    const target = event.target instanceof Element
-      ? event.target.closest("#ranking-restart-btn")
-      : null;
-    if (!target) {
-      return;
-    }
-    void deleteCurrentRankingEntry();
-  }, true);
-}

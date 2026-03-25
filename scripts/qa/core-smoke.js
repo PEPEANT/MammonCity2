@@ -39,6 +39,13 @@ const textChecks = [
     failMessage: "`submitRanking()` should overwrite the current browser entry instead of skipping lower or tied runs.",
   },
   {
+    label: "ranking restart does not delete saved entry",
+    file: "js/systems/ranking-service.js",
+    test: (text) => !text.includes('closest("#ranking-restart-btn")')
+      && !text.includes("deleteCurrentRankingEntry"),
+    failMessage: "Restarting from the ranking screen should not delete the saved leaderboard entry.",
+  },
+  {
     label: "save scene sanitizer exists",
     file: "js/logic.js",
     test: (text) => text.includes("function buildPersistenceSceneFrame("),
