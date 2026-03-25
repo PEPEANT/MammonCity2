@@ -2837,10 +2837,6 @@ function renderRoomScene() {
     title: "밖으로 나가기",
     onClick: goOutside,
   });
-  createChoiceButton({
-    title: "잠자기",
-    onClick: sleepInRoom,
-  });
   syncGameplayObjectivePrompt(state);
 }
 
