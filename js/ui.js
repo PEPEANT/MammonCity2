@@ -1287,10 +1287,155 @@ function renderInventoryPanel() {
   }).join("")}</div>`;
 }
 
+const sceneImagePreloadState = window.sceneImagePreloadState || {
+  registry: new Map(),
+  bootstrapped: false,
+};
+window.sceneImagePreloadState = sceneImagePreloadState;
+
+function normalizeSceneImageUrl(url = "") {
+  return String(url || "").trim();
+}
+
+function isSceneImageUrl(url = "") {
+  return /\.(png|jpe?g|webp|avif|gif|svg)([?#].*)?$/i.test(String(url || "").trim());
+}
+
+function collectSceneImageUrlsFromSource(source, bucket = []) {
+  if (!source) {
+    return bucket;
+  }
+
+  if (typeof source === "string") {
+    const normalizedUrl = normalizeSceneImageUrl(source);
+    if (normalizedUrl && isSceneImageUrl(normalizedUrl)) {
+      bucket.push(normalizedUrl);
+    }
+    return bucket;
+  }
+
+  if (Array.isArray(source)) {
+    source.forEach((entry) => collectSceneImageUrlsFromSource(entry, bucket));
+    return bucket;
+  }
+
+  if (typeof source === "object") {
+    Object.values(source).forEach((entry) => collectSceneImageUrlsFromSource(entry, bucket));
+  }
+
+  return bucket;
+}
+
+function preloadSceneImage(url = "", options = {}) {
+  const normalizedUrl = normalizeSceneImageUrl(url);
+  if (!normalizedUrl || !isSceneImageUrl(normalizedUrl)) {
+    return Promise.resolve(false);
+  }
+
+  const existing = sceneImagePreloadState.registry.get(normalizedUrl);
+  if (existing?.promise) {
+    return existing.promise;
+  }
+
+  const image = new Image();
+  let settled = false;
+  let resolvePromise = () => {};
+  const promise = new Promise((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  const record = {
+    url: normalizedUrl,
+    image,
+    promise,
+    status: "pending",
+  };
+  sceneImagePreloadState.registry.set(normalizedUrl, record);
+
+  const finish = (loaded) => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    record.status = loaded ? "loaded" : "error";
+    resolvePromise(Boolean(loaded));
+  };
+
+  image.decoding = "async";
+  try {
+    if ("loading" in image) {
+      image.loading = "eager";
+    }
+  } catch (_) {}
+  try {
+    if (options.priority && "fetchPriority" in image) {
+      image.fetchPriority = options.priority;
+    }
+  } catch (_) {}
+
+  image.addEventListener("load", () => finish(true), { once: true });
+  image.addEventListener("error", () => finish(false), { once: true });
+  image.src = normalizedUrl;
+
+  if (image.complete && image.naturalWidth > 0) {
+    finish(true);
+  } else if (typeof image.decode === "function") {
+    image.decode().then(() => finish(true)).catch(() => {});
+  }
+
+  return promise;
+}
+
+function preloadSceneImages(urls = [], options = {}) {
+  const normalizedUrls = [...new Set(
+    (Array.isArray(urls) ? urls : [urls])
+      .map((entry) => normalizeSceneImageUrl(entry))
+      .filter((entry) => entry && isSceneImageUrl(entry))
+  )];
+
+  normalizedUrls.forEach((url) => {
+    preloadSceneImage(url, options);
+  });
+
+  return normalizedUrls;
+}
+
+function scheduleSceneImageWarmup(targetState = state) {
+  if (sceneImagePreloadState.bootstrapped) {
+    return;
+  }
+
+  sceneImagePreloadState.bootstrapped = true;
+  const immediateUrls = collectSceneImageUrlsFromSource([
+    CHARACTER_ART?.player?.standing,
+    CHARACTER_ART?.player?.walking,
+    CHARACTER_ART?.convenienceCashier?.default,
+    CHARACTER_ART?.highSchoolGirl?.default,
+    CHARACTER_ART?.alleyAunt?.default,
+    CHARACTER_ART?.stationOfficeCommuter?.default,
+  ]);
+  preloadSceneImages(immediateUrls, { priority: "high" });
+
+  const deferredUrls = collectSceneImageUrlsFromSource(CHARACTER_ART);
+  const runDeferredPreload = () => preloadSceneImages(deferredUrls, { priority: "low" });
+
+  if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(() => {
+      runDeferredPreload();
+    }, { timeout: 1500 });
+  } else {
+    window.setTimeout(() => {
+      runDeferredPreload();
+    }, 350);
+  }
+}
+
 function applySceneBackgroundConfig(backgroundConfig = null) {
   if (!ui.bg || !backgroundConfig?.image) {
     return false;
   }
+
+  preloadSceneImage(backgroundConfig.image, { priority: "high" });
 
   const overlay = backgroundConfig.overlay
     || "linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%)";
@@ -1537,6 +1682,7 @@ function renderActors(actors = []) {
   ui.actorsLayer.innerHTML = "";
   ui.actorsLayer.classList.toggle("is-hidden", actors.length === 0);
   ui.actorsLayer.classList.toggle("has-interactive-actors", actors.some((actor) => Boolean(actor?.npcId)));
+  preloadSceneImages(actors.map((actor) => actor?.src || ""), { priority: "high" });
 
   actors.forEach((actor) => {
     const isInteractive = Boolean(actor?.npcId);
@@ -1564,6 +1710,17 @@ function renderActors(actors = []) {
 
     const image = document.createElement("img");
     image.className = "scene-actor-image";
+    image.decoding = "async";
+    try {
+      if ("loading" in image) {
+        image.loading = "eager";
+      }
+    } catch (_) {}
+    try {
+      if ("fetchPriority" in image) {
+        image.fetchPriority = isInteractive ? "high" : "auto";
+      }
+    } catch (_) {}
     image.src = actor.src;
     image.alt = actor.alt || "";
 

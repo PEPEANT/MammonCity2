@@ -1713,6 +1713,9 @@ let startScreenDrawTimer = null;
 document.addEventListener("DOMContentLoaded", () => {
   cacheUi();
   bindStaticEvents();
+  if (typeof scheduleSceneImageWarmup === "function") {
+    scheduleSceneImageWarmup(state);
+  }
   if (typeof startTradingTerminalTicker === "function") {
     startTradingTerminalTicker();
   }
