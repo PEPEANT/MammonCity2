@@ -288,6 +288,302 @@
   line-height: 1.45;
 }
 
+/* ===== 즉석복권 스크래치 ===== */
+
+.lotto-scratch-shell {
+  margin-top: 14px;
+  width: min(100%, 480px);
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.32);
+  gap: 0;
+}
+
+.lotto-scratch-shell.is-result {
+  gap: 0;
+}
+
+/* ── 티켓 헤더 ── */
+.lotto-ticket-header {
+  background: linear-gradient(135deg, #b8860b 0%, #ffd700 40%, #daa520 70%, #b8860b 100%);
+  padding: 12px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px dashed rgba(0, 0, 0, 0.18);
+}
+
+.lotto-ticket-brand {
+  font-size: 18px;
+  font-weight: 900;
+  color: #1a0a00;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.lotto-ticket-price-badge {
+  background: rgba(0, 0, 0, 0.18);
+  color: #1a0a00;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+/* ── 스크래치 영역 ── */
+.lotto-scratch-area {
+  background: #fffef5;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lotto-scratch-instruction {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a6000;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* ── 상태 칩 ── */
+.lotto-scratch-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lotto-scratch-status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.07);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #5a4000;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── 스크래치 보드 ── */
+.lotto-scratch-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.lotto-scratch-cell {
+  position: relative;
+  min-height: 100px;
+  border: none;
+  border-radius: 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+/* 미긁은 셀 — 은색 메탈릭 */
+.lotto-scratch-cell.is-hidden {
+  background: linear-gradient(145deg, #d8d8d8 0%, #b0b0b0 40%, #d4d4d4 60%, #989898 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.65),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.22),
+    0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.lotto-scratch-cell.is-hidden:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.65),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.22),
+    0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.lotto-scratch-cell.is-hidden strong {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(60, 60, 60, 0.7);
+  letter-spacing: 0.05em;
+}
+
+.lotto-scratch-cell.is-hidden::before {
+  content: "🪙";
+  font-size: 34px;
+  line-height: 1;
+}
+
+/* 긁힌 셀 — 흰 카드 */
+.lotto-scratch-cell.is-revealed {
+  background: #ffffff;
+  border: 2px solid #e8e8e8;
+  cursor: default;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.lotto-scratch-cell.is-revealed strong {
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lotto-scratch-cell-index {
+  display: none;
+}
+
+/* 등급별 색상 */
+.lotto-scratch-cell.is-revealed.is-miss strong { color: #bbb; }
+.lotto-scratch-cell.is-revealed.is-refund strong { color: #3b82f6; }
+.lotto-scratch-cell.is-revealed.is-small strong { color: #16a34a; }
+.lotto-scratch-cell.is-revealed.is-medium strong { color: #059669; font-size: 13px; }
+.lotto-scratch-cell.is-revealed.is-large strong { color: #d97706; font-size: 13px; }
+.lotto-scratch-cell.is-revealed.is-jackpot {
+  background: linear-gradient(135deg, #fff9e6, #fff3c4);
+  border-color: #fbbf24;
+}
+.lotto-scratch-cell.is-revealed.is-jackpot strong {
+  color: #b45309;
+  font-size: 11px;
+}
+.lotto-scratch-cell.is-revealed.is-super {
+  background: linear-gradient(135deg, #fdf4ff, #f3e8ff);
+  border-color: #a855f7;
+  animation: lotto-super-pulse 1.2s ease-in-out infinite alternate;
+}
+.lotto-scratch-cell.is-revealed.is-super strong {
+  color: #7c3aed;
+  font-size: 10px;
+}
+
+@keyframes lotto-super-pulse {
+  from { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+  to   { box-shadow: 0 0 0 6px rgba(168, 85, 247, 0); }
+}
+
+/* ── 확률표 ── */
+.lotto-scratch-odds {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.lotto-scratch-odds-title {
+  color: #8a6000;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.lotto-scratch-odds-row {
+  color: #555;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* ── 하단 바 (액션 + 안내) ── */
+.lotto-scratch-footer {
+  background: #f0ead0;
+  border-top: 2px dashed rgba(0, 0, 0, 0.12);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lotto-scratch-note {
+  color: #7a6030;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.lotto-scratch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.lotto-scratch-action {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.lotto-scratch-action:hover {
+  background: #fff;
+}
+
+.lotto-scratch-action.is-primary {
+  background: linear-gradient(180deg, #ffd45a, #ffbc2d);
+  border-color: #e6a800;
+  color: #3a2000;
+  box-shadow: 0 2px 8px rgba(255, 190, 50, 0.4);
+}
+
+/* ── 결과 화면 ── */
+.lotto-scratch-result-payout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  gap: 4px;
+  padding: 20px 16px;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  border-radius: 10px;
+  color: #bbb;
+}
+
+.lotto-scratch-result-payout.is-win {
+  background: linear-gradient(160deg, #fff9e0, #ffe680);
+  color: #7a4f00;
+}
+
+.lotto-scratch-result-payout.is-win.is-jackpot,
+.lotto-scratch-result-payout.is-win.is-super {
+  background: linear-gradient(160deg, #f5e6ff, #e0b8ff);
+  color: #5b00b5;
+  font-size: 32px;
+}
+
+.lotto-scratch-result-payout.is-miss {
+  color: #bbb;
+}
+
+.lotto-scratch-result-sub {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+  letter-spacing: 0;
+}
+
 .location-map-bus-route {
   padding: 0;
   overflow: hidden;
@@ -2271,6 +2567,42 @@
 }
 
 @media (max-width: 600px) {
+  .lotto-scratch-shell {
+    padding: 13px;
+    border-radius: 18px;
+  }
+
+  .lotto-scratch-board {
+    gap: 8px;
+  }
+
+  .lotto-scratch-cell {
+    min-height: 82px;
+    padding: 12px 10px 10px;
+    border-radius: 14px;
+  }
+
+  .lotto-scratch-cell strong {
+    font-size: 18px;
+  }
+
+  .lotto-scratch-cell.is-hidden strong {
+    font-size: 15px;
+  }
+
+  .lotto-scratch-actions {
+    flex-direction: column;
+  }
+
+  .lotto-scratch-action {
+    width: 100%;
+  }
+
+  .lotto-scratch-result-payout {
+    min-height: 66px;
+    font-size: 24px;
+  }
+
   .trash-item {
     width: 78px;
     height: 78px;

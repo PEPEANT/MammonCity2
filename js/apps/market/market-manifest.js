@@ -55,9 +55,30 @@ function parseMarketRouteState(screenId = "home") {
   return { view: "home", activeTab: "home" };
 }
 
+function getMarketListingImageSrc(listing) {
+  const rawPath = typeof listing?.imagePath === "string"
+    ? listing.imagePath.trim()
+    : "";
+  return rawPath ? encodeURI(rawPath) : "";
+}
+
 function buildMarketProductArtMarkup(listing, { detail = false } = {}) {
   if (!listing) {
     return "";
+  }
+
+  const imageSrc = getMarketListingImageSrc(listing);
+
+  if (imageSrc) {
+    return `
+      <div
+        class="market-product-art is-photo is-${escapePhoneAppHtml(listing.imageTone || "default")}${detail ? " is-detail" : ""}"
+        style="background-image:url('${escapePhoneAppHtml(imageSrc)}')"
+      >
+        <div class="market-product-art-kicker">${escapePhoneAppHtml(listing.detailCategory || "직거래")}</div>
+        <div class="market-product-art-label">${escapePhoneAppHtml(listing.imageLabel || "SALE")}</div>
+      </div>
+    `;
   }
 
   return `
@@ -507,7 +528,7 @@ function getMarketAppManifest(targetState = state) {
   return {
     id: "market",
     label: "호박마켓",
-    homeLabel: "호박",
+    homeLabel: "호박마켓",
     icon: "🎃",
     openRoute: "market/home",
     screenMode: "fullbleed",

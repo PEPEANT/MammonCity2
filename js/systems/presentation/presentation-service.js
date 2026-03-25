@@ -248,20 +248,9 @@ function getNpcDiscomfortThreshold(npcId = "", targetState = state) {
 }
 
 function getNpcDiscomfortDeltaForDialogue(npcId = "", targetState = state) {
-  const appearanceState = syncAppearanceState(targetState);
-  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
-    ? getPlayerAppearanceLevel(targetState)
-    : 1;
-
-  if (appearanceLevel <= 1) {
-    return appearanceState.attractiveness <= 10 ? 3 : 2;
-  }
-
-  if (appearanceLevel === 2) {
-    return appearanceState.attractiveness <= 35 ? 2 : 1;
-  }
-
-  return appearanceState.attractiveness < 55 ? 1 : 0;
+  // Neutral small talk should not instantly push ambient NPCs into avoidance.
+  // If a route needs discomfort, it should add annoyance explicitly via choice effects.
+  return 0;
 }
 
 function isNpcAvoidingPlayer(npcId = "", targetState = state) {
@@ -549,6 +538,10 @@ function resolveSceneActorPresentation(actor = {}, targetState = state, context 
   }
 
   const resolvedActor = { ...actor };
+  const preserveExplicitSrc = Boolean(
+    String(resolvedActor.src || "").trim()
+    && (resolvedActor.preserveSrc || resolvedActor.forceSrc || resolvedActor.lockPresentationArt)
+  );
   const actorKey = String(resolvedActor.npcId || resolvedActor.id || resolvedActor.alt || "").trim().toLowerCase();
   const actorAlt = String(resolvedActor.alt || "").trim().toLowerCase();
   const isPlayerActor = resolvedActor.kind === "player"
@@ -573,7 +566,7 @@ function resolveSceneActorPresentation(actor = {}, targetState = state, context 
   }
 
   const presentation = getNpcPresentation(npcId, targetState, context);
-  if (presentation?.art) {
+  if (presentation?.art && !preserveExplicitSrc) {
     resolvedActor.src = presentation.art;
   }
   if (presentation?.name) {

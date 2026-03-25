@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: mammoncity
+    runtime: static
+    plan: free
+    buildCommand: npm run build:render
+    staticPublishPath: ./dist
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: true

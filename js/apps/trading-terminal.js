@@ -27,6 +27,7 @@ const TRADING_TERMINAL_STOCK_DEFINITIONS = [
 
 const TRADING_TERMINAL_COIN_BASE_PRICES = Object.freeze({
   BTC: 138000000,
+  ETH: 4980000,
   DICE: 1250,
   MAMC: 14800,
   DIAB: 6900,
@@ -81,6 +82,134 @@ function formatTradingTerminalSize(appId, value = 0) {
   return safeValue.toFixed(3);
 }
 
+function getTradingTerminalWholeUnits(value = 0) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function roundTradingTerminalCashValue(value = 0) {
+  return Math.max(0, Math.round(Number(value) || 0));
+}
+
+function getTradingTerminalCoinSortRank(symbol = "") {
+  switch (String(symbol || "").trim().toUpperCase()) {
+    case "BTC":
+      return 0;
+    case "ETH":
+      return 1;
+    case "DICE":
+      return 2;
+    case "MAMC":
+      return 3;
+    case "DIAB":
+      return 4;
+    case "MOON":
+      return 5;
+    default:
+      return 99;
+  }
+}
+
+function normalizeTradingTerminalSpotHoldings(terminal, targetState = state) {
+  if (!terminal?.spotHoldings || typeof terminal.spotHoldings !== "object") {
+    return;
+  }
+
+  let fractionalRefund = 0;
+
+  Object.entries(terminal.spotHoldings).forEach(([symbol, holding]) => {
+    const rawQty = Math.max(0, Number(holding?.qty) || 0);
+    const wholeQty = getTradingTerminalWholeUnits(rawQty);
+    const fractionalQty = Math.max(0, rawQty - wholeQty);
+    const unitPrice = Math.max(
+      0,
+      Number(terminal.assets?.[symbol]?.price)
+      || Number(holding?.avgPrice)
+      || 0,
+    );
+
+    if (fractionalQty > 0.000001 && unitPrice > 0) {
+      fractionalRefund += roundTradingTerminalCashValue(fractionalQty * unitPrice);
+    }
+
+    if (wholeQty > 0) {
+      terminal.spotHoldings[symbol] = {
+        qty: wholeQty,
+        avgPrice: Math.max(0, Number(holding?.avgPrice) || unitPrice || 0),
+      };
+      return;
+    }
+
+    delete terminal.spotHoldings[symbol];
+  });
+
+  if (fractionalRefund <= 0) {
+    return;
+  }
+
+  if (typeof earnCash === "function") {
+    earnCash(fractionalRefund, targetState);
+  } else if (targetState) {
+    targetState.money = Math.max(0, Number(targetState.money) || 0) + fractionalRefund;
+  }
+}
+
+function reconcileTradingTerminalCoinDelistings(terminal, targetState = state) {
+  if (!terminal || typeof isCoinDelisted !== "function") {
+    return [];
+  }
+
+  const notices = [];
+
+  Object.entries(terminal.spotHoldings || {}).forEach(([symbol, holding]) => {
+    if (!isCoinDelisted(symbol, targetState)) {
+      return;
+    }
+
+    const qty = getTradingTerminalWholeUnits(holding?.qty);
+    const coinInfo = typeof getCoinTypeInfo === "function"
+      ? getCoinTypeInfo(symbol)
+      : null;
+    notices.push(`${coinInfo?.label || symbol} 현물 ${qty}개가 상장폐지로 가치 0원이 되어 정리됐다.`);
+    delete terminal.spotHoldings[symbol];
+  });
+
+  if (!Array.isArray(terminal.futuresPositions) || !terminal.futuresPositions.length) {
+    return notices;
+  }
+
+  const survivingPositions = [];
+
+  terminal.futuresPositions.forEach((position) => {
+    if (!isCoinDelisted(position?.symbol, targetState)) {
+      survivingPositions.push(position);
+      return;
+    }
+
+    const entryPrice = Math.max(1, Number(position?.entryPrice) || 1);
+    const margin = Math.max(0, Number(position?.margin) || 0);
+    const leverage = Math.max(1, Number(position?.leverage) || 1);
+    const direction = position?.side === "short" ? -1 : 1;
+    const pnl = margin * (((0 - entryPrice) / entryPrice) * leverage * direction);
+    const settlement = roundTradingTerminalCashValue(Math.max(0, margin + pnl));
+    const coinInfo = typeof getCoinTypeInfo === "function"
+      ? getCoinTypeInfo(position?.symbol)
+      : null;
+
+    if (settlement > 0) {
+      if (typeof earnCash === "function") {
+        earnCash(settlement, targetState);
+      } else if (targetState) {
+        targetState.money = Math.max(0, Number(targetState.money) || 0) + settlement;
+      }
+    }
+
+    notices.push(`${coinInfo?.label || position.symbol} ${position?.side === "short" ? "숏" : "롱"} 포지션이 상장폐지 가격 0원 기준으로 강제 정리됐다.`);
+  });
+
+  terminal.futuresPositions = survivingPositions;
+  return notices;
+}
+
 function createTradingTerminalCandles(basePrice = 1000, volatility = 0.01) {
   const candles = [];
   let price = Math.max(1, Number(basePrice) || 1);
@@ -105,18 +234,22 @@ function createTradingTerminalCandles(basePrice = 1000, volatility = 0.01) {
 
 function getTradingTerminalAssetDefinitions(appId, targetState = state) {
   if (appId === "coin") {
-    const coinEntries = typeof COIN_TYPES !== "undefined"
-      ? Object.entries(COIN_TYPES).sort(([left], [right]) => {
-        if (left === "DICE") return -1;
-        if (right === "DICE") return 1;
-        return 0;
-      })
-      : [["DICE", {
+    const coinEntries = typeof getTradableCoinEntries === "function"
+      ? getTradableCoinEntries(targetState).sort(([left], [right]) => (
+        getTradingTerminalCoinSortRank(left) - getTradingTerminalCoinSortRank(right)
+      ))
+      : (
+        typeof COIN_TYPES !== "undefined"
+        ? Object.entries(COIN_TYPES).sort(([left], [right]) => (
+          getTradingTerminalCoinSortRank(left) - getTradingTerminalCoinSortRank(right)
+        ))
+          : [["DICE", {
         symbol: "DICE",
         label: "다이스 코인",
         emoji: "🎲",
         volatility: 14,
-      }]];
+          }]]
+      );
 
     return coinEntries.map(([symbol, info]) => {
       const snapshot = typeof getCoinMarketSnapshot === "function"
@@ -217,13 +350,32 @@ function ensureTradingTerminalState(appId, targetState = state) {
     ? getMarketCycleTurnNumber(targetState)
     : Math.max(1, Math.round(Number(targetState?.day) || 1));
   const shouldResyncAssets = terminal.lastSyncedTurn !== currentTurn;
+  const activeSymbols = new Set(definitions.map((definition) => definition.symbol));
 
   definitions.forEach((definition) => {
+    if (typeof syncMarketCycleAssetState === "function") {
+      terminal.assets[definition.symbol] = syncMarketCycleAssetState(terminal.assets[definition.symbol], {
+        appId: normalizedAppId,
+        definition,
+        targetState,
+        tick: 0,
+        candleCount: 32,
+        forceRebuild: shouldResyncAssets || !terminal.assets[definition.symbol],
+      });
+      return;
+    }
+
     if (!terminal.assets[definition.symbol] || shouldResyncAssets) {
       terminal.assets[definition.symbol] = createTradingTerminalAssetState(normalizedAppId, definition, targetState);
       return;
     }
     terminal.assets[definition.symbol].meta = { ...definition };
+  });
+
+  Object.keys(terminal.assets).forEach((symbol) => {
+    if (!activeSymbols.has(symbol)) {
+      delete terminal.assets[symbol];
+    }
   });
 
   if (!terminal.selectedAsset || !terminal.assets[terminal.selectedAsset]) {
@@ -251,6 +403,21 @@ function ensureTradingTerminalState(appId, targetState = state) {
           : [],
       }
     : null;
+
+  normalizeTradingTerminalSpotHoldings(terminal, targetState);
+
+  const delistingNotices = normalizedAppId === "coin"
+    ? reconcileTradingTerminalCoinDelistings(terminal, targetState)
+    : [];
+  if (delistingNotices.length) {
+    terminal.lastLiquidationSummary = {
+      title: "상장폐지 정리",
+      body: delistingNotices[0],
+      tone: "fail",
+      items: delistingNotices,
+    };
+  }
+
   terminal.lastSyncedTurn = currentTurn;
 
   return terminal;
@@ -274,7 +441,10 @@ function getTradingTerminalSpotHoldings(appId, targetState = state) {
         return null;
       }
 
-      const qty = Number(holding.qty) || 0;
+      const qty = getTradingTerminalWholeUnits(holding.qty);
+      if (qty <= 0) {
+        return null;
+      }
       const avgPrice = Number(holding.avgPrice) || asset.price;
       const currentValue = qty * asset.price;
       const cost = qty * avgPrice;
@@ -528,7 +698,6 @@ function tickTradingTerminal(appId, targetState = state) {
   }
 
   const survivingPositions = [];
-  const liquidationItems = [];
   let liquidationMessage = "";
 
   terminal.futuresPositions.forEach((position) => {
@@ -591,17 +760,17 @@ function getTradingTerminalOrderBook(appId, targetState = state) {
     const bidPrice = Math.max(1, asset.price - spreadBase * level);
     const askSize = appId === "stocks"
       ? (typeof getMarketCycleBookSize === "function"
-        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "ask", level], 12, 152)
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, asset.minuteCursor || 0, "ask", level], 12, 152)
         : Math.round(Math.random() * 140 + 12))
       : (typeof getMarketCycleBookSize === "function"
-        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "ask", level], 0.2, 7.2, 3)
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, asset.minuteCursor || 0, "ask", level], 0.2, 7.2, 3)
         : Number((Math.random() * 7 + 0.2).toFixed(3)));
     const bidSize = appId === "stocks"
       ? (typeof getMarketCycleBookSize === "function"
-        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "bid", level], 12, 152)
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, asset.minuteCursor || 0, "bid", level], 12, 152)
         : Math.round(Math.random() * 140 + 12))
       : (typeof getMarketCycleBookSize === "function"
-        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, "bid", level], 0.2, 7.2, 3)
+        ? getMarketCycleBookSize(["terminal-book", appId, asset.meta.symbol, asset.cycleTurn || 0, asset.minuteCursor || 0, "bid", level], 0.2, 7.2, 3)
         : Number((Math.random() * 7 + 0.2).toFixed(3)));
 
     asks.push({ price: askPrice, size: askSize });
@@ -707,7 +876,7 @@ function tradeTradingTerminalSpot(appId, side = "buy", targetState = state) {
   }
 
   if (side === "buy") {
-    if (amount > walletBalance) {
+    if (amount > walletBalance && getTradingTerminalWholeUnits(walletBalance / asset.price) < 1) {
       setTradingTerminalStatus(appId, {
         kicker: "ORDER",
         title: "잔액 부족",
@@ -717,19 +886,42 @@ function tradeTradingTerminalSpot(appId, side = "buy", targetState = state) {
       return false;
     }
 
-    if (typeof spendCash === "function" && !spendCash(amount, targetState)) {
+    const qty = getTradingTerminalWholeUnits(Math.min(amount, walletBalance) / asset.price);
+    if (qty < 1) {
+      setTradingTerminalStatus(appId, {
+        kicker: "SPOT BUY",
+        title: "수량 부족",
+        body: "현재 가격 기준으로 1개 이상 살 수 있는 금액을 넣어야 합니다.",
+        tone: "fail",
+      }, targetState);
       return false;
     }
 
-    const qty = amount / asset.price;
+    const actualCost = roundTradingTerminalCashValue(qty * asset.price);
+    if (actualCost > walletBalance) {
+      setTradingTerminalStatus(appId, {
+        kicker: "ORDER",
+        title: "주문 실패",
+        body: "체결 금액이 보유 현금을 넘어 주문을 넣지 못했다.",
+        tone: "fail",
+      }, targetState);
+      return false;
+    }
+
+    if (typeof spendCash === "function" && !spendCash(actualCost, targetState)) {
+      return false;
+    }
+
     const current = terminal.spotHoldings[terminal.selectedAsset] || { qty: 0, avgPrice: asset.price };
-    const totalCost = (current.qty * current.avgPrice) + amount;
-    const totalQty = current.qty + qty;
+    const currentQty = getTradingTerminalWholeUnits(current.qty);
+    const totalCost = (currentQty * current.avgPrice) + actualCost;
+    const totalQty = currentQty + qty;
 
     terminal.spotHoldings[terminal.selectedAsset] = {
       qty: totalQty,
       avgPrice: totalQty > 0 ? totalCost / totalQty : asset.price,
     };
+    const buyStatusBody = `${asset.meta.name} ${qty}개를 ${formatTradingTerminalMoney(actualCost)}에 매수했다.`;
 
     setTradingTerminalStatus(appId, {
       kicker: "SPOT BUY",
@@ -737,8 +929,14 @@ function tradeTradingTerminalSpot(appId, side = "buy", targetState = state) {
       body: `${formatTradingTerminalMoney(amount)} 규모로 ${asset.meta.name} 현물을 편입했습니다.`,
       tone: "success",
     }, targetState);
+    setTradingTerminalStatus(appId, {
+      kicker: "SPOT BUY",
+      title: `${terminal.selectedAsset} 매수 완료`,
+      body: buyStatusBody,
+      tone: "success",
+    }, targetState);
     if (typeof showMoneyEffect === "function" && targetState === state) {
-      showMoneyEffect(-amount);
+      showMoneyEffect(-actualCost);
     }
     return true;
   }
@@ -754,18 +952,25 @@ function tradeTradingTerminalSpot(appId, side = "buy", targetState = state) {
     return false;
   }
 
-  const availableValue = holding.qty * asset.price;
-  const sellAmount = Math.min(amount, availableValue);
-  if (sellAmount <= 0) {
+  const availableQty = getTradingTerminalWholeUnits(holding.qty);
+  const qtyToSell = Math.min(availableQty, getTradingTerminalWholeUnits(amount / asset.price));
+  if (qtyToSell <= 0) {
+    setTradingTerminalStatus(appId, {
+      kicker: "SPOT SELL",
+      title: "수량 부족",
+      body: "현재 가격 기준으로 1개 이상 팔 수 있는 금액을 넣어야 합니다.",
+      tone: "fail",
+    }, targetState);
     return false;
   }
 
-  const qtyToSell = sellAmount / asset.price;
+  const sellAmount = roundTradingTerminalCashValue(qtyToSell * asset.price);
   const costBasis = qtyToSell * holding.avgPrice;
   const pnl = sellAmount - costBasis;
+  const sellStatusBody = `${asset.meta.name} ${qtyToSell}개를 ${formatTradingTerminalMoney(sellAmount)}에 매도했다. 손익 ${pnl >= 0 ? "+" : ""}${formatTradingTerminalMoney(pnl)}.`;
 
-  holding.qty = Math.max(0, holding.qty - qtyToSell);
-  if (holding.qty <= 0.000001) {
+  holding.qty = Math.max(0, availableQty - qtyToSell);
+  if (holding.qty <= 0) {
     delete terminal.spotHoldings[terminal.selectedAsset];
   }
 
@@ -779,6 +984,12 @@ function tradeTradingTerminalSpot(appId, side = "buy", targetState = state) {
     kicker: "SPOT SELL",
     title: `${terminal.selectedAsset} 매도 완료`,
     body: `${formatTradingTerminalMoney(sellAmount)}을 회수했습니다. 손익 ${pnl >= 0 ? "+" : ""}${formatTradingTerminalMoney(pnl)}.`,
+    tone: pnl >= 0 ? "success" : "fail",
+  }, targetState);
+  setTradingTerminalStatus(appId, {
+    kicker: "SPOT SELL",
+    title: `${terminal.selectedAsset} 매도 완료`,
+    body: sellStatusBody,
     tone: pnl >= 0 ? "success" : "fail",
   }, targetState);
   if (typeof showMoneyEffect === "function" && targetState === state) {

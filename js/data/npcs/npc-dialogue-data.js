@@ -1,3 +1,42 @@
+function createBusyPasserbyDialogue({
+  title,
+  introLine,
+  brushOffLine,
+  headlineText,
+}) {
+  return {
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        title,
+        lines: [introLine],
+        choices: [
+          { label: "잠깐 말을 걸어본다", next: "busy-reply" },
+          { label: "그냥 지나친다", end: true },
+        ],
+      },
+      "busy-reply": {
+        lines: [
+          brushOffLine,
+          "상대는 가볍게 고개를 숙이고 그대로 발걸음을 재촉한다.",
+        ],
+        choices: [
+          {
+            label: "알겠다고 하고 물러난다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "바쁜 사람",
+                text: headlineText,
+              },
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
 const NPC_DIALOGUES = {
   "high-school-girl": {
     startNodeId: "intro",
@@ -20,6 +59,15 @@ const NPC_DIALOGUES = {
           "여고생은 휴대폰 화면을 살짝 가린 채 너를 한 번 올려다본다.",
           "\"무슨 일 있어요?\" 하고 먼저 묻기엔 서로 너무 낯설다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "교복 차림의 학생이 경계보다 호기심을 먼저 비친다",
+            lines: [
+              "여고생은 휴대폰을 살짝 내리며 너를 한 번 더 바라본다.",
+              "이번에는 네가 먼저 묻기 전에도 말을 붙여볼 분위기다.",
+            ],
+          },
+        },
         choices: [
           { label: "무슨 일 있냐고 묻는다", next: "concern" },
           { label: "버스 시간을 물어본다", next: "bus-stop" },
@@ -104,6 +152,15 @@ const NPC_DIALOGUES = {
           "\"학원 가기 전에 잠깐 당 떨어져서요.\"",
           "학생은 버스 시간표보다 손에 쥔 문제집을 더 자주 내려다본다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "과자 봉지를 접어 쥔 학생이 먼저 시선을 맞춘다",
+            lines: [
+              "학생은 너를 알아본 듯 작게 웃으며 또 보네요 하는 표정을 짓는다.",
+              "전보다 경계가 풀린 얼굴이라 사소한 대화도 훨씬 편하게 이어질 것 같다.",
+            ],
+          },
+        },
         choices: [
           { label: "오늘 공부 많이 하나 보다 하고 묻는다", next: "concern" },
           {
@@ -130,6 +187,15 @@ const NPC_DIALOGUES = {
           "\"오늘 모의고사 다시 풀어보는 날이라서요.\"",
           "학생은 버스가 늦는 것보다 남은 공부 시간이 줄어드는 걸 더 신경 쓰는 눈치다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "문제집을 안은 학생이 네 쪽으로 몸을 살짝 틀어 선다",
+            lines: [
+              "오늘도 바쁘긴 한데 자꾸 마주친다는 말이 먼저 떠오를 것 같은 분위기다.",
+              "쫓기던 눈빛 사이로도 전보다 분명한 여유가 묻어난다.",
+            ],
+          },
+        },
         choices: [
           {
             label: "집중 잘 되길 바란다고 말한다",
@@ -260,6 +326,15 @@ const NPC_DIALOGUES = {
           "\"오늘은 도시락이 빨리 빠져서 저녁 전에 한 번 더 채워야 할 것 같아요.\"",
           "점원은 바코드 리더기보다 진열대 쪽을 더 자주 힐끗거린다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "행사 스티커를 정리하던 점원이 시선을 쉽게 거두지 못한다",
+            lines: [
+              "오늘은 손님이 많았는데도 이상하게 계속 기억에 남는다고 할 것 같은 눈치다.",
+              "업무 얘기 사이에도 너를 의식하는 기색이 은근히 드러난다.",
+            ],
+          },
+        },
         choices: [
           {
             label: "사람 몰리는 시간대가 언제냐고 묻는다",
@@ -289,6 +364,15 @@ const NPC_DIALOGUES = {
           "\"요즘엔 물류차 늦게 들어오는 날이 많아서 정리할 틈이 잘 안 나네요.\"",
           "익숙하게 듣는 말투지만 전보다 한결 편한 분위기다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "삼각김밥 상자를 들고도 점원의 목소리가 평소보다 한결 부드럽다",
+            lines: [
+              "자주 오시니까 이제 바로 알아보겠다는 말이 묘하게 친근하게 들린다.",
+              "익숙함에 가까운 말인데도 전보다 훨씬 사적인 온기가 섞여 있다.",
+            ],
+          },
+        },
         choices: [
           {
             label: "오늘도 바쁘겠다고 말해준다",
@@ -335,6 +419,15 @@ const NPC_DIALOGUES = {
           "퇴근한 얼굴인데도 눈빛은 아직 회사에 붙잡혀 있는 것 같다.",
           "\"왜요? 저 찾으셨어요?\" 하고 피곤한 목소리로 묻는다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "양복 차림의 남자가 피곤한 와중에도 너를 먼저 살핀다",
+            lines: [
+              "퇴근한 얼굴인데도 눈빛은 아까보다 한결 부드럽다.",
+              "피곤한 목소리 속에서도 이상하게 너한테는 템포를 늦춰주는 느낌이다.",
+            ],
+          },
+        },
         choices: [
           { label: "오늘 일할 만한 곳이 있냐고 묻는다", next: "jobs" },
           { label: "힘들어 보인다고 말한다", next: "tired" },
@@ -423,6 +516,15 @@ const NPC_DIALOGUES = {
           "아주머니는 통화를 끝내고 너를 보자 익숙한 사람 보듯 눈을 가늘게 뜬다.",
           "\"또 나왔니? 오늘도 밖에서 시간 보낼 거야?\"",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "장바구니를 든 아주머니가 낯익은 사람 보듯 먼저 눈을 맞춘다",
+            lines: [
+              "아주머니는 네 얼굴을 보자 괜히 표정이 먼저 풀린다.",
+              "오늘은 얼굴이 훨씬 폈네 하고 반가운 말부터 건넬 것 같은 분위기다.",
+            ],
+          },
+        },
         choices: [
           { label: "그냥 인사만 한다", next: "greet" },
           { label: "동네 소문을 묻는다", next: "rumor" },
@@ -524,6 +626,15 @@ const NPC_DIALOGUES = {
           "점원이 바코드 스캐너를 내려놓고 짧게 눈을 맞춘다.",
           "\"필요하신 거 있으시면 천천히 보세요.\"",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "편의점 계산대 위 형광등 아래로 점원의 시선이 조금 더 오래 머문다",
+            lines: [
+              "점원은 바코드 스캐너를 내려놓고 네 얼굴을 다시 한번 확인한다.",
+              "필요한 물건보다 너 쪽에 먼저 반응이 간 것처럼 말끝이 살짝 흔들린다.",
+            ],
+          },
+        },
         choices: [
           {
             label: "인사만 하고 물건을 더 둘러본다",
@@ -675,6 +786,15 @@ const NPC_DIALOGUES = {
           "낯선 거리의 공기를 잘 아는 사람처럼 표정이 이상하리만큼 느긋하다.",
           "\"길 찾는 얼굴은 아닌데, 뭘 찾고 있어요?\"",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "네온 불빛 아래 선 여자가 시선을 붙들고 입꼬리를 먼저 올린다",
+            lines: [
+              "낯선 거리의 공기를 잘 아는 사람인데도 너를 보자 템포가 바뀐다.",
+              "그냥 지나가기엔 아쉽다는 표정이 처음부터 너무 노골적이다.",
+            ],
+          },
+        },
         choices: [
           { label: "오늘 중심가 분위기를 묻는다", next: "mood" },
           { label: "가볍게 웃고 지나간다", next: "leave" },
@@ -714,6 +834,15 @@ const NPC_DIALOGUES = {
           "\"또 보네. 여기 계속 돌면 결국 다 마주치더라.\"",
           "장난기 섞인 말투지만 반응을 보는 눈빛은 꽤 또렷하다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "길거리 여자가 대놓고 눈웃음을 건네며 한 걸음 가까워진다",
+            lines: [
+              "이렇게 자꾸 마주치면 그냥 넘기기 어렵지 않냐는 말이 장난처럼 흐른다.",
+              "농담 섞인 말투지만 반응을 보는 눈빛은 훨씬 노골적으로 또렷하다.",
+            ],
+          },
+        },
         choices: [
           {
             label: "오늘도 바쁘냐고 묻는다",
@@ -743,6 +872,15 @@ const NPC_DIALOGUES = {
           "\"오늘은 그냥 지나가도 되는 얼굴은 아니네.\"",
           "짧은 한마디인데도 먼저 말을 걸 기회를 남겨두는 느낌이다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "익숙한 얼굴을 알아본 여자가 이번엔 거의 기다렸다는 듯 멈춘다",
+            lines: [
+              "오늘은 진짜 그냥 보내기 싫다는 기색이 짧은 한마디에 다 담겨 있다.",
+              "거리의 네온보다 여자의 시선이 더 진하게 남는다.",
+            ],
+          },
+        },
         choices: [
           {
             label: "다음에 또 보자고 하고 지나간다",
@@ -788,6 +926,15 @@ const NPC_DIALOGUES = {
           "\"슬슬 움직여야 덜 막히는데, 사람은 더 많아지네요.\"",
           "차분한 목소리인데도 발끝은 다음 동선을 먼저 생각하는 것처럼 조금 바쁘다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "베이지 니트 차림 통근자가 시계를 보다가 다시 네 쪽을 본다",
+            lines: [
+              "급한데도 괜히 한 번 더 보게 된다는 듯 시선이 다시 돌아온다.",
+              "차분한 목소리인데도 예상 밖의 관심이 살짝 묻어난다.",
+            ],
+          },
+        },
         choices: [
           { label: "오늘 출근길 분위기를 묻는다", next: "commute" },
           { label: "짧게 인사하고 지나간다", next: "leave" },
@@ -842,6 +989,15 @@ const NPC_DIALOGUES = {
           "\"다음 차가 바로 오는 줄 알았는데 살짝 비었네요.\"",
           "음악을 듣고 있었던 것 같은데도 주변 소음에는 꽤 익숙해 보인다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "체크스커트 차림 학생이 이어폰 한쪽을 뺀 채 먼저 시선을 고정한다",
+            lines: [
+              "역 앞 사람들 사이에서도 네 쪽이 먼저 눈에 들어온다는 얼굴이다.",
+              "경계보다는 궁금함이 먼저 앞서는 표정이라 대화 문턱이 낮아 보인다.",
+            ],
+          },
+        },
         choices: [
           { label: "역 앞은 늘 이런지 묻는다", next: "station" },
           { label: "방해하지 않고 지나간다", next: "leave" },
@@ -896,6 +1052,15 @@ const NPC_DIALOGUES = {
           "\"오늘은 덜 막히는 길로 가야겠네요.\"",
           "목소리는 담담한데 발걸음은 이미 다음 코너를 계산하는 것처럼 또렷하다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "가죽재킷 차림 통근자가 큰길 대신 잠깐 네 쪽에 시선을 둔다",
+            lines: [
+              "오늘은 길보다 사람이 더 눈에 들어온다는 듯 말끝에 작은 웃음이 걸린다.",
+              "담담한 척하지만 너와 마주친 뒤로 템포가 한 박자 느려진다.",
+            ],
+          },
+        },
         choices: [
           { label: "중심가 사람 흐름이 어떤지 묻는다", next: "downtown" },
           { label: "눈인사만 하고 지나간다", next: "leave" },
@@ -950,6 +1115,15 @@ const NPC_DIALOGUES = {
           "\"강의 하나 비면 공원부터 돌게 되더라구요.\"",
           "쉬는 중인 듯하지만, 눈빛은 다음 일정까지 계산하고 있는 것처럼 또렷하다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "후드티 차림 대학생이 산책로 대신 네 쪽으로 걸음을 조금 늦춘다",
+            lines: [
+              "강의 비는 시간마다 이런 우연이 생기면 좀 재밌겠다는 표정이다.",
+              "쉬는 중인 얼굴인데도 너와 마주친 순간 반응이 더 또렷해진다.",
+            ],
+          },
+        },
         choices: [
           { label: "캠퍼스 공원 분위기를 묻는다", next: "park" },
           { label: "쉬는 시간 방해하지 않고 지나간다", next: "leave" },
@@ -1004,6 +1178,15 @@ const NPC_DIALOGUES = {
           "\"읽을 건 많은데 시간은 늘 애매하게 모자라네요.\"",
           "가볍게 웃지만 눈은 이미 다음 할 일을 정리하는 사람처럼 빠르게 움직인다.",
         ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "안경을 고쳐 쓰던 대학생이 책보다 네 쪽에 더 오래 시선을 둔다",
+            lines: [
+              "읽을 건 많은데 오늘은 자꾸 집중이 다른 쪽으로 샌다는 듯 웃는다.",
+              "가볍게 넘기려 하지만 시선은 꽤 솔직하게 머문다.",
+            ],
+          },
+        },
         choices: [
           { label: "요즘 무엇을 공부하는지 묻는다", next: "study" },
           { label: "고개만 끄덕이고 지나간다", next: "leave" },
@@ -1049,4 +1232,282 @@ const NPC_DIALOGUES = {
       },
     },
   },
+  "station-office-commuter": {
+    startNodeId: "intro",
+    startNodeSelector(targetState) {
+      const relation = typeof getNpcRelation === "function"
+        ? getNpcRelation("station-office-commuter", targetState)
+        : null;
+      if ((relation?.meetings || 0) >= 2) {
+        return "familiar-morning";
+      }
+      if ((relation?.meetings || 0) >= 1) {
+        return "platform-check";
+      }
+      return "intro";
+    },
+    nodes: {
+      intro: {
+        title: "역 앞 벤치 옆에서 가방을 멘 직장인 여자가 휴대폰 시계를 다시 확인한다",
+        lines: [
+          "\"지각은 아닌데, 애매하게 서두르게 되는 시간대네요.\"",
+          "여자는 피곤한 기색 속에서도 예의는 놓치지 않은 채 역 입구와 전광판을 번갈아 본다.",
+        ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "가방끈을 고쳐 쥔 직장인 여자가 먼저 짧게 시선을 맞추고 시간을 확인한다",
+            lines: [
+              "\"이 시간엔 다들 표정이 비슷하죠. 급한데 티는 덜 내려고 하고.\"",
+              "짧은 미소가 스쳤다가 사라지지만, 경계보단 대화를 받아줄 여유가 조금 더 있어 보인다.",
+            ],
+          },
+        },
+        choices: [
+          { label: "출근길이 늘 이렇게 빠듯하냐고 묻는다", next: "rush-talk" },
+          { label: "역 앞 분위기가 항상 이렇냐고 묻는다", next: "station-talk" },
+          { label: "짧게 인사만 하고 지나간다", next: "leave" },
+        ],
+      },
+      "rush-talk": {
+        lines: [
+          "\"늦을 것 같진 않은데, 사람 많은 시간엔 괜히 마음이 먼저 뛰어요.\"",
+          "여자는 한숨처럼 웃고는 휴대폰 화면을 끄며 가방끈을 다시 한번 추켜올린다.",
+        ],
+        choices: [
+          {
+            label: "오늘도 무난히 지나가길 바란다고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "짧은 출근길 대화",
+                text: "직장인 여자가 짧게 웃고는 역 입구 쪽으로 시선을 돌렸다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞 직장인과 출근길 이야기를 나눴다",
+                body: "바쁜 시간인데도 짧은 한마디를 받아주는 여유가 의외로 또렷하게 남았다.",
+                tags: ["NPC", "역앞", "직장인"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+                attractionDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      "station-talk": {
+        lines: [
+          "\"사람은 많아도 흐름이 일정해서요. 익숙해지면 오히려 마음이 덜 복잡해져요.\"",
+          "그 말투는 차분한데, 몸은 이미 다음 동선으로 넘어갈 준비를 끝낸 사람처럼 정돈되어 있다.",
+        ],
+        choices: [
+          {
+            label: "그 말이 왠지 이해된다고 답한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "역 앞 리듬",
+                text: "직장인 여자가 고개를 끄덕이고는 다시 출근 동선을 정리했다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞 직장인이 익숙한 리듬에 대해 말했다",
+                body: "사람 많은 역 앞에서도 자기 흐름을 잃지 않는 사람 같다는 인상이 남았다.",
+                tags: ["NPC", "통근", "역앞"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "여자는 짧게 고개만 숙인 뒤 다시 역 입구 쪽을 바라본다.",
+        ],
+        choices: [
+          {
+            label: "역 앞을 다시 둘러본다",
+            end: true,
+          },
+        ],
+      },
+      "platform-check": {
+        title: "며칠 전 봤던 직장인 여자가 역 앞 안내판과 휴대폰 시간을 번갈아 맞춰본다",
+        lines: [
+          "\"전광판이랑 폰 시간은 늘 비슷한데, 이상하게 둘 다 확인하게 되네요.\"",
+          "이제는 낯선 사람을 상대하는 표정보다, 잠깐 말을 섞을 수 있는 사람을 보는 눈빛에 더 가깝다.",
+        ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "직장인 여자가 안내판을 확인하다가 널 보고 먼저 가볍게 웃는다",
+            lines: [
+              "\"또 이 시간대네요. 출근길 루틴이 비슷한가 봐요.\"",
+              "짧은 말인데도 예전보다 분명히 부드럽게 이어지는 분위기가 있다.",
+            ],
+          },
+        },
+        choices: [
+          { label: "늘 같은 시간대에 마주친다고 말한다", next: "routine" },
+          { label: "오늘은 덜 바빠 보인다고 말한다", next: "softer" },
+        ],
+      },
+      routine: {
+        lines: [
+          "\"그러네요. 같은 풍경을 자주 보면 얼굴도 기억에 남나 봐요.\"",
+          "여자는 괜히 웃음을 숨기듯 시선을 옆으로 흘리다가도 다시 네 쪽으로 돌아온다.",
+        ],
+        choices: [
+          {
+            label: "무리하지 말고 오늘도 잘 버티라고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "익숙한 얼굴",
+                text: "직장인 여자가 짧게 웃고는 오늘 일정도 버텨보겠다고 말했다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞에서 익숙한 얼굴이 되어가는 기분이 들었다",
+                body: "지나가는 사람 중 하나가 아니라, 서로 기억하는 얼굴이 된 것 같은 감각이 남았다.",
+                tags: ["NPC", "역앞", "통근"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+                attractionDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      softer: {
+        lines: [
+          "\"오늘은 첫 일정이 조금 늦게 시작해서요. 이럴 때만 숨 돌리는 기분이 들어요.\"",
+          "그녀는 잠깐 어깨 힘을 풀었다가 다시 가방끈을 매만지며 평소 표정으로 돌아간다.",
+        ],
+        choices: [
+          {
+            label: "그 잠깐의 여유가 오래 갔으면 좋겠다고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "잠깐의 여유",
+                text: "직장인 여자가 고맙다는 듯 눈웃음을 짓고 다시 시간을 확인했다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞 직장인의 잠깐의 여유를 들여다봤다",
+                body: "바쁜 사람일수록 짧은 여유를 더 소중하게 여긴다는 분위기가 잔잔하게 남았다.",
+                tags: ["NPC", "직장인", "대화"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      "familiar-morning": {
+        title: "직장인 여자가 역 입구 쪽을 보다가 너를 발견하고 먼저 고개를 가볍게 든다",
+        lines: [
+          "\"이제는 이 시간대에 마주치면 좀 덜 피곤한 기분이 드네요.\"",
+          "말은 담백한데, 예전보다 분명히 너를 한 사람으로 받아들이는 온도가 느껴진다.",
+        ],
+        appearanceVariants: {
+          level2Plus: {
+            title: "직장인 여자가 널 보자 먼저 미소를 얹고는 휴대폰을 잠깐 내려놓는다",
+            lines: [
+              "\"출근길에 아는 얼굴 하나 있는 게 생각보다 크네요.\"",
+              "짧은 말인데도 관계가 한 단계 부드러워진 공기가 또렷하게 감돈다.",
+            ],
+          },
+        },
+        choices: [
+          { label: "그 말이 괜히 반갑다고 답한다", next: "warmth" },
+          { label: "오늘 끝나고는 조금 쉬었으면 좋겠다고 말한다", next: "care" },
+        ],
+      },
+      warmth: {
+        lines: [
+          "\"반가운 건 저도 그래요. 바쁜 시간에 그런 감정 들기 쉽지 않은데.\"",
+          "여자는 짧게 웃고는 괜히 머리카락을 정리하며 시선을 한번 내려 깐다.",
+        ],
+        choices: [
+          {
+            label: "다음에 또 보자고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "조금 가까워진 거리",
+                text: "직장인 여자가 다음에도 이 시간대면 볼 수 있겠다고 조용히 답했다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞 직장인과 거리가 조금 가까워졌다",
+                body: "이제는 스쳐 지나가는 통근자가 아니라, 다음에 또 보고 싶은 사람처럼 느껴졌다.",
+                tags: ["NPC", "호감", "역앞"],
+              },
+              npcRelation: {
+                affinityDelta: 2,
+                attractionDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      care: {
+        lines: [
+          "\"그 말 들으니까 진짜 조금 버틸 만해지네요.\"",
+          "그녀는 짧게 숨을 고른 뒤, 오늘은 덜 각박하게 시작할 수 있을 것 같다고 작게 말한다.",
+        ],
+        choices: [
+          {
+            label: "오늘도 잘 다녀오라고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "출근길 응원",
+                text: "직장인 여자가 고개를 끄덕이며 오늘도 버텨보겠다고 했다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞 직장인에게 진심 어린 응원을 건넸다",
+                body: "서로의 하루를 조금은 덜 무겁게 만들어주는 대화처럼 느껴졌다.",
+                tags: ["NPC", "응원", "직장인"],
+              },
+              npcRelation: {
+                affinityDelta: 2,
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+  "street-passer-001": createBusyPasserbyDialogue({
+    title: "서류가방을 든 직장인이 앞만 보며 바쁜 걸음으로 지나간다",
+    introLine: "표정은 차분한데 발걸음은 한 번도 느려지지 않는다.",
+    brushOffLine: "\"죄송합니다. 지금은 좀 바빠서요.\"",
+    headlineText: "서류가방을 든 직장인은 짧게 사과하고 그대로 발걸음을 재촉한다.",
+  }),
+  "street-passer-002": createBusyPasserbyDialogue({
+    title: "지친 회사원이 숨을 고르면서도 시계를 몇 번이나 확인한다",
+    introLine: "피곤해 보이지만 멈춰 설 틈은 전혀 없어 보인다.",
+    brushOffLine: "\"죄송합니다. 일이 좀 바빠서요.\"",
+    headlineText: "지친 회사원은 고개를 숙여 사과하고 곧장 인파 속으로 섞여든다.",
+  }),
+  "street-passer-003": createBusyPasserbyDialogue({
+    title: "휴대폰을 보던 청년이 화면에서 눈을 떼지 않은 채 길을 건넌다",
+    introLine: "잠깐 멈출 수는 있어도 길게 대화할 분위기는 아니다.",
+    brushOffLine: "\"아, 죄송해요. 지금 급한 연락 기다리는 중이라서요.\"",
+    headlineText: "휴대폰을 보던 청년은 미안하다고 말한 뒤 다시 화면에 시선을 돌린다.",
+  }),
+  "street-passer-004": createBusyPasserbyDialogue({
+    title: "후드 차림 청년이 혼자 리듬을 타듯 가볍게 골목을 지나간다",
+    introLine: "잠깐 말을 붙일 순 있어도 오래 붙잡히진 않을 것 같다.",
+    brushOffLine: "\"미안해요. 다음에요. 지금은 좀 급해서요.\"",
+    headlineText: "후드 차림 청년은 짧게 웃어 보인 뒤 그대로 걸음을 옮긴다.",
+  }),
 };

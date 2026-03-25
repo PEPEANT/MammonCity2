@@ -1,6 +1,7 @@
 var cityMapUiState = window.cityMapUiState || {
   open: false,
   selectedLocationId: "",
+  cardOpen: false,
 };
 window.cityMapUiState = cityMapUiState;
 
@@ -15,6 +16,14 @@ function escapeCityMapHtml(text) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function syncCityMapQuickButtons() {
+  if (typeof getPhonePanelState !== "function" || typeof applyPhoneShellUi !== "function") {
+    return;
+  }
+
+  applyPhoneShellUi(ui, getPhonePanelState());
 }
 
 function ensureCityMapUi() {
@@ -61,6 +70,7 @@ function ensureCityMapUi() {
   ui.cityMapShellTitle = overlay.querySelector("#city-map-shell-title");
   ui.cityMapShellSubtitle = overlay.querySelector("#city-map-shell-subtitle");
   ui.cityMapCurrentName = overlay.querySelector("#city-map-current-name");
+  ui.cityMapCanvasWrap = overlay.querySelector(".city-map-canvas-wrap");
   ui.cityMapBoardViewport = overlay.querySelector(".city-map-board-viewport");
   ui.cityMapBoard = overlay.querySelector("#city-map-board");
   ui.cityMapLegend = overlay.querySelector("#city-map-legend");
@@ -80,7 +90,8 @@ function ensureCityMapSelection(targetState = state) {
   const currentLocationId = getCurrentCityMapLocationId(targetState);
 
   if (!cityMapUiState.selectedLocationId || !validNodeIds.has(cityMapUiState.selectedLocationId) || cityMapUiState.selectedLocationId === currentLocationId) {
-    cityMapUiState.selectedLocationId = getDefaultCityMapSelection(targetState);
+    cityMapUiState.selectedLocationId = "";
+    cityMapUiState.cardOpen = false;
   }
 
   return cityMapUiState.selectedLocationId;
@@ -96,6 +107,7 @@ function openCityMapOverlay(targetState = state) {
   }
 
   cityMapUiState.open = true;
+  cityMapUiState.cardOpen = false;
   ensureCityMapSelection(targetState);
   renderCityMapOverlay(targetState);
   return true;
@@ -108,13 +120,15 @@ function openCityMapOverlayToLocation(locationId = "", targetState = state) {
   if (normalizedLocationId) {
     cityMapUiState.selectedLocationId = normalizedLocationId;
   }
+  cityMapUiState.cardOpen = false;
   return openCityMapOverlay(targetState);
 }
 
 function hideCityMapOverlay(options = {}) {
-  const preserveSelection = options?.preserveSelection !== false;
+  const preserveSelection = options?.preserveSelection === true;
 
   cityMapUiState.open = false;
+  cityMapUiState.cardOpen = false;
   if (!preserveSelection) {
     cityMapUiState.selectedLocationId = "";
   }
@@ -127,6 +141,7 @@ function hideCityMapOverlay(options = {}) {
 
   document.body.classList.remove("city-map-modal-open");
   ui.game?.classList.remove("city-map-open");
+  syncCityMapQuickButtons();
 }
 
 function toggleCityMapOverlay(forceOpen) {
@@ -156,11 +171,13 @@ function getCityMapSelectedSummary(targetState = state) {
   const nodes = getCityMapNodes(targetState);
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
   const selectedNode = nodeMap.get(selectedLocationId) || null;
-  const summary = selectedLocationId ? getCityMapTravelSummary(selectedLocationId, targetState) : null;
+  const cardOpen = Boolean(selectedNode) && cityMapUiState.cardOpen === true;
+  const summary = cardOpen && selectedLocationId ? getCityMapTravelSummary(selectedLocationId, targetState) : null;
   const locationMap = getDayWorldLocationMap(targetState?.day || 1) || {};
   const selectedLocation = selectedNode ? locationMap[selectedNode.id] || {} : null;
 
   return {
+    cardOpen,
     selectedLocationId,
     nodes,
     nodeMap,
@@ -191,6 +208,105 @@ function buildCityMapZoneSvgMarkup(zones = []) {
   }).join("");
 }
 
+function getCityMapVisualLinkKey(link = {}) {
+  const ends = [String(link.from || "").trim(), String(link.to || "").trim()].sort();
+  return ends.join("::");
+}
+
+function normalizeCityMapVisualLinkStyle(style = "") {
+  return String(style || "").trim().toLowerCase() === "connector" ? "connector" : "near";
+}
+
+function getCityMapVisualLinks(nodeMap, links = [], targetState = state) {
+  const detailedLinks = links.map((link) => {
+    const fromNode = nodeMap.get(link.from);
+    const toNode = nodeMap.get(link.to);
+
+    if (!fromNode || !toNode) {
+      return null;
+    }
+
+    return {
+      ...link,
+      visualKey: getCityMapVisualLinkKey(link),
+      distance: Math.hypot(
+        Number(fromNode.x) - Number(toNode.x),
+        Number(fromNode.y) - Number(toNode.y),
+      ),
+    };
+  }).filter(Boolean);
+
+  const configuredLinks = Array.isArray(getDayCityMapConfig(targetState?.day)?.visualLinks)
+    ? getDayCityMapConfig(targetState?.day).visualLinks
+    : [];
+  if (configuredLinks.length) {
+    const actualLinkMap = new Map(detailedLinks.map((link) => [link.visualKey, link]));
+    const visibleLinks = [];
+    const seenKeys = new Set();
+
+    configuredLinks.forEach((link) => {
+      const from = String(link?.from || "").trim();
+      const to = String(link?.to || "").trim();
+      const visualKey = getCityMapVisualLinkKey({ from, to });
+
+      if (!from || !to || seenKeys.has(visualKey) || !nodeMap.has(from) || !nodeMap.has(to)) {
+        return;
+      }
+
+      const actualLink = actualLinkMap.get(visualKey) || null;
+      visibleLinks.push({
+        from,
+        to,
+        visualKey,
+        mode: link?.mode === "bus"
+          ? "bus"
+          : (link?.mode === "walk" ? "walk" : (actualLink?.mode === "bus" ? "bus" : "walk")),
+        minutes: Math.max(0, Math.round(Number(link?.minutes ?? actualLink?.minutes) || 0)),
+        style: normalizeCityMapVisualLinkStyle(link?.style),
+      });
+      seenKeys.add(visualKey);
+    });
+
+    return visibleLinks;
+  }
+
+  const visibleLinks = new Map();
+  const endpointUsage = new Map();
+  const registerLink = (link) => {
+    if (!link || visibleLinks.has(link.visualKey)) {
+      return;
+    }
+
+    visibleLinks.set(link.visualKey, { ...link, style: "near" });
+    endpointUsage.set(link.from, (endpointUsage.get(link.from) || 0) + 1);
+    endpointUsage.set(link.to, (endpointUsage.get(link.to) || 0) + 1);
+  };
+
+  detailedLinks
+    .filter((link) => link.mode === "walk" && (link.minutes <= 8 || link.distance <= 12))
+    .sort((left, right) => left.minutes - right.minutes || left.distance - right.distance)
+    .forEach(registerLink);
+
+  [...nodeMap.keys()].forEach((nodeId) => {
+    if ((endpointUsage.get(nodeId) || 0) > 0) {
+      return;
+    }
+
+    const fallbackLink = detailedLinks
+      .filter((link) => link.from === nodeId || link.to === nodeId)
+      .sort((left, right) => {
+        if (left.mode !== right.mode) {
+          return left.mode === "walk" ? -1 : 1;
+        }
+        return left.minutes - right.minutes || left.distance - right.distance;
+      })[0];
+
+    registerLink(fallbackLink);
+  });
+
+  return [...visibleLinks.values()];
+}
+
 function buildCityMapRoadSvgMarkup(nodeMap, links = []) {
   return links.map((link) => {
     const fromNode = nodeMap.get(link.from);
@@ -200,9 +316,10 @@ function buildCityMapRoadSvgMarkup(nodeMap, links = []) {
       return "";
     }
 
+    const styleClass = link.style === "connector" ? "is-connector" : "is-near";
     return `
       <line
-        class="city-map-road-line ${link.mode === "bus" ? "is-bus" : "is-walk"}"
+        class="city-map-road-line ${styleClass}"
         x1="${fromNode.x}"
         y1="${fromNode.y}"
         x2="${toNode.x}"
@@ -259,7 +376,7 @@ function buildCityMapNodeMarkup(nodes = [], targetState = state) {
       "city-map-node",
       getCityMapNodeToneClass(node),
       node.current ? "is-current" : "",
-      cityMapUiState.selectedLocationId === node.id ? "is-selected" : "",
+      cityMapUiState.cardOpen && cityMapUiState.selectedLocationId === node.id ? "is-selected" : "",
       !node.unlocked ? "is-locked" : "",
     ].filter(Boolean).join(" ");
     const icon = node.unlocked ? (node.icon || "📍") : "🔒";
@@ -267,6 +384,12 @@ function buildCityMapNodeMarkup(nodes = [], targetState = state) {
       ? '<span class="city-map-node-status is-current">현재</span>'
       : (!node.unlocked ? '<span class="city-map-node-status is-locked">미해금</span>' : "");
     const disabled = node.current || !node.unlocked ? "disabled" : "";
+    const nodeStyle = [
+      `left:${node.x}%`,
+      `top:${node.y}%`,
+      `--city-map-label-offset-x:${Number(node.labelOffsetX) || 0}px`,
+      `--city-map-label-offset-y:${Number(node.labelOffsetY) || 0}px`,
+    ].join(";");
     const ariaLabel = node.current
       ? `${node.fullLabel || node.label} 현재 위치`
       : `${node.fullLabel || node.label}${node.unlocked ? "" : " 미해금"}`;
@@ -275,7 +398,7 @@ function buildCityMapNodeMarkup(nodes = [], targetState = state) {
       <button
         type="button"
         class="${classes}"
-        style="left:${node.x}%;top:${node.y}%"
+        style="${nodeStyle}"
         data-city-map-node="${escapeCityMapHtml(node.id)}"
         aria-label="${escapeCityMapHtml(ariaLabel)}"
         ${disabled}
@@ -292,7 +415,7 @@ function buildCityMapNodeMarkup(nodes = [], targetState = state) {
 
 function buildCityMapBoardMarkup(targetState = state) {
   const { nodes, nodeMap, summary } = getCityMapSelectedSummary(targetState);
-  const links = getCityMapLinks(targetState);
+  const links = getCityMapVisualLinks(nodeMap, getCityMapLinks(targetState), targetState);
   const zones = getCityMapZones(targetState);
   const zoneMarkup = buildCityMapZoneSvgMarkup(zones);
   const roadMarkup = buildCityMapRoadSvgMarkup(nodeMap, links);
@@ -317,12 +440,12 @@ function buildCityMapBoardMarkup(targetState = state) {
 function buildCityMapLegendMarkup() {
   return `
     <div class="city-map-legend-item">
-      <span class="city-map-legend-line is-bus" aria-hidden="true"></span>
-      <span class="city-map-legend-text">버스 연계</span>
+      <span class="city-map-legend-line is-near" aria-hidden="true"></span>
+      <span class="city-map-legend-text">가까운 연결</span>
     </div>
     <div class="city-map-legend-item">
-      <span class="city-map-legend-line is-walk" aria-hidden="true"></span>
-      <span class="city-map-legend-text">도보 이동</span>
+      <span class="city-map-legend-line is-route" aria-hidden="true"></span>
+      <span class="city-map-legend-text">선택 경로</span>
     </div>
     <div class="city-map-legend-item">
       <span class="city-map-legend-dot is-current" aria-hidden="true"></span>
@@ -352,7 +475,6 @@ function buildCityMapMethodMarkup(summary = null) {
         <span class="city-map-method-icon" aria-hidden="true">${isBus ? "🚌" : "🚶"}</span>
         <span class="city-map-method-copy">
           <span class="city-map-method-label">${isBus ? "버스" : "도보"}</span>
-          <span class="city-map-method-note">${isBus ? "빠른 구간 이동" : "골목 세부 이동"}</span>
         </span>
       </div>
     `;
@@ -360,21 +482,13 @@ function buildCityMapMethodMarkup(summary = null) {
 }
 
 function buildCityMapCardMarkup(targetState = state) {
-  const { selectedLocationId, selectedNode, summary, selectedLocation } = getCityMapSelectedSummary(targetState);
+  const { selectedLocationId, selectedNode, summary, cardOpen } = getCityMapSelectedSummary(targetState);
 
-  if (!selectedNode) {
-    return `
-      <div class="city-map-travel-card-handle" aria-hidden="true"></div>
-      <div class="city-map-travel-empty">
-        <div class="city-map-travel-empty-kicker">CITY MOVE</div>
-        <div class="city-map-travel-empty-title">목적지를 고르세요</div>
-        <div class="city-map-travel-empty-copy">지도에서 원하는 위치를 누르면 이동 시간과 도착 예정 시각을 바로 확인할 수 있습니다.</div>
-      </div>
-    `;
+  if (!selectedNode || !cardOpen) {
+    return "";
   }
 
   const districtLabel = getCityMapDistrictLabel(selectedNode, targetState);
-  const locationNote = selectedLocation?.mapNode?.note || selectedLocation?.note || selectedLocation?.title || "";
   const locationIcon = selectedNode.unlocked ? (selectedNode.icon || "📍") : "🔒";
 
   if (!summary?.canTravel) {
@@ -385,16 +499,14 @@ function buildCityMapCardMarkup(targetState = state) {
         <div class="city-map-destination-copy">
           <div class="city-map-destination-district">${escapeCityMapHtml(districtLabel || "현재 위치")}</div>
           <div class="city-map-destination-name">${escapeCityMapHtml(selectedNode.fullLabel || selectedNode.label)}</div>
-          <div class="city-map-destination-note">${escapeCityMapHtml(locationNote || "지금 이 위치에 서 있습니다.")}</div>
         </div>
       </div>
       <div class="city-map-travel-empty is-current">
         <div class="city-map-travel-empty-kicker">CURRENT</div>
         <div class="city-map-travel-empty-title">현재 위치입니다</div>
-        <div class="city-map-travel-empty-copy">다른 목적지를 선택하면 이동 계획 카드가 아래에서 바로 열립니다.</div>
       </div>
       <div class="city-map-travel-actions is-single">
-        <button type="button" class="city-map-travel-btn is-secondary" data-city-map-action="close">닫기</button>
+        <button type="button" class="city-map-travel-btn is-secondary" data-city-map-action="collapse">닫기</button>
       </div>
     `;
   }
@@ -406,7 +518,6 @@ function buildCityMapCardMarkup(targetState = state) {
       <div class="city-map-destination-copy">
         <div class="city-map-destination-district">${escapeCityMapHtml(districtLabel || "이동 지역")}</div>
         <div class="city-map-destination-name">${escapeCityMapHtml(summary.targetLabel)}</div>
-        <div class="city-map-destination-note">${escapeCityMapHtml(locationNote)}</div>
       </div>
     </div>
     <div class="city-map-travel-methods">
@@ -428,7 +539,7 @@ function buildCityMapCardMarkup(targetState = state) {
       <div class="city-map-travel-route-value">${escapeCityMapHtml(summary.routeText || `${summary.currentLabel} -> ${summary.targetLabel}`)}</div>
     </div>
     <div class="city-map-travel-actions">
-      <button type="button" class="city-map-travel-btn is-secondary" data-city-map-action="close">취소</button>
+      <button type="button" class="city-map-travel-btn is-secondary" data-city-map-action="collapse">취소</button>
       <button type="button" class="city-map-travel-btn is-primary" data-city-map-action="confirm" data-city-map-target="${escapeCityMapHtml(selectedLocationId)}">🗺️ 이동하기</button>
     </div>
   `;
@@ -449,7 +560,7 @@ function renderCityMapOverlay(targetState = state) {
 
   const config = getDayCityMapConfig(targetState?.day);
   const title = config?.title || "배금시 이동 지도";
-  const subtitle = config?.subtitle || "도시 전체 지도를 보고 원하는 위치를 고른 뒤 이동합니다.";
+  const subtitle = String(config?.subtitle || "").trim();
   const currentLabel = typeof getCurrentLocationLabel === "function"
     ? getCurrentLocationLabel(targetState)
     : "";
@@ -459,6 +570,7 @@ function renderCityMapOverlay(targetState = state) {
   }
   if (ui.cityMapShellSubtitle) {
     ui.cityMapShellSubtitle.textContent = subtitle;
+    ui.cityMapShellSubtitle.hidden = !subtitle;
   }
   if (ui.cityMapCurrentName) {
     ui.cityMapCurrentName.textContent = currentLabel;
@@ -470,7 +582,13 @@ function renderCityMapOverlay(targetState = state) {
     ui.cityMapLegend.innerHTML = buildCityMapLegendMarkup();
   }
   if (ui.cityMapCard) {
-    ui.cityMapCard.innerHTML = buildCityMapCardMarkup(targetState);
+    const isCardVisible = cityMapUiState.cardOpen && Boolean(cityMapUiState.selectedLocationId);
+    ui.cityMapCard.hidden = !isCardVisible;
+    ui.cityMapCard.setAttribute("aria-hidden", isCardVisible ? "false" : "true");
+    ui.cityMapCard.innerHTML = isCardVisible ? buildCityMapCardMarkup(targetState) : "";
+  }
+  if (ui.cityMapCanvasWrap) {
+    ui.cityMapCanvasWrap.classList.toggle("is-card-open", cityMapUiState.cardOpen && Boolean(cityMapUiState.selectedLocationId));
   }
 
   overlay.hidden = false;
@@ -478,6 +596,7 @@ function renderCityMapOverlay(targetState = state) {
   overlay.classList.add("is-open");
   document.body.classList.add("city-map-modal-open");
   ui.game?.classList.add("city-map-open");
+  syncCityMapQuickButtons();
 }
 
 function confirmCityMapTravel(targetLocationId = cityMapUiState.selectedLocationId) {
@@ -507,6 +626,12 @@ function handleCityMapOverlayClick(event) {
       hideCityMapOverlay();
       return;
     }
+    if (action === "collapse") {
+      cityMapUiState.selectedLocationId = "";
+      cityMapUiState.cardOpen = false;
+      renderCityMapOverlay(state);
+      return;
+    }
     if (action === "confirm") {
       confirmCityMapTravel(actionTarget.dataset.cityMapTarget || cityMapUiState.selectedLocationId);
       return;
@@ -519,5 +644,6 @@ function handleCityMapOverlayClick(event) {
   }
 
   cityMapUiState.selectedLocationId = nodeTarget.dataset.cityMapNode || "";
+  cityMapUiState.cardOpen = Boolean(cityMapUiState.selectedLocationId);
   renderCityMapOverlay(state);
 }

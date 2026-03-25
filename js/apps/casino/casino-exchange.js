@@ -186,7 +186,7 @@ function buildCasinoExchangeScreenMarkup({ stageMode = false, targetState = stat
     <div class="casino-app ${stageMode ? "is-stage" : ""}">
       <div class="casino-app-top">
         <div class="casino-app-copy">
-          <span class="casino-app-kicker">EXCHANGE</span>
+          ${stageMode ? "" : '<span class="casino-app-kicker">EXCHANGE</span>'}
           <div class="casino-app-title">카지노 환전소</div>
         </div>
         <div class="casino-app-top-actions">

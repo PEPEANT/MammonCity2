@@ -6,7 +6,8 @@ const PHONE_APP_ID_ALIASES = {
   store: "playstore",
 };
 
-const PHONE_DEFAULT_INSTALLED_APPS = ["bank", "dis", "market", "news", "playstore", "call", "gallery", "jobs", "bus"];
+const PHONE_DEFAULT_INSTALLED_APPS = ["bank", "dis", "news", "playstore", "call", "gallery"];
+const PHONE_OPTIONAL_INSTALL_APP_IDS = new Set(["market", "jobs", "bus"]);
 const PHONE_REMOVED_APP_IDS = new Set(["casino"]);
 
 function normalizePhoneAppId(appId = "") {
@@ -61,13 +62,44 @@ function createDefaultInstalledPhoneApps() {
   return [...PHONE_DEFAULT_INSTALLED_APPS];
 }
 
-function normalizeInstalledPhoneAppIds(appIds) {
+function createDefaultManualPhoneInstalledApps() {
+  return [];
+}
+
+function normalizeManualPhoneAppIds(appIds) {
   const source = Array.isArray(appIds) ? appIds : [];
+  const normalized = [];
+
+  source.forEach((appId) => {
+    const normalizedAppId = normalizePhoneAppId(appId);
+    if (
+      !normalizedAppId
+      || PHONE_REMOVED_APP_IDS.has(normalizedAppId)
+      || !PHONE_OPTIONAL_INSTALL_APP_IDS.has(normalizedAppId)
+      || normalized.includes(normalizedAppId)
+    ) {
+      return;
+    }
+    normalized.push(normalizedAppId);
+  });
+
+  return normalized;
+}
+
+function normalizeInstalledPhoneAppIds(appIds, manualInstalledApps = []) {
+  const source = Array.isArray(appIds) ? appIds : [];
+  const normalizedManualApps = normalizeManualPhoneAppIds(manualInstalledApps);
+  const optionalAllowed = new Set(normalizedManualApps);
   const normalized = [];
 
   [...PHONE_DEFAULT_INSTALLED_APPS, ...source].forEach((appId) => {
     const normalizedAppId = normalizePhoneAppId(appId);
-    if (!normalizedAppId || PHONE_REMOVED_APP_IDS.has(normalizedAppId) || normalized.includes(normalizedAppId)) {
+    if (
+      !normalizedAppId
+      || PHONE_REMOVED_APP_IDS.has(normalizedAppId)
+      || normalized.includes(normalizedAppId)
+      || (PHONE_OPTIONAL_INSTALL_APP_IDS.has(normalizedAppId) && !optionalAllowed.has(normalizedAppId))
+    ) {
       return;
     }
     normalized.push(normalizedAppId);
@@ -83,6 +115,7 @@ function createDefaultPhoneDeviceState() {
     route: "home",
     usedToday: false,
     installedApps: createDefaultInstalledPhoneApps(),
+    manualInstalledApps: createDefaultManualPhoneInstalledApps(),
   };
 }
 
@@ -101,6 +134,11 @@ function syncPhoneSessionState(targetState = state) {
   const legacyRoute = typeof nested.route === "string" && nested.route
     ? nested.route
     : (typeof targetState.phoneView === "string" && targetState.phoneView ? targetState.phoneView : "home");
+  const manualInstalledApps = normalizeManualPhoneAppIds(
+    Array.isArray(targetState.phoneManualInstalledApps)
+      ? targetState.phoneManualInstalledApps
+      : nested.manualInstalledApps,
+  );
   const resolvedRoute = normalizePhoneRoute(
     legacyRoute,
   );
@@ -108,6 +146,7 @@ function syncPhoneSessionState(targetState = state) {
     Array.isArray(targetState.installedPhoneApps)
       ? targetState.installedPhoneApps
       : nested.installedApps,
+    manualInstalledApps,
   );
   const routeInfo = parsePhoneRoute(resolvedRoute);
   const safeRoute = PHONE_REMOVED_APP_IDS.has(routeInfo.appId)
@@ -125,6 +164,7 @@ function syncPhoneSessionState(targetState = state) {
       ? targetState.phoneUsedToday
       : (typeof nested.usedToday === "boolean" ? nested.usedToday : defaults.usedToday),
     installedApps,
+    manualInstalledApps,
   };
 
   targetState.devices = {
@@ -136,6 +176,7 @@ function syncPhoneSessionState(targetState = state) {
   targetState.phoneView = safeRoute;
   targetState.phoneUsedToday = resolved.usedToday;
   targetState.installedPhoneApps = [...installedApps];
+  targetState.phoneManualInstalledApps = [...manualInstalledApps];
 
   return resolved;
 }
@@ -159,9 +200,22 @@ function patchPhoneSession(targetState = state, patch = {}) {
     route: Object.prototype.hasOwnProperty.call(patch, "route")
       ? normalizePhoneRoute(patch.route)
       : currentPhoneState.route,
+    manualInstalledApps: Object.prototype.hasOwnProperty.call(patch, "manualInstalledApps")
+      ? normalizeManualPhoneAppIds(patch.manualInstalledApps)
+      : [...(currentPhoneState.manualInstalledApps || [])],
     installedApps: Object.prototype.hasOwnProperty.call(patch, "installedApps")
-      ? normalizeInstalledPhoneAppIds(patch.installedApps)
-      : [...currentPhoneState.installedApps],
+      ? normalizeInstalledPhoneAppIds(
+        patch.installedApps,
+        Object.prototype.hasOwnProperty.call(patch, "manualInstalledApps")
+          ? patch.manualInstalledApps
+          : currentPhoneState.manualInstalledApps,
+      )
+      : normalizeInstalledPhoneAppIds(
+        currentPhoneState.installedApps,
+        Object.prototype.hasOwnProperty.call(patch, "manualInstalledApps")
+          ? patch.manualInstalledApps
+          : currentPhoneState.manualInstalledApps,
+      ),
   };
   const routeInfo = parsePhoneRoute(nextPhoneState.route);
 
@@ -174,6 +228,7 @@ function patchPhoneSession(targetState = state, patch = {}) {
   targetState.phoneView = routeInfo.route;
   targetState.phoneUsedToday = nextPhoneState.usedToday;
   targetState.installedPhoneApps = [...nextPhoneState.installedApps];
+  targetState.phoneManualInstalledApps = [...nextPhoneState.manualInstalledApps];
 
   return nextPhoneState;
 }
@@ -206,6 +261,10 @@ function installPhoneApp(appId, targetState = state) {
   }
 
   const installedApps = [...getInstalledPhoneAppIds(targetState), normalizedAppId];
-  patchPhoneSession(targetState, { installedApps });
+  const phoneState = getPhoneSessionState(targetState);
+  const manualInstalledApps = PHONE_OPTIONAL_INSTALL_APP_IDS.has(normalizedAppId)
+    ? [...(phoneState.manualInstalledApps || []), normalizedAppId]
+    : [...(phoneState.manualInstalledApps || [])];
+  patchPhoneSession(targetState, { installedApps, manualInstalledApps });
   return true;
 }

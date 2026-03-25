@@ -266,6 +266,15 @@ const COIN_TYPES = {
     description: "가장 널리 알려진 대표 코인. 밈 코인보다 느리지만 자산 규모가 크고 시장 심리를 강하게 탄다.",
     isMeme: false,
   },
+  ETH: {
+    label: "이더리움",
+    symbol: "ETH",
+    volatility: 2.2,
+    emoji: "◆",
+    shortDescription: "스마트 컨트랙트 메이저",
+    description: "비트코인 다음으로 거래가 두꺼운 메이저 코인. 알트장 심리를 끌고 가지만 잡코인보다는 훨씬 단단하다.",
+    isMeme: false,
+  },
   MAMC: {
     label: "맘코인",
     symbol: "MAMC",
@@ -305,6 +314,42 @@ const COIN_TYPES = {
 };
 
 const COIN_EVENT_RULES = {
+  BTC: [
+    {
+      id: "etf-demand",
+      adjustment: 0.05,
+      severity: "normal",
+      headline: "비트코인, 기관 수요 기대에 매수세 유입",
+      body: "현물 자금 유입 기대가 다시 붙으면서 메이저 코인 쪽으로 자금이 천천히 모이고 있다.",
+      topics: ["비트코인", "기관수요", "메이저코인"],
+    },
+    {
+      id: "macro-cooling",
+      adjustment: -0.04,
+      severity: "normal",
+      headline: "비트코인, 거시 변수 경계감에 숨 고르기",
+      body: "단기 급등 뒤 차익 실현이 나오며 메이저 코인 전반이 잠시 쉬어 가는 분위기다.",
+      topics: ["비트코인", "거시변수", "차익실현"],
+    },
+  ],
+  ETH: [
+    {
+      id: "ecosystem-demand",
+      adjustment: 0.07,
+      severity: "normal",
+      headline: "이더리움, 생태계 수요 기대에 동반 강세",
+      body: "체인 사용량과 대형 자금 유입 기대가 붙으며 이더리움이 메이저 알트 중심으로 움직이고 있다.",
+      topics: ["이더리움", "생태계", "메이저알트"],
+    },
+    {
+      id: "fee-pressure",
+      adjustment: -0.05,
+      severity: "normal",
+      headline: "이더리움, 네트워크 부담 경계에 눌림",
+      body: "수수료 부담과 차익 실현이 겹치며 단기 상승폭을 일부 되돌리는 흐름이 나왔다.",
+      topics: ["이더리움", "수수료부담", "눌림"],
+    },
+  ],
   MAMC: [
     {
       id: "steady-flow",
@@ -427,14 +472,73 @@ const COIN_EVENT_RULES = {
   ],
 };
 
+const COIN_DELISTING_SCHEDULE = Object.freeze([
+  {
+    symbol: "MOON",
+    day: 8,
+    phaseLabel: "후퇴 초입",
+    reason: "상장 루머가 꺼지고 유동성이 말라 상장폐지 수순에 들어갔다.",
+  },
+  {
+    symbol: "DIAB",
+    day: 9,
+    phaseLabel: "후퇴기",
+    reason: "공포 심리만 남은 채 거래량이 끊기며 상장폐지가 확정됐다.",
+  },
+  {
+    symbol: "MAMC",
+    day: 10,
+    phaseLabel: "공포기",
+    reason: "막판 투매를 버티지 못하고 시장에서 퇴출됐다.",
+  },
+]);
+
 function getCoinTypeInfo(coinType) {
-  return COIN_TYPES[coinType] || COIN_TYPES.MAMC;
+  const normalizedCoinType = String(coinType || "").trim().toUpperCase();
+  return COIN_TYPES[normalizedCoinType] || COIN_TYPES.BTC;
+}
+
+function getCoinListingStatus(coinType, targetState = state) {
+  const normalizedCoinType = String(coinType || "").trim().toUpperCase();
+  const resolvedCoin = getCoinTypeInfo(normalizedCoinType);
+  const economy = getTodayEconomy(targetState);
+  const delistingEntry = COIN_DELISTING_SCHEDULE.find((entry) => entry.symbol === resolvedCoin.symbol) || null;
+  const isDelisted = Boolean(delistingEntry && economy.day >= delistingEntry.day);
+
+  return {
+    symbol: resolvedCoin.symbol,
+    coin: resolvedCoin,
+    day: economy.day,
+    isDelisted,
+    isListed: !isDelisted,
+    delistingEntry,
+  };
+}
+
+function isCoinDelisted(coinType, targetState = state) {
+  return getCoinListingStatus(coinType, targetState).isDelisted;
+}
+
+function getTradableCoinEntries(targetState = state) {
+  return Object.entries(COIN_TYPES).filter(([symbol]) => !isCoinDelisted(symbol, targetState));
 }
 
 function getCoinEventRule(coinType, targetState = state) {
-  const rules = COIN_EVENT_RULES[coinType] || COIN_EVENT_RULES.MAMC;
-  const coin = getCoinTypeInfo(coinType);
+  const listingStatus = getCoinListingStatus(coinType, targetState);
+  const coin = listingStatus.coin;
   const economy = getTodayEconomy(targetState);
+  if (listingStatus.isDelisted) {
+    return {
+      id: `delisted-${coin.symbol.toLowerCase()}`,
+      adjustment: -1,
+      severity: "extreme",
+      headline: `${coin.label}, ${listingStatus.delistingEntry?.phaseLabel || economy.phaseLabel}에 상장폐지`,
+      body: listingStatus.delistingEntry?.reason || `${coin.label} 거래가 중단되고 상장폐지 처리됐다.`,
+      topics: [coin.label, coin.symbol, "상장폐지"],
+    };
+  }
+
+  const rules = COIN_EVENT_RULES[coin.symbol] || COIN_EVENT_RULES.BTC || COIN_EVENT_RULES.MAMC;
   let eligibleRules = rules;
 
   if (economy.cryptoBias >= 0.08) {
@@ -462,8 +566,30 @@ function getCoinEventRule(coinType, targetState = state) {
 function getCoinMarketSnapshot(coinType, targetState = state) {
   const stockSnapshot = getStockMarketSnapshot(targetState);
   const economy = getTodayEconomy(targetState);
-  const coin = getCoinTypeInfo(coinType);
+  const listingStatus = getCoinListingStatus(coinType, targetState);
+  const coin = listingStatus.coin;
   const event = getCoinEventRule(coinType, targetState);
+  if (listingStatus.isDelisted) {
+    return {
+      ...coin,
+      event,
+      returnRate: -1,
+      direction: "down",
+      isDelisted: true,
+      movementText: formatSignedEconomyPercent(-100),
+      eventKicker: "상장폐지",
+      monthLabel: economy.monthLabel,
+      phaseLabel: economy.phaseLabel,
+      fearGreed: economy.fearGreed,
+      topics: [...new Set([
+        coin.label,
+        coin.symbol,
+        "상장폐지",
+        ...(Array.isArray(event.topics) ? event.topics : []),
+      ].filter(Boolean))],
+    };
+  }
+
   const phaseBoost = 1 + (Math.max(0, stockSnapshot.stockVolatility - 1) * (coin.isMeme ? 1.15 : 0.65));
   const eventBoost = coin.isMeme ? 0.82 : 0.56;
   const sentimentBoost = ((economy.fearGreed - 50) / 100) * (coin.isMeme ? 0.10 : 0.06);
@@ -482,6 +608,7 @@ function getCoinMarketSnapshot(coinType, targetState = state) {
     event,
     returnRate,
     direction,
+    isDelisted: false,
     movementText: formatSignedEconomyPercent(returnRate * 100),
     eventKicker: coin.isMeme
       ? (event.severity === "extreme" ? "초고변동 이벤트" : "밈코인 속보")

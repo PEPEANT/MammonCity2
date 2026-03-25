@@ -42,6 +42,7 @@ const CHARACTER_ART = {
   },
   convenienceCashier: {
     default: "assets/characters/npc/convenience-cashier/default.png",
+    homeInvite: "assets/characters/npc/convenience-cashier/home-invite.png",
     postSurgery: "assets/characters/npc/convenience-cashier/post-surgery.png",
   },
   casinoHomeless: {
@@ -52,6 +53,27 @@ const CHARACTER_ART = {
   },
   cityKnitCommuter: {
     default: "assets/characters/npc/city-knit-commuter/default.png",
+  },
+  stationOfficeCommuter: {
+    default: "assets/characters/npc/station-office-commuter/default.png",
+  },
+  streetPasser001: {
+    default: "assets/characters/npc/street-passer-001/default.png",
+  },
+  streetPasser002: {
+    default: "assets/characters/npc/street-passer-002/default.png",
+  },
+  streetPasser003: {
+    default: "assets/characters/npc/street-passer-003/default.png",
+  },
+  streetPasser004: {
+    default: "assets/characters/npc/street-passer-004/default.png",
+  },
+  downtownGolddigger: {
+    default: "assets/characters/npc/downtown-golddigger/default.png",
+  },
+  cityCareerWoman: {
+    default: "assets/characters/npc/city-career-woman/default.png",
   },
   stationAltStudent: {
     default: "assets/characters/npc/station-alt-student/default.png",
@@ -65,8 +87,14 @@ const CHARACTER_ART = {
   campusGlassesStudent: {
     default: "assets/characters/npc/campus-glasses-student/default.png",
   },
+  campusGlassesGirl: {
+    default: "assets/characters/npc/campus-glasses-girl/default.png",
+  },
   cultRecruiter: {
     default: "assets/characters/npc/cult-recruiter/default.png",
+  },
+  cultRecruiterYoung: {
+    default: "assets/characters/npc/cult-recruiter-young/default.png",
   },
   romanceScammer: {
     default: "assets/characters/npc/romance-scammer/default.png",

@@ -1,55 +1,105 @@
-function buildCallContactActions(contact = {}, { compact = false } = {}) {
+function buildCallIncomingScreenMarkup(targetState = state) {
+  const pending = targetState?.callPending || {};
+  const label = pending.label || "알 수 없음";
+  const kind = pending.kind || "family";
+  const contactId = pending.contactId || "";
+  const initial = label.charAt(0);
+  const avatarColorClass = kind === "romance" ? " is-romance" : " is-family";
+
+  return `
+    <div class="call-incoming-shell">
+      <div class="call-incoming-top">
+        <div class="call-incoming-status">전화 연결 중...</div>
+        <div class="call-incoming-avatar${avatarColorClass}">${escapePhoneAppHtml(initial)}</div>
+        <div class="call-incoming-name">${escapePhoneAppHtml(label)}</div>
+        <div class="call-incoming-tag">${kind === "romance" ? "연락처" : "가족"}</div>
+      </div>
+
+      <div class="call-incoming-actions">
+        <div class="call-incoming-action-wrap">
+          ${buildPhoneAppActionButtonMarkup({
+            action: "call-reject-incoming",
+            label: "📵",
+            className: "call-incoming-btn is-reject",
+          })}
+          <span class="call-incoming-btn-label">거절</span>
+        </div>
+        <div class="call-incoming-action-wrap">
+          ${buildPhoneAppActionButtonMarkup({
+            action: "call-confirm-incoming",
+            label: "📞",
+            data: { contactId, kind },
+            className: "call-incoming-btn is-answer",
+          })}
+          <span class="call-incoming-btn-label">통화</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildCallAvatarMarkup(label = "", kind = "") {
+  const initial = (label || "?").charAt(0);
+  const colorClass = kind === "romance" ? " is-romance" : kind === "family" ? " is-family" : " is-default";
+  return `<div class="call-avatar${colorClass}">${escapePhoneAppHtml(initial)}</div>`;
+}
+
+function buildCallContactRow(contact = {}, { compact = false } = {}) {
   const baseContactId = contact.contactId ? { contactId: contact.contactId } : {};
-  const actions = [
-    buildPhoneAppActionButtonMarkup({
-      action: contact.action || "call-home-contact",
-      label: "통화",
-      data: baseContactId,
-      className: "phone-job-apply",
-    }),
-  ];
+  const isRomance = contact.kind === "romance";
 
-  if (!compact && contact.kind === "romance") {
-    actions.push(buildPhoneAppActionButtonMarkup({
-      action: "schedule-romance-date",
-      label: "약속",
-      disabled: !contact.canDate,
-      data: baseContactId,
-      className: "phone-job-apply",
-    }));
-    actions.push(buildPhoneAppActionButtonMarkup({
-      action: "invite-romance-home",
-      label: "집초대",
-      disabled: !contact.canHomeInvite,
-      data: baseContactId,
-      className: "phone-job-apply",
-    }));
-  }
+  const callBtn = buildPhoneAppActionButtonMarkup({
+    action: "call-show-incoming",
+    label: "📞",
+    data: {
+      contactId: contact.contactId || contact.id || "",
+      label: contact.label || "",
+      kind: contact.kind || "family",
+    },
+    className: "call-action-btn is-call",
+  });
 
-  return actions.join("");
+  const secondaryBtns = !compact && isRomance
+    ? `
+      ${buildPhoneAppActionButtonMarkup({
+        action: "schedule-romance-date",
+        label: "약속",
+        disabled: !contact.canDate,
+        data: baseContactId,
+        className: "call-action-btn is-secondary" + (!contact.canDate ? " is-disabled" : ""),
+      })}
+      ${buildPhoneAppActionButtonMarkup({
+        action: "invite-romance-home",
+        label: "집초대",
+        disabled: !contact.canHomeInvite,
+        data: baseContactId,
+        className: "call-action-btn is-secondary" + (!contact.canHomeInvite ? " is-disabled" : ""),
+      })}
+    `
+    : "";
+
+  return `
+    <div class="call-contact-row">
+      ${buildCallAvatarMarkup(contact.label, isRomance ? "romance" : "family")}
+      <div class="call-contact-info">
+        <div class="call-contact-name">${escapePhoneAppHtml(contact.label || "연락처")}</div>
+        <div class="call-contact-tag">${escapePhoneAppHtml(contact.stageLabel || "")}</div>
+      </div>
+      <div class="call-contact-actions">
+        ${secondaryBtns}
+        ${callBtn}
+      </div>
+    </div>
+  `;
 }
 
-function buildCallContactCard(contact = {}, { compact = false } = {}) {
-  const note = compact ? "" : (contact.note || "");
-
-  return buildPhoneAppCardMarkup({
-    label: contact.kind === "romance" ? (contact.rosterLabel || "연락처") : "",
-    title: contact.label || "연락처",
-    body: note,
-    tone: contact.kind === "romance" ? "accent" : "",
-    footerHtml: compact
-      ? ""
-      : `<span>${escapePhoneAppHtml(contact.stageLabel || "")}</span>`,
-    actionsHtml: buildCallContactActions(contact, { compact }),
-  });
-}
-
-function buildCallEmptyCard() {
-  return buildPhoneAppCardMarkup({
-    title: "저장된 연락처 없음",
-    body: "길거리나 편의점에서 인연을 만들면 새 번호가 전화 앱에 추가됩니다.",
-    tone: "muted",
-  });
+function buildCallEmptyRow() {
+  return `
+    <div class="call-empty-row">
+      <div class="call-empty-icon">👤</div>
+      <div class="call-empty-text">인연을 만나면 번호가 저장됩니다</div>
+    </div>
+  `;
 }
 
 function getCallAppContacts(targetState = state) {
@@ -101,28 +151,44 @@ function getCallAppManifest(targetState = state) {
         ? canUsePhoneApps(targetState)
         : true
     ),
-    buildScreenMarkup: ({ stageMode = false } = {}) => {
+    buildScreenMarkup: ({ stageMode = false, screenId = "home" } = {}) => {
+      if (screenId === "incoming") {
+        return buildCallIncomingScreenMarkup(targetState);
+      }
+
       const contacts = getCallAppContacts(targetState);
       const compact = !stageMode;
-      const listMarkup = contacts.length
-        ? contacts.map((contact) => buildCallContactCard(contact, { compact })).join("")
-        : "";
-      const romanceEmptyMarkup = contacts.length <= 1
-        ? buildCallEmptyCard()
+      const romanceContacts = contacts.filter((c) => c.kind === "romance");
+      const familyContacts = contacts.filter((c) => c.kind !== "romance");
+
+      const appStatus = typeof getPhoneAppStatus === "function"
+        ? getPhoneAppStatus("call", targetState)
+        : null;
+
+      const statusMarkup = appStatus
+        ? `<div class="call-status-bar">${escapePhoneAppHtml(appStatus.title || "")}</div>`
         : "";
 
       return `
-        ${buildPhoneAppScreenHeaderMarkup({
-          title: "전화",
-          note: compact ? "저장된 번호만 간단히 보여줍니다." : "통화, 약속, 집 초대까지 여기서 관리합니다.",
-          showHomeButton: !stageMode,
-        })}
-        ${buildPhoneAppStatusMarkup("call", buildPhoneAppCardMarkup({
-          title: compact ? "최근 연락" : "최근 통화",
-          body: compact ? "엄마" : "최근 통화와 약속 상태가 여기에 표시됩니다.",
-        }))}
-        ${listMarkup}
-        ${romanceEmptyMarkup}
+        <div class="call-app-shell">
+          <div class="call-app-topbar">
+            <span class="call-app-topbar-title">전화</span>
+          </div>
+
+          ${statusMarkup}
+
+          <div class="call-contact-list">
+            <div class="call-section-header">가족</div>
+            ${familyContacts.map((c) => buildCallContactRow(c, { compact })).join("")}
+
+            ${romanceContacts.length > 0
+              ? `
+                <div class="call-section-header">연락처</div>
+                ${romanceContacts.map((c) => buildCallContactRow(c, { compact })).join("")}
+              `
+              : (!compact ? buildCallEmptyRow() : "")}
+          </div>
+        </div>
       `;
     },
   };

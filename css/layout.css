@@ -1204,7 +1204,22 @@ body {
 
 @media (max-width: 600px) and (orientation: portrait) {
   #hud-right {
-    top: calc(env(safe-area-inset-top, 0px) + 2px);
+    top: calc(env(safe-area-inset-top, 0px) + 48px);
+    right: calc(var(--phone-panel-width) + 14px);
+    max-width: calc(100% - var(--phone-panel-width) - 26px);
+  }
+
+  #side-toolbar {
+    top: calc(env(safe-area-inset-top, 0px) + 112px);
+    z-index: 18;
+  }
+
+  #character-panel,
+  #inventory-panel,
+  #memory-panel {
+    top: calc(env(safe-area-inset-top, 0px) + 112px);
+    max-height: calc(100% - 216px);
+    z-index: 19;
   }
 }
 

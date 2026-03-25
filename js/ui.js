@@ -138,6 +138,7 @@ function cacheUi() {
   ui.textbox = document.getElementById("textbox");
   ui.phoneControls = document.getElementById("phone-controls");
   ui.phoneStageButton = document.getElementById("phone-stage-btn");
+  ui.cityMapToggleButton = document.getElementById("city-map-toggle-btn");
   ui.phoneBackButton = document.getElementById("phone-back-btn");
   ui.phoneLockedBadge = document.getElementById("phone-locked-badge");
   ui.phoneTimeDisplay = document.getElementById("phone-time-display");
@@ -276,6 +277,36 @@ function canAdvanceSceneText() {
 
   const progressEntry = sceneTextProgress.progressByKey[activeKey];
   return Boolean(progressEntry && progressEntry.lineCount > 1 && progressEntry.lineIndex < progressEntry.lineCount - 1);
+}
+
+function resetSceneTextProgress(progressKey = "") {
+  const normalizedKey = String(progressKey || "").trim();
+  if (!normalizedKey) {
+    sceneTextProgress.activeKey = "";
+    return;
+  }
+
+  delete sceneTextProgress.progressByKey[normalizedKey];
+  if (sceneTextProgress.activeKey === normalizedKey) {
+    sceneTextProgress.activeKey = "";
+  }
+}
+
+function resetSceneTextProgressByPrefix(prefix = "") {
+  const normalizedPrefix = String(prefix || "").trim();
+  if (!normalizedPrefix) {
+    return;
+  }
+
+  Object.keys(sceneTextProgress.progressByKey).forEach((key) => {
+    if (!key.startsWith(normalizedPrefix)) {
+      return;
+    }
+    delete sceneTextProgress.progressByKey[key];
+    if (sceneTextProgress.activeKey === key) {
+      sceneTextProgress.activeKey = "";
+    }
+  });
 }
 
 function advanceSceneText() {
@@ -839,10 +870,16 @@ function updatePhonePanel() {
   ui.phonePanel.classList.toggle("is-stage-docked", layoutState.stageDocked);
   ui.phonePanel.classList.toggle("is-safe-layout", layoutState.safeLayout);
   ui.phoneStage?.classList.toggle("is-safe-layout", layoutState.safeLayout);
+  const romanceCallSessionActive = typeof getRomanceCallSession === "function"
+    ? Boolean(getRomanceCallSession(state)?.active && state.scene === "romance-call")
+    : false;
+  ui.phonePanel.classList.toggle("is-lowered-for-call", romanceCallSessionActive);
+  ui.phoneStage?.classList.toggle("is-lowered-for-call", romanceCallSessionActive);
   if (ui.game) {
     ui.game.classList.toggle("phone-focus-active", layoutState.focusActive);
     ui.game.classList.toggle("phone-safe-layout", layoutState.safeLayout);
     ui.game.classList.toggle("phone-collapsed", screenState.minimized || layoutState.focusActive);
+    ui.game.classList.toggle("is-romance-call-session", romanceCallSessionActive);
   }
   if (ui.phoneFocusDim) {
     ui.phoneFocusDim.hidden = !layoutState.focusActive;
@@ -910,7 +947,7 @@ function renderGameplayFeedback() {
   const feedback = typeof getActiveGameplayFeedback === "function"
     ? getActiveGameplayFeedback()
     : null;
-  const shouldHide = !feedback || state.scene === "ranking" || state.scene === "turn-briefing";
+  const shouldHide = !feedback || state.scene === "ranking" || state.scene === "turn-briefing" || state.scene === "romance-call";
   ui.gameplayFeedback.hidden = shouldHide;
   ui.gameplayFeedback.setAttribute("aria-hidden", shouldHide ? "true" : "false");
 
@@ -1264,6 +1301,34 @@ function applySceneBackgroundConfig(backgroundConfig = null) {
 
   ui.bg.className = backgroundConfig.className || "custom-location-bg";
   ui.bg.style.background = `${overlay}, url('${backgroundConfig.image}') ${position} / ${size} ${repeat}${color ? ` ${color}` : ""}`;
+  ui.bg.style.transition = "none";
+  return true;
+}
+
+function getCurrentUiBackgroundSnapshot() {
+  if (!ui.bg) {
+    return null;
+  }
+
+  return {
+    className: typeof ui.bg.className === "string" ? ui.bg.className : "",
+    background: typeof ui.bg.style.background === "string" ? ui.bg.style.background : "",
+  };
+}
+
+function applySceneBackgroundSnapshot(snapshot = null) {
+  if (!ui.bg || !snapshot || typeof snapshot !== "object") {
+    return false;
+  }
+
+  const className = typeof snapshot.className === "string" ? snapshot.className : "";
+  const background = typeof snapshot.background === "string" ? snapshot.background : "";
+  if (!className && !background) {
+    return false;
+  }
+
+  ui.bg.className = className;
+  ui.bg.style.background = background;
   ui.bg.style.transition = "none";
   return true;
 }
@@ -2747,6 +2812,12 @@ function renderCasinoVenueScene() {
   const venueScreenId = typeof getCasinoVenueScreenId === "function"
     ? getCasinoVenueScreenId(state)
     : "home";
+  const showVenueMeta = venueScreenId === "home";
+  const venueTags = [...new Set(
+    (Array.isArray(venueLocation?.tags) ? venueLocation.tags : [])
+      .map((tag) => String(tag || "").trim())
+      .filter(Boolean)
+  )];
 
   setBackgroundByTone("outside");
   if (!applySceneBackgroundConfig(venueLocation?.background || null)) {
@@ -2756,18 +2827,14 @@ function renderCasinoVenueScene() {
   setCharacter("");
   renderActors([]);
   setCharacterPosition(50, 1);
-  setSceneSpeaker(venueLocation?.speaker || venueLocation?.label || "카지노");
-  renderTags(["부산", "카지노", ...(venueLocation?.tags || [])].filter(Boolean));
+  setSceneSpeaker(showVenueMeta ? (venueLocation?.speaker || venueLocation?.label || "카지노") : "");
+  renderTags(showVenueMeta ? venueTags : []);
   clearChoices();
   setTextboxAdvanceState(false);
   ui.message.innerHTML = `
     <div class="casino-venue-shell">
       <div class="casino-venue-toolbar">
-        <div class="casino-venue-copy">
-          <div class="casino-venue-kicker">CASINO FLOOR</div>
-          <div class="casino-venue-title">${escapeHtml(venueLocation?.title || "카지노 게임장")}</div>
-          <div class="casino-venue-note">${escapeHtml((venueLocation?.lines || [])[0] || "환전소와 테이블을 오가며 오늘 운을 시험할 수 있다.")}</div>
-        </div>
+        <div class="casino-venue-copy"></div>
         <button class="casino-mini-btn casino-venue-exit" type="button" data-casino-scene-action="leave">로비로</button>
       </div>
       <div class="casino-venue-body">
@@ -3080,7 +3147,93 @@ function renderRomanceScene() {
   });
 }
 
+function renderRomanceCallSessionScene(callSession) {
+  const renderModel = typeof getRomanceCallSessionRenderModel === "function"
+    ? getRomanceCallSessionRenderModel(state)
+    : null;
+  if (!renderModel) {
+    if (typeof finishRomanceCallScene === "function") {
+      finishRomanceCallScene(state);
+      return;
+    }
+    state.scene = "room";
+    renderGame();
+    return;
+  }
+
+  const finishCallLabel = "?? ???";
+  const baseTone = renderModel.sourceSceneType === "home-invite" ? "room" : "outside";
+  setBackgroundByTone(baseTone);
+  if (!applySceneBackgroundConfig(renderModel.backgroundConfig || null) && ui.bg) {
+    ui.bg.style.transition = "none";
+  }
+  setWorldMode("result");
+  setCharacter("");
+  renderActors([]);
+  setCharacterPosition(50, 1);
+  setSceneSpeaker(renderModel.speaker || callSession.label || "??");
+  renderTags(renderModel.tags || ["??"]);
+  const showChoices = renderMessage(renderModel.title || "?? ??", renderModel.lines || [], {
+    progressKey: buildSceneTextProgressKey(
+      renderModel.progressKey || `romance-call-session:${callSession.contactId || callSession.npcId || "call"}` ,
+      renderModel.title || "?? ??",
+      renderModel.lines || [],
+    ),
+  });
+  clearChoices();
+  syncGameplayObjectivePrompt(state);
+
+  if (!showChoices) {
+    return;
+  }
+
+  const sceneChoices = Array.isArray(renderModel.choices) ? renderModel.choices : [];
+  if (sceneChoices.length) {
+    sceneChoices.forEach((choice, index) => {
+      const choiceLabel = String(choice?.label || "").trim();
+      if (!choiceLabel) {
+        return;
+      }
+
+      createChoiceButton({
+        title: choiceLabel,
+        gateActionId: `${renderModel.progressKey || "romance-call-session"}:${choice.id || index}`,
+        onClick: () => {
+          if (typeof chooseRomanceCallChoice === "function" && chooseRomanceCallChoice(index, state) !== false) {
+            renderGame();
+          }
+        },
+      });
+    });
+    return;
+  }
+
+  createChoiceButton({
+    title: renderModel.advanceLabel || finishCallLabel,
+    onClick: () => {
+      if (renderModel.advanceLabel && renderModel.advanceLabel !== finishCallLabel && typeof advanceRomanceCallSession === "function") {
+        if (advanceRomanceCallSession(state) !== false) {
+          renderGame();
+        }
+        return;
+      }
+
+      if (typeof finishRomanceCallScene === "function") {
+        finishRomanceCallScene(state);
+      }
+    },
+  });
+}
+
 function renderRomanceCallScene() {
+  const callSession = typeof getRomanceCallSession === "function"
+    ? getRomanceCallSession(state)
+    : null;
+  if (callSession?.active) {
+    renderRomanceCallSessionScene(callSession);
+    return;
+  }
+
   const callScene = typeof getRomanceCallScene === "function"
     ? getRomanceCallScene(state)
     : null;
@@ -3255,6 +3408,112 @@ function renderNightAutoSleepScene() {
 }
 
 function renderLottoPickScene() {
+  {
+    const lottoState = typeof syncLottoRetailerState === "function"
+      ? syncLottoRetailerState(state)
+      : null;
+    const pickSession = lottoState?.pickSession || null;
+    if (!pickSession) {
+      state.scene = "outside";
+      renderGame();
+      return;
+    }
+
+    const venueLocation = typeof getWorldLocationConfig === "function"
+      ? getWorldLocationConfig("lotto-retailer-interior", state.day)
+      : null;
+    const purchaseSnapshot = typeof getLottoRetailerPurchaseSnapshot === "function"
+      ? getLottoRetailerPurchaseSnapshot(state)
+      : null;
+    const remainingCount = Math.max(
+      0,
+      Number(purchaseSnapshot?.remaining)
+        || (typeof LOTTO_TICKET_DAILY_LIMIT === "number" ? LOTTO_TICKET_DAILY_LIMIT : 5),
+    );
+    const board = Array.isArray(pickSession.board) ? pickSession.board : [];
+    const boardMarkup = board.map((cell, index) => {
+      const prizeRule = typeof getLottoPrizeRuleById === "function"
+        ? getLottoPrizeRuleById(cell?.prizeId || "miss")
+        : null;
+      const revealed = Boolean(cell?.revealed);
+      const cellLabel = revealed
+        ? (prizeRule?.scratchLabel || prizeRule?.label || "?")
+        : "긁기";
+      const cellClassName = [
+        "lotto-scratch-cell",
+        revealed ? "is-revealed" : "is-hidden",
+        prizeRule?.id ? `is-${escapeHtml(prizeRule.id)}` : "",
+      ].filter(Boolean).join(" ");
+
+      return `
+        <button
+          type="button"
+          class="${cellClassName}"
+          data-lotto-scratch-index="${index}"
+          ${revealed ? "disabled" : ""}
+        >
+          <span class="lotto-scratch-cell-index">${index + 1}</span>
+          <strong>${escapeHtml(cellLabel)}</strong>
+        </button>
+      `;
+    }).join("");
+    const oddsMarkup = oddsLines.map((line) => `
+      <div class="lotto-scratch-odds-row">${escapeHtml(line)}</div>
+    `).join("");
+
+    setBackgroundByTone("outside");
+    if (!applySceneBackgroundConfig(venueLocation?.background || null)) {
+      clearSceneBackgroundOverride();
+    }
+    setWorldMode("incident");
+    setCharacter("");
+    renderActors([]);
+    setCharacterPosition(50, 1);
+    setSceneSpeaker("즉석복권 판매장");
+    renderTags(["즉석복권", `${remainingCount}장 남음`]);
+    clearChoices();
+    setTextboxAdvanceState(false);
+    ui.message.innerHTML = `
+      <div class="lotto-scratch-shell">
+        <div class="lotto-ticket-header">
+          <span class="lotto-ticket-brand">즉석복권</span>
+          <span class="lotto-ticket-price-badge">${escapeHtml(typeof formatMoney === "function" ? formatMoney(LOTTO_TICKET_PRICE) : "1,000원")}</span>
+        </div>
+        <div class="lotto-scratch-area">
+          <div class="lotto-scratch-instruction">3칸이 모두 같으면 당첨!</div>
+          <div class="lotto-scratch-board">
+            ${boardMarkup}
+          </div>
+        </div>
+        <div class="lotto-scratch-footer">
+          <div class="lotto-scratch-actions">
+            <button type="button" class="lotto-scratch-action" data-lotto-scratch-leave="true">나가기</button>
+          </div>
+        </div>
+      </div>
+    `;
+    syncTextboxContentState();
+    syncGameplayObjectivePrompt(state);
+
+    Array.from(ui.message.querySelectorAll("[data-lotto-scratch-index]")).forEach((button) => {
+      button.addEventListener("click", () => {
+        const index = Number(button.dataset.lottoScratchIndex);
+        if (typeof scratchLottoRetailerCell === "function") {
+          scratchLottoRetailerCell(index, state);
+        }
+      });
+    });
+    const leaveButton = ui.message.querySelector("[data-lotto-scratch-leave]");
+    if (leaveButton) {
+      leaveButton.addEventListener("click", () => {
+        if (typeof cancelLottoRetailerPickSession === "function") {
+          cancelLottoRetailerPickSession(state);
+        }
+      });
+    }
+    return;
+  }
+
   const lottoState = typeof syncLottoRetailerState === "function"
     ? syncLottoRetailerState(state)
     : null;
@@ -3341,6 +3600,81 @@ function renderLottoPickScene() {
 }
 
 function renderLottoResultScene() {
+  {
+    const lottoState = typeof syncLottoRetailerState === "function"
+      ? syncLottoRetailerState(state)
+      : null;
+    const summary = lottoState?.lastDrawSummary || null;
+    if (!summary) {
+      state.scene = "outside";
+      renderGame();
+      return;
+    }
+
+    const venueLocation = typeof getWorldLocationConfig === "function"
+      ? getWorldLocationConfig("lotto-retailer-interior", state.day)
+      : null;
+    const purchaseSnapshot = typeof getLottoRetailerPurchaseSnapshot === "function"
+      ? getLottoRetailerPurchaseSnapshot(state)
+      : null;
+    const remainingCount = Math.max(0, Number(purchaseSnapshot?.remaining) || 0);
+    const canBuyMore = remainingCount > 0
+      && (typeof canAfford !== "function" || canAfford(LOTTO_TICKET_PRICE, state));
+    setBackgroundByTone("outside");
+    if (!applySceneBackgroundConfig(venueLocation?.background || null)) {
+      clearSceneBackgroundOverride();
+    }
+    setWorldMode("incident");
+    setCharacter("");
+    renderActors([]);
+    setCharacterPosition(50, 1);
+    setSceneSpeaker("즉석복권 판매장");
+    renderTags(["즉석복권", `${remainingCount}장 남음`]);
+    clearChoices();
+    setTextboxAdvanceState(false);
+    const isWin = (Number(summary.payout) || 0) > 0;
+    const prizeLabel = isWin
+      ? (typeof getLottoPrizeRuleById === "function" ? getLottoPrizeRuleById(summary.prizeId || "miss").label : "") : "";
+    ui.message.innerHTML = `
+      <div class="lotto-scratch-shell is-result">
+        <div class="lotto-ticket-header">
+          <span class="lotto-ticket-brand">즉석복권</span>
+          <span class="lotto-ticket-price-badge">${escapeHtml(prizeLabel || (isWin ? "당첨" : "꽝"))}</span>
+        </div>
+        <div class="lotto-scratch-area">
+          <div class="lotto-scratch-result-payout${isWin ? " is-win" + (summary.prizeId === "jackpot" || summary.prizeId === "super" ? " is-" + escapeHtml(summary.prizeId) : "") : " is-miss"}">
+            ${isWin
+              ? `${escapeHtml(typeof formatMoney === "function" ? formatMoney(summary.payout || 0) : "0원")} 획득`
+              : "꽝"}
+          </div>
+        </div>
+        <div class="lotto-scratch-footer">
+          <div class="lotto-scratch-actions">
+            ${canBuyMore ? '<button type="button" class="lotto-scratch-action is-primary" data-lotto-result-rebuy="true">한 장 더</button>' : ""}
+            <button type="button" class="lotto-scratch-action" data-lotto-result-close="true">돌아가기</button>
+          </div>
+        </div>
+      </div>
+    `;
+    syncTextboxContentState();
+    syncGameplayObjectivePrompt(state);
+
+    const rebuyButton = ui.message.querySelector("[data-lotto-result-rebuy]");
+    if (rebuyButton) {
+      rebuyButton.addEventListener("click", () => {
+        if (typeof buyLottoRetailerTicket === "function") {
+          buyLottoRetailerTicket(state);
+        }
+      });
+    }
+
+    const closeButton = ui.message.querySelector("[data-lotto-result-close]");
+    if (closeButton) {
+      closeButton.addEventListener("click", () => dismissLottoRetailerResult(state));
+    }
+    return;
+  }
+
   const lottoState = typeof syncLottoRetailerState === "function"
     ? syncLottoRetailerState(state)
     : null;
@@ -3559,9 +3893,15 @@ function renderDialogueScene() {
   const dialogueNode = typeof getActiveDialogueNode === "function"
     ? getActiveDialogueNode(state)
     : null;
+  const dialogueState = typeof syncDialogueState === "function"
+    ? syncDialogueState(state)
+    : (state.dialogue && typeof state.dialogue === "object" ? state.dialogue : null);
   const outsideScene = typeof getCurrentOutsideSceneConfig === "function"
     ? getCurrentOutsideSceneConfig(state)
     : null;
+  const dialogueActors = Array.isArray(dialogueState?.actorsSnapshot) && dialogueState.actorsSnapshot.length
+    ? dialogueState.actorsSnapshot
+    : (outsideScene?.actors || []);
 
   if (!dialogueNode) {
     if (typeof endNpcDialogue === "function") {
@@ -3571,11 +3911,14 @@ function renderDialogueScene() {
     return;
   }
 
-  setBackgroundByTone("outside");
-  applySceneBackgroundConfig(outsideScene?.background || null);
+  const hasCapturedBackground = applySceneBackgroundSnapshot(dialogueState?.backgroundSnapshot || null);
+  if (!hasCapturedBackground) {
+    setBackgroundByTone("outside");
+    applySceneBackgroundConfig(outsideScene?.background || null);
+  }
   setWorldMode("outside");
   setCharacter("");
-  renderActors(outsideScene?.actors || []);
+  renderActors(dialogueActors);
   setCharacterPosition(50, 1);
   setSceneSpeaker(dialogueNode.speaker || "대화");
   renderTags(dialogueNode.tags || ["대화"]);

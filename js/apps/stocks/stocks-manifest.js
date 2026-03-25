@@ -255,6 +255,18 @@ function ensureStockMarketAppState(targetState = state) {
   const shouldResyncAssets = app.lastSyncedTurn !== currentTurn;
 
   definitions.forEach((definition) => {
+    if (typeof syncMarketCycleAssetState === "function") {
+      app.assets[definition.symbol] = syncMarketCycleAssetState(app.assets[definition.symbol], {
+        appId: "stock-market",
+        definition,
+        targetState,
+        tick: definition.tick || 0,
+        candleCount: 30,
+        forceRebuild: shouldResyncAssets || !app.assets[definition.symbol],
+      });
+      return;
+    }
+
     if (!app.assets[definition.symbol] || shouldResyncAssets) {
       app.assets[definition.symbol] = createStockMarketAssetState(definition, targetState);
       return;
@@ -474,7 +486,7 @@ function calculateStockMarketSummary(targetState = state) {
 }
 
 function tickStockMarketApp(targetState = state) {
-  ensureStockMarketAppState(targetState);
+  return ensureStockMarketAppState(targetState);
 }
 
 function getStockMarketOrderBook(targetState = state) {
@@ -493,7 +505,7 @@ function getStockMarketOrderBook(targetState = state) {
       price: snapStockMarketPrice(asset.price + (tick * level), tick),
       size: typeof getMarketCycleBookSize === "function"
         ? getMarketCycleBookSize(
-          ["stock-book", asset.meta.symbol, asset.cycleTurn || 0, "ask", level],
+          ["stock-book", asset.meta.symbol, asset.cycleTurn || 0, asset.minuteCursor || 0, "ask", level],
           30,
           maxBookSize + 30,
         )
@@ -506,7 +518,7 @@ function getStockMarketOrderBook(targetState = state) {
       price: snapStockMarketPrice(asset.price - (tick * level), tick),
       size: typeof getMarketCycleBookSize === "function"
         ? getMarketCycleBookSize(
-          ["stock-book", asset.meta.symbol, asset.cycleTurn || 0, "bid", level],
+          ["stock-book", asset.meta.symbol, asset.cycleTurn || 0, asset.minuteCursor || 0, "bid", level],
           30,
           maxBookSize + 30,
         )

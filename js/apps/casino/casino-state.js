@@ -14,6 +14,7 @@ const CASINO_SLOT_MIN_BET = 10000;
 function createDefaultCasinoBlackjackState() {
   return {
     phase: "betting",
+    roundDay: 0,
     dealerHidden: true,
     bet: 0,
     playerAcePreference: 11,
@@ -25,6 +26,13 @@ function createDefaultCasinoBlackjackState() {
     resultTone: "accent",
     outcome: "",
   };
+}
+
+function normalizeCasinoBlackjackPhase(phase = "") {
+  const normalizedPhase = String(phase || "").trim().toLowerCase();
+  return ["betting", "player-turn", "dealer-turn", "result"].includes(normalizedPhase)
+    ? normalizedPhase
+    : "betting";
 }
 
 function createDefaultCasinoSlotsState() {
@@ -74,25 +82,42 @@ function cloneCasinoCardList(cards) {
     : [];
 }
 
-function syncCasinoBlackjackState(rawState) {
+function syncCasinoBlackjackState(rawState, targetState = state) {
   const defaults = createDefaultCasinoBlackjackState();
   const existing = rawState && typeof rawState === "object" ? rawState : {};
+  const phase = normalizeCasinoBlackjackPhase(existing.phase || defaults.phase);
+  const roundDay = Math.max(0, Math.round(Number(existing.roundDay) || 0));
+  const bet = Math.max(0, Math.round(Number(existing.bet) || 0));
+  const playerHand = cloneCasinoCardList(existing.playerHand);
+  const dealerHand = cloneCasinoCardList(existing.dealerHand);
+  const currentDay = Math.max(0, Math.round(Number(targetState?.day) || 0));
+  const isActiveRound = phase === "player-turn" || phase === "dealer-turn";
+  const shouldResetActiveRound = isActiveRound && (
+    roundDay <= 0
+    || (currentDay > 0 && roundDay !== currentDay)
+    || playerHand.length < 2
+    || dealerHand.length < 2
+  );
+  const normalizedPhase = shouldResetActiveRound ? defaults.phase : phase;
+  const dealerHidden = typeof existing.dealerHidden === "boolean"
+    ? existing.dealerHidden
+    : defaults.dealerHidden;
 
   return {
     ...defaults,
     ...existing,
-    dealerHidden: typeof existing.dealerHidden === "boolean"
-      ? existing.dealerHidden
-      : defaults.dealerHidden,
-    bet: Math.max(0, Math.round(Number(existing.bet) || 0)),
+    phase: normalizedPhase,
+    roundDay: normalizedPhase === "betting" ? 0 : roundDay,
+    dealerHidden: shouldResetActiveRound ? defaults.dealerHidden : dealerHidden,
+    bet,
     playerAcePreference: existing.playerAcePreference === 1 ? 1 : 11,
-    playerHand: cloneCasinoCardList(existing.playerHand),
-    dealerHand: cloneCasinoCardList(existing.dealerHand),
+    playerHand: shouldResetActiveRound ? [] : playerHand,
+    dealerHand: shouldResetActiveRound ? [] : dealerHand,
     shoe: cloneCasinoCardList(existing.shoe),
-    messageTitle: String(existing.messageTitle || ""),
-    messageBody: String(existing.messageBody || ""),
-    resultTone: String(existing.resultTone || defaults.resultTone),
-    outcome: String(existing.outcome || ""),
+    messageTitle: shouldResetActiveRound ? "" : String(existing.messageTitle || ""),
+    messageBody: shouldResetActiveRound ? "" : String(existing.messageBody || ""),
+    resultTone: shouldResetActiveRound ? defaults.resultTone : String(existing.resultTone || defaults.resultTone),
+    outcome: shouldResetActiveRound ? "" : String(existing.outcome || ""),
   };
 }
 
@@ -139,7 +164,7 @@ function syncCasinoState(targetState = state) {
       ...defaults.exchangeDraft,
       ...(existing.exchangeDraft || {}),
     },
-    blackjack: syncCasinoBlackjackState(existing.blackjack),
+    blackjack: syncCasinoBlackjackState(existing.blackjack, targetState),
     slots: syncCasinoSlotsState(existing.slots),
     scam: existing.scam && typeof existing.scam === "object"
       ? {

@@ -1,3 +1,20 @@
+function createPhoneQuickToggleState(screenState = {}, targetState = state) {
+  const cityMapOpen = Boolean(
+    typeof cityMapUiState !== "undefined"
+    && cityMapUiState
+    && cityMapUiState.open
+  );
+  const mapAvailable = typeof canShowCityMapForState === "function"
+    ? canShowCityMapForState(targetState)
+    : false;
+
+  return {
+    cityMapOpen,
+    mapAvailable,
+    showMapQuickButton: Boolean(mapAvailable && (screenState?.minimized || cityMapOpen)),
+  };
+}
+
 function createPhoneShellViewModel(targetState = state) {
   const phoneState = typeof syncPhoneSessionState === "function"
     ? syncPhoneSessionState(targetState)
@@ -84,6 +101,7 @@ function applyPhoneShellUiLegacyStatus(uiRefs, screenState) {
     activeAppId,
     signalText,
   } = screenState;
+  const quickToggleState = createPhoneQuickToggleState(screenState, state);
 
   uiRefs.phonePanel.classList.toggle("is-unlocked", unlocked);
   uiRefs.phonePanel.classList.toggle("phone-used", usedToday);
@@ -96,7 +114,7 @@ function applyPhoneShellUiLegacyStatus(uiRefs, screenState) {
   }
 
   if (uiRefs.phoneToggleButton) {
-    uiRefs.phoneToggleButton.hidden = !unlocked;
+    uiRefs.phoneToggleButton.hidden = !unlocked || quickToggleState.cityMapOpen;
     uiRefs.phoneToggleButton.setAttribute("aria-expanded", minimized ? "false" : "true");
     uiRefs.phoneToggleButton.setAttribute("aria-label", minimized ? "폰 열기" : "폰 닫기");
     uiRefs.phoneToggleButton.classList.toggle("is-active", !minimized);
@@ -110,6 +128,18 @@ function applyPhoneShellUiLegacyStatus(uiRefs, screenState) {
     }
   }
 
+  if (uiRefs.cityMapToggleButton) {
+    uiRefs.cityMapToggleButton.hidden = !unlocked || !quickToggleState.showMapQuickButton;
+    uiRefs.cityMapToggleButton.disabled = !quickToggleState.mapAvailable;
+    uiRefs.cityMapToggleButton.setAttribute("aria-expanded", quickToggleState.cityMapOpen ? "true" : "false");
+    uiRefs.cityMapToggleButton.setAttribute("aria-label", quickToggleState.cityMapOpen ? "지도 닫기" : "지도 열기");
+    uiRefs.cityMapToggleButton.classList.toggle("is-active", quickToggleState.cityMapOpen);
+    const mapLabel = uiRefs.cityMapToggleButton.querySelector(".phone-control-label");
+    if (mapLabel) {
+      mapLabel.textContent = "";
+    }
+  }
+
   if (uiRefs.phoneStageButton) {
     uiRefs.phoneStageButton.hidden = !unlocked || minimized;
     uiRefs.phoneStageButton.disabled = !screenState.canOpenStage;
@@ -118,7 +148,7 @@ function applyPhoneShellUiLegacyStatus(uiRefs, screenState) {
     uiRefs.phoneStageButton.classList.toggle("is-active", stageExpanded);
     const stageLabel = uiRefs.phoneStageButton.querySelector(".phone-control-label");
     if (stageLabel) {
-      stageLabel.textContent = stageExpanded ? "축소" : "확대";
+      stageLabel.textContent = stageExpanded ? "축소" : "확장";
     }
   }
 
@@ -173,6 +203,7 @@ function applyPhoneShellUi(uiRefs, screenState) {
     day,
     activeAppId,
   } = screenState;
+  const quickToggleState = createPhoneQuickToggleState(screenState, state);
 
   uiRefs.phonePanel.classList.toggle("is-unlocked", unlocked);
   uiRefs.phonePanel.classList.toggle("phone-used", usedToday);
@@ -185,7 +216,7 @@ function applyPhoneShellUi(uiRefs, screenState) {
   }
 
   if (uiRefs.phoneToggleButton) {
-    uiRefs.phoneToggleButton.hidden = !unlocked;
+    uiRefs.phoneToggleButton.hidden = !unlocked || quickToggleState.cityMapOpen;
     uiRefs.phoneToggleButton.setAttribute("aria-expanded", minimized ? "false" : "true");
     uiRefs.phoneToggleButton.setAttribute("aria-label", minimized ? "폰 열기" : "폰 닫기");
     uiRefs.phoneToggleButton.classList.toggle("is-active", !minimized);
@@ -196,6 +227,18 @@ function applyPhoneShellUi(uiRefs, screenState) {
     }
     if (toggleLabel) {
       toggleLabel.textContent = "";
+    }
+  }
+
+  if (uiRefs.cityMapToggleButton) {
+    uiRefs.cityMapToggleButton.hidden = !unlocked || !quickToggleState.showMapQuickButton;
+    uiRefs.cityMapToggleButton.disabled = !quickToggleState.mapAvailable;
+    uiRefs.cityMapToggleButton.setAttribute("aria-expanded", quickToggleState.cityMapOpen ? "true" : "false");
+    uiRefs.cityMapToggleButton.setAttribute("aria-label", quickToggleState.cityMapOpen ? "지도 닫기" : "지도 열기");
+    uiRefs.cityMapToggleButton.classList.toggle("is-active", quickToggleState.cityMapOpen);
+    const mapLabel = uiRefs.cityMapToggleButton.querySelector(".phone-control-label");
+    if (mapLabel) {
+      mapLabel.textContent = "";
     }
   }
 

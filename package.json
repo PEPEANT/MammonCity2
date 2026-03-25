@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "build:render": "npm run qa:core-smoke && node scripts/build-static-dist.js",
     "sync:market-cycle": "node scripts/sync-market-cycle-to-hosting.js",
     "qa:core-smoke": "node scripts/qa/core-smoke.js"
   },

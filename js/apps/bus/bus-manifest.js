@@ -86,7 +86,7 @@ function getBusAppHeroValues(targetState = state) {
 
   return {
     routeTitle: map.routeTitle || "배금 100번",
-    routeSubtitle: map.routeSubtitle || "배금시외버스터미널 ↔ 배금역",
+    routeSubtitle: map.routeSubtitle || "배금역 버스정류장 ↔ 배금디지털단지 ↔ 배금역 앞",
     serviceLabel: map.serviceLabel || "간선버스",
     statusLabel: activeStatus,
     statusTone: getBusHeroStatusTone(activeStatus),
@@ -200,8 +200,8 @@ function buildBusRouteScreenMarkup({ stageMode = false } = {}, targetState = sta
 }
 
 function buildBusTimetableScreenMarkup({ stageMode = false } = {}, targetState = state) {
-  const terminalName = DAY01_WORLD_BUS_MAP?.terminalName || "배금시외버스터미널";
-  const terminalSubtitle = DAY01_WORLD_BUS_MAP?.terminalSubtitle || "출발 시간표";
+  const terminalName = DAY01_WORLD_BUS_MAP?.terminalName || "배금역";
+  const terminalSubtitle = DAY01_WORLD_BUS_MAP?.terminalSubtitle || "구역 안내 및 운행 정보";
   const timetableEntries = Array.isArray(DAY01_WORLD_TERMINAL_SCHEDULE) ? DAY01_WORLD_TERMINAL_SCHEDULE : [];
   const canBoard = canBoardFromBusApp(targetState);
 
@@ -219,7 +219,7 @@ function buildBusTimetableScreenMarkup({ stageMode = false } = {}, targetState =
     const actionMarkup = entry?.escapeEnding
       ? buildPhoneAppActionButtonMarkup({
           action: "bus-take-express",
-          label: canBoard ? "탑승" : "터미널 필요",
+          label: canBoard ? "탑승" : "정류장 필요",
           disabled: !canBoard,
           data: { "entry-id": entry.id || "" },
           className: "bus-phone-terminal-action",
@@ -230,7 +230,7 @@ function buildBusTimetableScreenMarkup({ stageMode = false } = {}, targetState =
       <article class="bus-phone-terminal-item${entry?.escapeEnding ? " is-express" : ""}">
         <div class="bus-phone-terminal-head">
           <div class="bus-phone-terminal-copy">
-            <div class="bus-phone-terminal-name">배금 → ${escapePhoneAppHtml(entry?.destination || "")}</div>
+            <div class="bus-phone-terminal-name">${escapePhoneAppHtml(terminalName)} → ${escapePhoneAppHtml(entry?.destination || "")}</div>
             <div class="bus-phone-terminal-meta">${escapePhoneAppHtml(entry?.routeType || "")} · ${escapePhoneAppHtml(entry?.platform || "")}</div>
           </div>
           <span class="bus-phone-terminal-status ${statusClass}">${escapePhoneAppHtml(entry?.status || "보통")}</span>
@@ -246,7 +246,7 @@ function buildBusTimetableScreenMarkup({ stageMode = false } = {}, targetState =
       <div class="bus-phone-top bus-phone-top-timetable">
         <div class="bus-phone-terminal-hero">
           <div>
-            <div class="bus-phone-terminal-kicker">TERMINAL</div>
+            <div class="bus-phone-terminal-kicker">STATION</div>
             <h1 class="bus-phone-terminal-hero-title">${escapePhoneAppHtml(terminalName)}</h1>
             <p class="bus-phone-terminal-hero-subtitle">${escapePhoneAppHtml(terminalSubtitle)}</p>
           </div>
@@ -273,7 +273,7 @@ function getBusAppManifest(targetState = state) {
     screenMode: "fullbleed",
     installable: true,
     storeCategory: "교통",
-    storeDescription: "버스/터미널 앱",
+    storeDescription: "버스/역 안내 앱",
     isAvailable: () => (
       typeof canUsePhoneApps === "function"
         ? canUsePhoneApps(targetState)

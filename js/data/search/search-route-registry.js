@@ -1,13 +1,13 @@
 const DIGGLE_SEARCH_ROUTE_REGISTRY = Object.freeze([
   Object.freeze({
     id: "dis-singularity-gallery",
-    keywords: ["특이점", "특이점이 온다", "디특이점갤러리", "singularity", "agi", "갤러리"],
+    keywords: ["특이점", "특이점이 온다", "디시인사이드", "디씨", "singularity", "agi", "갤러리"],
     appId: "dis",
     route: "dis/singularity",
     fallbackRoute: "dis/home",
     title: "특이점이 온다 갤러리",
-    body: "실시간 글과 댓글이 올라오는 디특이점갤러리로 바로 이동합니다.",
-    tags: ["Diggle", "디특이점갤러리", "특이점", "AGI", "실시간"],
+    body: "실시간 글과 댓글이 올라오는 디시인사이드 갤러리로 바로 이동합니다.",
+    tags: ["디시인사이드", "특이점", "AGI", "실시간"],
   }),
   Object.freeze({
     id: "market-premium",
@@ -63,7 +63,7 @@ const DIGGLE_SEARCH_ROUTE_REGISTRY = Object.freeze([
 
 const DIGGLE_HISTORY_ROUTE_ENTRIES = Object.freeze([
   Object.freeze({
-    label: "디특이점갤러리",
+    label: "디시인사이드",
     route: "dis/singularity",
   }),
   Object.freeze({

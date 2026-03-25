@@ -148,9 +148,9 @@ function buildCasinoSlotsScreenMarkup({ stageMode = false, targetState = state }
     <div class="casino-app casino-slots-screen ${stageMode ? "is-stage" : ""}">
       <div class="casino-app-top">
         <div class="casino-app-copy">
-          <span class="casino-app-kicker">SLOTS</span>
+          ${stageMode ? "" : '<span class="casino-app-kicker">SLOTS</span>'}
           <div class="casino-app-title">골든 다이스 슬롯</div>
-          <div class="casino-app-note">레버를 직접 당겨 슬롯을 돌립니다. 배팅은 칩으로 처리됩니다.</div>
+          ${stageMode ? "" : '<div class="casino-app-note">레버를 직접 당겨 슬롯을 돌립니다. 배팅은 칩으로 처리됩니다.</div>'}
         </div>
         <div class="casino-app-top-actions">
           ${!stageMode ? '<button class="casino-mini-btn" type="button" data-phone-route="casino/home">홈</button>' : ""}

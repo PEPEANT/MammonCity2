@@ -1,50 +1,10 @@
 const DIS_COMMUNITY_APP_ID_STORAGE_KEY = "mammoncity.firebaseAppId";
 const DIS_COMMUNITY_COLLECTION_ID = "dcSingularityPosts";
 const DIS_COMMUNITY_MAX_POSTS = 40;
-const DIS_COMMUNITY_FALLBACK_POSTS = Object.freeze([
-  Object.freeze({
-    id: "fallback-singularity-1",
-    title: "AGI 오면 제일 먼저 바뀌는 직업이 뭐냐",
-    author: "시뮬라크",
-    content: "생산직 자동화보다 사무직 보조가 먼저 완전히 붙을 것 같음. 너희는 어디부터 바뀐다고 봄?",
-    createdAt: 1763971200000,
-    views: 38,
-    likes: 9,
-    comments: [
-      Object.freeze({
-        id: "fallback-comment-1",
-        author: "훈서기",
-        content: "연구소 쪽부터 사람 쓰는 방식이 달라질 듯",
-        createdAt: 1763971500000,
-      }),
-    ],
-  }),
-  Object.freeze({
-    id: "fallback-singularity-2",
-    title: "배금전자 연구직도 결국 특이점 오면 다 갈아엎히냐",
-    author: "반도체광",
-    content: "AI 설계 자동화가 붙어도 실험실 검증은 오래 남지 않을까 싶다. 다들 의견 좀.",
-    createdAt: 1763967600000,
-    views: 24,
-    likes: 5,
-    comments: [],
-  }),
-  Object.freeze({
-    id: "fallback-singularity-3",
-    title: "기본소득 오면 배금도시 물가부터 터질 것 같은데",
-    author: "노동해방",
-    content: "돈만 푼다고 끝이 아니라 주거 공급이랑 같이 가야 된다고 본다.",
-    createdAt: 1763964000000,
-    views: 17,
-    likes: 3,
-    comments: [],
-  }),
-]);
-
 let disCommunityAuthPromise = null;
 let disCommunityRealtimeStarted = false;
 let disCommunityRealtimeUnsubscribe = null;
-let disCommunityCachedPosts = DIS_COMMUNITY_FALLBACK_POSTS.map((post, index) => normalizeDisCommunityPost(post, index));
+let disCommunityCachedPosts = [];
 let disCommunityConnectionState = {
   mode: "offline",
   live: false,
@@ -67,6 +27,7 @@ function getDisCommunityStateTarget(targetState = null) {
 function createDefaultDisCommunityState() {
   return {
     selectedPostId: "",
+    tab: "all",
     draft: {
       author: "",
       title: "",
@@ -94,6 +55,7 @@ function syncDisCommunityState(targetState = null) {
     ...defaults,
     ...rawState,
     selectedPostId: String(rawState.selectedPostId || ""),
+    tab: rawState.tab === "best" ? "best" : "all",
     draft: {
       ...defaults.draft,
       ...(rawState.draft || {}),
@@ -111,6 +73,12 @@ function setDisCommunitySelectedPostId(postId = "", targetState = null) {
   const communityState = syncDisCommunityState(targetState);
   communityState.selectedPostId = String(postId || "").trim();
   return communityState.selectedPostId;
+}
+
+function setDisCommunityTab(tab = "all", targetState = null) {
+  const communityState = syncDisCommunityState(targetState);
+  communityState.tab = tab === "best" ? "best" : "all";
+  return communityState.tab;
 }
 
 function setDisCommunityDraftField(field = "", value = "", targetState = null) {
@@ -305,9 +273,7 @@ function hydrateDisCommunitySnapshot(posts = []) {
     .map((post, index) => normalizeDisCommunityPost(post, index))
     .sort((left, right) => right.createdAt - left.createdAt);
 
-  disCommunityCachedPosts = normalizedPosts.length
-    ? normalizedPosts
-    : DIS_COMMUNITY_FALLBACK_POSTS.map((post, index) => normalizeDisCommunityPost(post, index));
+  disCommunityCachedPosts = normalizedPosts;
 }
 
 function ensureDisCommunityRealtime(targetState = null) {
@@ -548,7 +514,7 @@ async function submitDisCommunityComment(postId = "", payload = {}) {
       comments: [...(currentPost.comments || []), nextComment],
     });
     await collectionRef.doc(normalizedPostId).update({
-      comments: [...(currentPost.comments || []), nextComment],
+      comments: firebase.firestore.FieldValue.arrayUnion(nextComment),
     });
     return {
       ok: true,

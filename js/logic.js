@@ -56,6 +56,9 @@ function getCurrentOutsideSceneConfig(targetState = state) {
     if (typeof recoverMcDonaldsVenueLocation === "function") {
       recoverMcDonaldsVenueLocation(targetState);
     }
+    if (typeof recoverResearchLabVenueLocation === "function") {
+      recoverResearchLabVenueLocation(targetState);
+    }
 
     const locationId = getCurrentLocationId(targetState);
     const baseScene = locationId ? locations[locationId] || null : null;
@@ -143,11 +146,6 @@ function getCurrentOutsideSceneConfig(targetState = state) {
         )
       : null;
     const hasWanderFocusNpc = Boolean(wanderFocusNpc?.actor && wanderResult.locationId === locationId);
-    const ambientNpcActors = typeof getLocationAmbientNpcActors === "function"
-      ? getLocationAmbientNpcActors(targetState, locationId, {
-          focusNpcId: hasWanderFocusNpc ? wanderFocusNpcId : "",
-        })
-      : [];
     resolvedScene.options = resolvedScene.options.filter((option) => option.action !== "wander");
 
     if (locationId && canUseLocationWander(locationId, targetState)) {
@@ -179,18 +177,9 @@ function getCurrentOutsideSceneConfig(targetState = state) {
       });
     }
 
-    ambientNpcActors.forEach((actor) => {
-      const duplicateActor = resolvedScene.actors.some((existingActor) =>
-        (actor.npcId && existingActor?.npcId === actor.npcId)
-        || (!actor.npcId && actor.alt && existingActor?.alt === actor.alt && existingActor?.left === actor.left)
-        || (actor.src && existingActor?.src === actor.src && actor.left === existingActor?.left)
-      );
-      if (!duplicateActor) {
-        resolvedScene.actors.push({ ...actor });
-      }
-    });
-
     applyMcDonaldsVenueSceneState(resolvedScene, locationId, targetState);
+    applyResearchLabVenueSceneState(resolvedScene, locationId, targetState);
+    applyRealEstateVenueSceneState(resolvedScene, locationId, targetState);
 
     if (false && locationId === "baegeum-hospital") {
       resolvedScene.options = resolvedScene.options.map((option) =>
@@ -312,14 +301,6 @@ function applyMcDonaldsVenueSceneState(resolvedScene, locationId = "", targetSta
       });
     }
 
-    if (venueState.canApplyHere && venueState.hasCounterOffer && venueState.offerByJobId["mcd-counter"]) {
-      prependSceneOption(resolvedScene.options, {
-        title: "카운터 알바를 물어본다",
-        action: "mcd-apply-job",
-        jobId: "mcd-counter",
-      });
-    }
-
     if (venueState.canApplyHere && venueState.hasKitchenOffer && venueState.offerByJobId["mcd-kitchen"]) {
       prependSceneOption(resolvedScene.options, {
         title: "주방 알바를 물어본다",
@@ -369,14 +350,6 @@ function applyMcDonaldsVenueSceneState(resolvedScene, locationId = "", targetSta
       });
     }
 
-    if (venueState.canApplyHere && venueState.hasCounterOffer && venueState.offerByJobId["mcd-counter"]) {
-      prependSceneOption(resolvedScene.options, {
-        title: "카운터 알바를 물어본다",
-        action: "mcd-apply-job",
-        jobId: "mcd-counter",
-      });
-    }
-
     if (venueState.canApplyHere && venueState.hasKitchenOffer && venueState.offerByJobId["mcd-kitchen"]) {
       prependSceneOption(resolvedScene.options, {
         title: "주방 알바를 물어본다",
@@ -421,6 +394,412 @@ function applyMcDonaldsVenueSceneState(resolvedScene, locationId = "", targetSta
   }
 
   return resolvedScene;
+}
+
+const RESEARCH_LAB_ACCESS_POSTING_IDS = new Set([
+  "baegeum-research-lab",
+  "ai-researcher",
+]);
+
+function canAccessResearchLabInterior(targetState = state) {
+  const postingId = typeof getCareerEmploymentPostingId === "function"
+    ? getCareerEmploymentPostingId(targetState)
+    : "";
+  return RESEARCH_LAB_ACCESS_POSTING_IDS.has(String(postingId || "").trim());
+}
+
+function recoverResearchLabVenueLocation(targetState = state) {
+  if (!targetState || targetState.scene !== "outside") {
+    return false;
+  }
+
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState)
+    : "";
+  if (currentLocationId !== "research-lab-interior" || canAccessResearchLabInterior(targetState)) {
+    return false;
+  }
+
+  if (typeof syncWorldState === "function") {
+    const worldState = syncWorldState(targetState);
+    worldState.currentLocation = "tower-cafe";
+    if (typeof getWorldLocationDistrictId === "function") {
+      worldState.currentDistrict = getWorldLocationDistrictId("tower-cafe", targetState.day);
+    }
+  } else if (targetState.world && typeof targetState.world === "object") {
+    targetState.world.currentLocation = "tower-cafe";
+  }
+
+  return true;
+}
+
+function buildResearchLabAccessStatusLine(hasAccess = false) {
+  return hasAccess
+    ? "출입 게이트가 연구원 사원증을 확인한 뒤 조용히 열린다."
+    : "연구동 출입 게이트가 연구원 사원증 없이는 열리지 않는다.";
+}
+
+function applyResearchLabVenueSceneState(resolvedScene, locationId = "", targetState = state) {
+  if (!resolvedScene || !["tower-cafe", "research-lab-interior"].includes(String(locationId || "").trim())) {
+    return resolvedScene;
+  }
+
+  const hasAccess = canAccessResearchLabInterior(targetState);
+  const statusLine = buildResearchLabAccessStatusLine(hasAccess);
+
+  if (statusLine) {
+    const leadLine = resolvedScene.lines[0] || "";
+    resolvedScene.lines = [leadLine, statusLine].filter(Boolean);
+  }
+
+  if (!hasAccess && locationId === "tower-cafe") {
+    resolvedScene.options = resolvedScene.options.filter((option) =>
+      String(option?.targetLocation || "").trim() !== "research-lab-interior"
+    );
+    if (!resolvedScene.tags.includes("출입통제")) {
+      resolvedScene.tags.push("출입통제");
+    }
+  }
+
+  return resolvedScene;
+}
+
+const DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION = Object.freeze({
+  id: "downtown-rental-building",
+  label: "다운타운 수익형 빌딩",
+  price: 25000000,
+  estimatedValue: 41000000,
+  incomePerTurn: 2800000,
+  sourceLabel: "다운타운 부동산",
+});
+
+function createDefaultRealEstateInvestmentState() {
+  return {
+    ownedBuildingId: "",
+    buildingLabel: "",
+    purchasedDay: 0,
+    cumulativeProfit: 0,
+    lastProcessedTurnDay: 0,
+    purchasePrice: 0,
+    estimatedValue: 0,
+    incomePerTurn: 0,
+  };
+}
+
+function syncRealEstateInvestmentState(targetState = state) {
+  ensureMetaRunStateReady(targetState);
+  const businessState = targetState.business && typeof targetState.business === "object"
+    ? targetState.business
+    : (targetState.business = {});
+  const defaults = createDefaultRealEstateInvestmentState();
+  const currentState = businessState.realEstate && typeof businessState.realEstate === "object"
+    ? businessState.realEstate
+    : {};
+
+  businessState.realEstate = {
+    ...defaults,
+    ...currentState,
+    ownedBuildingId: String(currentState.ownedBuildingId || "").trim(),
+    buildingLabel: String(currentState.buildingLabel || "").trim(),
+    purchasedDay: Math.max(0, Math.round(Number(currentState.purchasedDay) || 0)),
+    cumulativeProfit: Math.max(0, Math.round(Number(currentState.cumulativeProfit) || 0)),
+    lastProcessedTurnDay: Math.max(0, Math.round(Number(currentState.lastProcessedTurnDay) || 0)),
+    purchasePrice: Math.max(0, Math.round(Number(currentState.purchasePrice) || 0)),
+    estimatedValue: Math.max(0, Math.round(Number(currentState.estimatedValue) || 0)),
+    incomePerTurn: Math.max(0, Math.round(Number(currentState.incomePerTurn) || 0)),
+  };
+
+  return businessState.realEstate;
+}
+
+function getDowntownRealEstateBuildingDefinition(buildingId = "") {
+  const normalizedBuildingId = String(buildingId || DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION.id).trim();
+  return normalizedBuildingId === DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION.id
+    ? DOWNTOWN_REAL_ESTATE_BUILDING_DEFINITION
+    : null;
+}
+
+function getOwnedRealEstateInvestmentSummary(targetState = state) {
+  const investmentState = syncRealEstateInvestmentState(targetState);
+  const definition = getDowntownRealEstateBuildingDefinition(investmentState.ownedBuildingId);
+  if (!definition) {
+    return null;
+  }
+
+  return {
+    ...definition,
+    label: investmentState.buildingLabel || definition.label,
+    purchasedDay: Math.max(1, Math.round(Number(investmentState.purchasedDay) || 1)),
+    cumulativeProfit: Math.max(0, Math.round(Number(investmentState.cumulativeProfit) || 0)),
+    lastProcessedTurnDay: Math.max(0, Math.round(Number(investmentState.lastProcessedTurnDay) || 0)),
+    purchasePrice: Math.max(0, Math.round(Number(investmentState.purchasePrice) || definition.price)),
+    estimatedValue: Math.max(0, Math.round(Number(investmentState.estimatedValue) || definition.estimatedValue)),
+    incomePerTurn: Math.max(0, Math.round(Number(investmentState.incomePerTurn) || definition.incomePerTurn)),
+  };
+}
+
+function buildRealEstateVenueStatusLine(locationId = "", targetState = state) {
+  const ownedBuilding = getOwnedRealEstateInvestmentSummary(targetState);
+  if (ownedBuilding) {
+    return `${ownedBuilding.label} 계약이 유지 중이다. 매 턴 ${formatMoney(ownedBuilding.incomePerTurn)} 임대수익이 계좌로 들어오고, 누적 수익은 ${formatMoney(ownedBuilding.cumulativeProfit)}이다.`;
+  }
+
+  const buildingDefinition = getDowntownRealEstateBuildingDefinition();
+  if (locationId === "real-estate-interior") {
+    return `${buildingDefinition.label} 매입가는 ${formatMoney(buildingDefinition.price)}이고, 매 턴 예상 임대수익은 ${formatMoney(buildingDefinition.incomePerTurn)}이다.`;
+  }
+
+  return `${formatMoney(buildingDefinition.price)}부터 시작하는 다운타운 수익형 빌딩 매물을 상담할 수 있다.`;
+}
+
+function applyRealEstateVenueSceneState(resolvedScene, locationId = "", targetState = state) {
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!resolvedScene || !["real-estate", "real-estate-interior"].includes(normalizedLocationId)) {
+    return resolvedScene;
+  }
+
+  const ownedBuilding = getOwnedRealEstateInvestmentSummary(targetState);
+  const buildingDefinition = getDowntownRealEstateBuildingDefinition();
+  const statusLine = buildRealEstateVenueStatusLine(normalizedLocationId, targetState);
+  if (statusLine) {
+    const leadLine = resolvedScene.lines[0] || "";
+    resolvedScene.lines = [leadLine, statusLine].filter(Boolean);
+  }
+
+  if (!resolvedScene.tags.includes("부동산")) {
+    resolvedScene.tags.push("부동산");
+  }
+
+  if (normalizedLocationId === "real-estate") {
+    if (ownedBuilding && !resolvedScene.tags.includes("건물주")) {
+      resolvedScene.tags.push("건물주");
+    }
+    return resolvedScene;
+  }
+
+  resolvedScene.options = resolvedScene.options.map((option) =>
+    option?.action === "buy-downtown-building"
+      ? {
+          ...option,
+          title: `${buildingDefinition.label}을 ${formatMoney(buildingDefinition.price)}에 매입한다`,
+        }
+      : option
+  );
+
+  if (ownedBuilding) {
+    resolvedScene.options = resolvedScene.options.filter((option) => option?.action !== "buy-downtown-building");
+    prependSceneOption(resolvedScene.options, {
+      title: "보유 건물 수익 현황을 확인한다",
+      action: "review-downtown-building",
+    });
+    if (!resolvedScene.tags.includes("건물주")) {
+      resolvedScene.tags.push("건물주");
+    }
+  }
+
+  return resolvedScene;
+}
+
+function reviewDowntownRealEstateBuilding(targetState = state) {
+  const ownedBuilding = getOwnedRealEstateInvestmentSummary(targetState);
+  if (!ownedBuilding) {
+    targetState.headline = {
+      badge: "매물 조회",
+      text: "아직 매입한 건물이 없다. 안쪽 계약 테이블에서 수익형 빌딩을 살 수 있다.",
+    };
+    if (targetState === state) {
+      renderGame();
+    }
+    return false;
+  }
+
+  const operatedTurns = Math.max(0, ownedBuilding.lastProcessedTurnDay - ownedBuilding.purchasedDay + 1);
+  targetState.headline = {
+    badge: "건물 현황",
+    text: `${ownedBuilding.label} 보유 중. 누적 수익 ${formatMoney(ownedBuilding.cumulativeProfit)}, 자산 가치는 ${formatMoney(ownedBuilding.estimatedValue)}이다.`,
+  };
+  if (typeof setPhoneAppStatus === "function") {
+    setPhoneAppStatus("bank", {
+      kicker: "REALTY",
+      title: ownedBuilding.label,
+      body: `${operatedTurns}턴 운영했고 누적 수익은 ${formatMoney(ownedBuilding.cumulativeProfit)}이다. 자산 가치는 ${formatMoney(ownedBuilding.estimatedValue)}로 잡힌다.`,
+      tone: "success",
+    }, targetState);
+  }
+  if (targetState === state) {
+    renderGame();
+  }
+  return true;
+}
+
+function buyDowntownRealEstateBuilding(targetState = state) {
+  const existingBuilding = getOwnedRealEstateInvestmentSummary(targetState);
+  if (existingBuilding) {
+    return reviewDowntownRealEstateBuilding(targetState);
+  }
+
+  const buildingDefinition = getDowntownRealEstateBuildingDefinition();
+  const bankBalance = typeof getBankBalance === "function"
+    ? getBankBalance(targetState)
+    : Math.max(0, Number(targetState?.bank?.balance) || 0);
+  if (bankBalance < buildingDefinition.price) {
+    const shortage = Math.max(0, buildingDefinition.price - bankBalance);
+    targetState.headline = {
+      badge: "매입 보류",
+      text: `${buildingDefinition.label} 계약금이 부족하다. ${formatMoney(shortage)}이 더 있어야 한다.`,
+    };
+    if (typeof setPhoneAppStatus === "function") {
+      setPhoneAppStatus("bank", {
+        kicker: "REALTY",
+        title: "건물 매입 보류",
+        body: `${buildingDefinition.label} 매입가 ${formatMoney(buildingDefinition.price)} 중 ${formatMoney(shortage)}이 부족하다.`,
+        tone: "fail",
+      }, targetState);
+    }
+    if (targetState === state) {
+      renderGame();
+    }
+    return false;
+  }
+
+  const spent = typeof spendBankBalance === "function"
+    ? spendBankBalance(buildingDefinition.price, {
+        title: "다운타운 부동산 건물 매입",
+        type: "asset",
+        note: `${buildingDefinition.label} 계약금`,
+      }, targetState)
+    : false;
+  if (!spent) {
+    targetState.headline = {
+      badge: "매입 보류",
+      text: "계좌 정산 중 문제가 생겨 건물 계약을 마무리하지 못했다.",
+    };
+    if (targetState === state) {
+      renderGame();
+    }
+    return false;
+  }
+
+  const investmentState = syncRealEstateInvestmentState(targetState);
+  investmentState.ownedBuildingId = buildingDefinition.id;
+  investmentState.buildingLabel = buildingDefinition.label;
+  investmentState.purchasedDay = Math.max(1, Math.round(Number(targetState.day) || 1));
+  investmentState.lastProcessedTurnDay = Math.max(0, investmentState.purchasedDay - 1);
+  investmentState.purchasePrice = buildingDefinition.price;
+  investmentState.estimatedValue = buildingDefinition.estimatedValue;
+  investmentState.incomePerTurn = buildingDefinition.incomePerTurn;
+  investmentState.cumulativeProfit = Math.max(0, Math.round(Number(investmentState.cumulativeProfit) || 0));
+
+  const message = `${buildingDefinition.label}을 매입했다. 이제 매 턴 ${formatMoney(buildingDefinition.incomePerTurn)} 임대수익이 계좌로 들어온다.`;
+  targetState.headline = {
+    badge: "건물 매입",
+    text: message,
+  };
+  if (typeof setPhoneAppStatus === "function") {
+    setPhoneAppStatus("bank", {
+      kicker: "REALTY",
+      title: "건물 매입 완료",
+      body: `${message} 엔딩 정산에는 건물 가치 ${formatMoney(buildingDefinition.estimatedValue)}도 함께 반영된다.`,
+      tone: "success",
+    }, targetState);
+  }
+  if (typeof queueGameplayFeedback === "function") {
+    queueGameplayFeedback({
+      title: "다운타운 부동산 계약 완료",
+      body: `${formatMoney(buildingDefinition.price)} 계약이 끝났다. 매 턴 ${formatMoney(buildingDefinition.incomePerTurn)} 수익이 들어온다.`,
+      tone: "success",
+      duration: 2600,
+    });
+  }
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory("다운타운 건물을 매입했다", `${buildingDefinition.label}을 ${formatMoney(buildingDefinition.price)}에 매입했다. 매 턴 ${formatMoney(buildingDefinition.incomePerTurn)} 임대수익이 들어오고, 최종 정산에는 건물 가치 ${formatMoney(buildingDefinition.estimatedValue)}가 포함된다.`, {
+      type: "finance",
+      source: buildingDefinition.sourceLabel,
+      tags: ["부동산", "건물", "투자"],
+    });
+  }
+  if (targetState === state) {
+    renderGame();
+  }
+  return true;
+}
+
+function settleOwnedRealEstateTurnIncome(completedDay = 0, targetState = state) {
+  const normalizedCompletedDay = Math.max(0, Math.round(Number(completedDay) || 0));
+  const ownedBuilding = getOwnedRealEstateInvestmentSummary(targetState);
+  if (!ownedBuilding || !normalizedCompletedDay) {
+    return null;
+  }
+
+  const investmentState = syncRealEstateInvestmentState(targetState);
+  const startDay = Math.max(ownedBuilding.purchasedDay, investmentState.lastProcessedTurnDay + 1);
+  if (normalizedCompletedDay < startDay) {
+    return null;
+  }
+
+  const settledTurns = Math.max(1, normalizedCompletedDay - startDay + 1);
+  const payout = Math.max(0, ownedBuilding.incomePerTurn * settledTurns);
+  if (!payout) {
+    return null;
+  }
+
+  investmentState.lastProcessedTurnDay = normalizedCompletedDay;
+  investmentState.cumulativeProfit += payout;
+
+  if (typeof earnBankBalance === "function") {
+    earnBankBalance(payout, {
+      title: "건물 임대 수익",
+      type: "income",
+      note: `${ownedBuilding.label} ${settledTurns}턴 정산`,
+    }, targetState);
+  } else {
+    targetState.bank = {
+      ...(targetState.bank || {}),
+      balance: Math.max(0, Number(targetState?.bank?.balance) || 0) + payout,
+    };
+  }
+
+  const periodLabel = settledTurns > 1
+    ? `${startDay}턴부터 ${normalizedCompletedDay}턴까지`
+    : `${normalizedCompletedDay}턴`;
+  const summary = {
+    badge: "건물 수익",
+    title: `${ownedBuilding.label} 임대 수익`,
+    body: `${periodLabel} 운영 수익 ${formatMoney(payout)}이 계좌로 들어왔다.`,
+    lines: [
+      `${periodLabel} 운영 정산으로 ${formatMoney(payout)}이 계좌에 입금됐다.`,
+      `누적 임대수익 ${formatMoney(investmentState.cumulativeProfit)}`,
+      `건물 자산 가치 ${formatMoney(ownedBuilding.estimatedValue)}`,
+    ],
+  };
+
+  if (typeof queueNextTurnEvent === "function" && normalizedCompletedDay < MAX_DAYS) {
+    queueNextTurnEvent({
+      id: `real-estate-income-${normalizedCompletedDay}-${ownedBuilding.id}`,
+      badge: summary.badge,
+      title: summary.title,
+      speaker: "다음 턴 요약",
+      tags: ["부동산", "수익", "건물"],
+      lines: summary.lines,
+    }, targetState, { absoluteDay: normalizedCompletedDay + 1 });
+  }
+
+  if (typeof setPhoneAppStatus === "function") {
+    setPhoneAppStatus("bank", {
+      kicker: "RENT",
+      title: summary.title,
+      body: `${summary.body} 누적 수익은 ${formatMoney(investmentState.cumulativeProfit)}이다.`,
+      tone: "success",
+    }, targetState);
+  }
+
+  return {
+    ...summary,
+    payout,
+    cumulativeProfit: investmentState.cumulativeProfit,
+    estimatedValue: ownedBuilding.estimatedValue,
+    label: ownedBuilding.label,
+  };
 }
 
 const SAVE_STATE_KEY = "mammon-city-save-v1";
@@ -1384,7 +1763,8 @@ function createInitialState() {
         stageExpanded: false,
         route: "home",
         usedToday: false,
-        installedApps: ["bank", "dis", "market", "news", "playstore", "call", "gallery", "jobs", "bus"],
+        installedApps: ["bank", "dis", "news", "playstore", "call", "gallery"],
+        manualInstalledApps: [],
       };
   const jobsDefaults = typeof createDefaultJobsState === "function"
     ? createDefaultJobsState()
@@ -1486,6 +1866,16 @@ function createInitialState() {
         ledger: [],
         permits: {},
         staff: {},
+        realEstate: {
+          ownedBuildingId: "",
+          buildingLabel: "",
+          purchasedDay: 0,
+          cumulativeProfit: 0,
+          lastProcessedTurnDay: 0,
+          purchasePrice: 0,
+          estimatedValue: 0,
+          incomePerTurn: 0,
+        },
       };
   const appearanceDefaults = typeof createDefaultAppearanceState === "function"
     ? createDefaultAppearanceState()
@@ -1609,6 +1999,7 @@ function createInitialState() {
       ledger: Array.isArray(businessDefaults.ledger) ? [...businessDefaults.ledger] : [],
       permits: { ...(businessDefaults.permits || {}) },
       staff: { ...(businessDefaults.staff || {}) },
+      realEstate: { ...(businessDefaults.realEstate || {}) },
     },
     appearance: {
       ...appearanceDefaults,
@@ -1680,6 +2071,7 @@ function createInitialState() {
           activeScene: null,
           lastOutcome: null,
           callScene: null,
+          callSession: null,
           girlfriendContactIds: [],
         },
     ambientRomance: {
@@ -2267,6 +2659,25 @@ function hydrateState(rawState = {}) {
                   : [],
               })
           : null,
+        callSession: rawState.romance.callSession && typeof rawState.romance.callSession === "object"
+          ? (typeof cloneRomanceCallSessionSnapshot === "function"
+            ? cloneRomanceCallSessionSnapshot(rawState.romance.callSession)
+            : {
+                ...rawState.romance.callSession,
+                beats: Array.isArray(rawState.romance.callSession.beats)
+                  ? rawState.romance.callSession.beats.map((beat) => ({
+                      ...(beat || {}),
+                      lines: Array.isArray(beat?.lines) ? [...beat.lines] : [],
+                      choices: Array.isArray(beat?.choices)
+                        ? beat.choices.map((choice) => ({
+                            ...(choice || {}),
+                            responseLines: Array.isArray(choice?.responseLines) ? [...choice.responseLines] : [],
+                          }))
+                        : [],
+                    }))
+                  : [],
+              })
+          : null,
         girlfriendContactIds: Array.isArray(rawState.romance.girlfriendContactIds)
           ? rawState.romance.girlfriendContactIds.map((id) => String(id || "").trim()).filter(Boolean)
           : [],
@@ -2282,6 +2693,7 @@ function hydrateState(rawState = {}) {
             : null,
           lastOutcome: null,
           callScene: null,
+          callSession: null,
           girlfriendContactIds: [],
         });
   if (typeof syncRomanceDomainState === "function") {
@@ -3724,6 +4136,16 @@ function advanceClockByMinutes(minutes = 0, { source = "" } = {}, targetState = 
 
   const elapsedMinutes = Math.max(0, nextMinutes - currentMinutes);
   setAbsoluteDayMinutes(nextMinutes, targetState);
+
+  if (elapsedMinutes > 0) {
+    if (typeof tickStockMarketApp === "function") {
+      tickStockMarketApp(targetState);
+    }
+    if (typeof tickTradingTerminal === "function") {
+      tickTradingTerminal("coin", targetState);
+      tickTradingTerminal("stocks", targetState);
+    }
+  }
 
   if (applyHungerTimePassage(elapsedMinutes, targetState)) {
     if (reachedNightAutoSleep) {
@@ -5812,14 +6234,27 @@ function wanderAroundOutside() {
   const npcPool = typeof getAdjustedLocationNpcPool === "function"
     ? getAdjustedLocationNpcPool(state, locationId)
     : getAlleyNpcPool(state, locationId);
+  const talkableNpcPool = npcPool.filter((entry) => entry?.metadata?.talkable !== false);
   const locationLabel = getCurrentLocationLabel();
   const previousNpcId = typeof getLocationWanderNpcId === "function"
     ? getLocationWanderNpcId(locationId, state)
     : "";
+  const assignedAmbientSnapshot = typeof getLocationAmbientNpcSnapshot === "function"
+    ? getLocationAmbientNpcSnapshot(state, locationId)
+    : null;
+  const assignedAmbientNpcId = Array.isArray(assignedAmbientSnapshot?.roster)
+    ? String(
+        assignedAmbientSnapshot.roster.find((entry) => !entry?.isFallback)?.id
+        || ""
+      ).trim()
+    : "";
+  const assignedAmbientNpc = assignedAmbientNpcId
+    ? talkableNpcPool.find((entry) => String(entry?.id || "") === assignedAmbientNpcId) || null
+    : null;
   const rotatedNpcPool = previousNpcId
-    ? npcPool.filter((entry) => String(entry?.id || "") !== previousNpcId)
-    : npcPool;
-  const activeNpc = pickWeightedEntry(rotatedNpcPool.length ? rotatedNpcPool : npcPool);
+    ? talkableNpcPool.filter((entry) => String(entry?.id || "") !== previousNpcId)
+    : talkableNpcPool;
+  const activeNpc = assignedAmbientNpc || pickWeightedEntry(rotatedNpcPool.length ? rotatedNpcPool : talkableNpcPool);
   const streetRomanceLead = activeNpc && typeof tryAutoStreetRomanceLead === "function"
     ? tryAutoStreetRomanceLead(activeNpc.id, state, {
         locationId,
@@ -5830,7 +6265,7 @@ function wanderAroundOutside() {
     ? ["이동", "탐색", locationId, activeNpc.tag, streetRomanceLead?.tag || ""]
     : ["이동", "탐색", locationId, streetRomanceLead?.tag || ""].filter(Boolean);
 
-  if (!locationId || !npcPool.length) {
+  if (!locationId || !talkableNpcPool.length) {
     state.headline = {
       badge: "탐색 불가",
       text: `${locationLabel}은 천천히 걸어봐도 지금은 특별히 만날 사람이 없다.`,
@@ -5978,11 +6413,23 @@ function startNpcInteraction(npcId, source = "actor-click") {
     return true;
   }
 
+  const dialogueActorsSnapshot = typeof getCurrentOutsideSceneConfig === "function"
+    ? ((getCurrentOutsideSceneConfig(state)?.actors || []).map((actor) => ({ ...actor })))
+    : [];
+
   const started = typeof startNpcDialogue === "function" && startNpcDialogue(npcId, {
     returnScene: "outside",
     returnLocationId: getCurrentLocationId(state),
     source,
+    backgroundSnapshot: typeof getCurrentUiBackgroundSnapshot === "function"
+      ? getCurrentUiBackgroundSnapshot()
+      : null,
+    actorsSnapshot: dialogueActorsSnapshot,
   }, state);
+
+  if (started && typeof recordRecentNpcSighting === "function") {
+    recordRecentNpcSighting(npcId, state, locationId);
+  }
 
   if (!started) {
     if (activeNpc?.id === npcId) {
@@ -6160,9 +6607,7 @@ function normalizeStateForCurrentRules() {
       state.scene = "outside";
     }
     if (state.scene === "lotto-result" && !lottoState.lastDrawSummary) {
-      state.scene = "room";
-    } else if (state.scene === "room" && lottoState.lastDrawSummary && !state.turnBriefing) {
-      state.scene = "lotto-result";
+      state.scene = "outside";
     }
   }
 
@@ -6485,6 +6930,12 @@ const ACTION_HANDLERS = {
   "buy-mcdonalds-coffee"() {
     visitMcDonaldsMenu("buy-mcdonalds-coffee", state);
   },
+  "buy-downtown-building"() {
+    buyDowntownRealEstateBuilding(state);
+  },
+  "review-downtown-building"() {
+    reviewDowntownRealEstateBuilding(state);
+  },
   "study-career-center-review"() {
     const currentMeetings = Number(state.social?.contacts?.careerCenterClerk?.meetings || 0);
     runStudyDistrictEvent({
@@ -6635,6 +7086,17 @@ function bindStaticEvents() {
       source: "phone-toggle",
       actionId: "phone:toggle-panel",
       allowedModes: ["normal", "phone"],
+    });
+  });
+  ui.cityMapToggleButton?.addEventListener("click", () => {
+    runGuardedUiAction(() => {
+      if (typeof toggleCityMapOverlay === "function") {
+        toggleCityMapOverlay();
+      }
+    }, {
+      source: "map-toggle",
+      actionId: "city-map:toggle-overlay",
+      allowedModes: ["normal"],
     });
   });
   ui.phoneStageButton?.addEventListener("click", () => {
@@ -9107,60 +9569,78 @@ const LOTTO_TICKET_DAILY_LIMIT = 5;
 const LOTTO_PICK_NUMBER_COUNT = 6;
 const LOTTO_PICK_NUMBER_MAX = 45;
 const LOTTO_PICK_OPTION_COUNT = 3;
+const LOTTO_SCRATCH_CELL_COUNT = 3;
+const LOTTO_SCRATCH_MATCH_COUNT = 3;
 const LOTTO_RETAILER_PRIZE_TABLE = Object.freeze([
   Object.freeze({
     id: "miss",
     label: "꽝",
+    scratchLabel: "꽝",
     payout: 0,
-    weight: 8900,
-    badge: "로또 꽝",
+    weight: 5000,
+    badge: "꽝",
     headlineText: "번호가 전부 비껴갔다. 오늘은 종이 한 장만 손에 남았다.",
-    memoryBody: "로또 한 장을 샀지만 번호가 전부 빗나갔다.",
+    memoryBody: "즉석복권 한 장을 샀지만 번호가 전부 빗나갔다.",
   }),
   Object.freeze({
     id: "refund",
     label: "5등",
+    scratchLabel: "1천",
     payout: 1000,
-    weight: 800,
+    weight: 2000,
     badge: "5등",
-    headlineText: "본전은 챙겼다. 다음 번호를 다시 노려볼 만하다.",
-    memoryBody: "로또 번호 하나가 맞아 본전 정도는 다시 챙겼다.",
+    headlineText: "본전은 챙겼다. 다음 장을 다시 노려볼 만하다.",
+    memoryBody: "즉석복권에서 본전을 건졌다.",
   }),
   Object.freeze({
     id: "small",
     label: "4등",
-    payout: 5000,
-    weight: 200,
+    scratchLabel: "1만",
+    payout: 10000,
+    weight: 1500,
     badge: "4등",
-    headlineText: "작게 터졌다. 군것질값 정도는 바로 생겼다.",
-    memoryBody: "작은 당첨이 떠서 예상보다 기분 좋은 수익이 생겼다.",
+    headlineText: "작게 터졌다. 치킨값 정도는 바로 생겼다.",
+    memoryBody: "즉석복권 소액 당첨으로 치킨값이 생겼다.",
   }),
   Object.freeze({
     id: "medium",
     label: "3등",
-    payout: 30000,
-    weight: 80,
+    scratchLabel: "10만",
+    payout: 100000,
+    weight: 1000,
     badge: "3등",
-    headlineText: "묵직한 소액 당첨이 떴다. 오늘 하루가 꽤 가벼워졌다.",
-    memoryBody: "로또에서 소액 당첨이 떠서 오늘 지출 부담이 꽤 줄었다.",
+    headlineText: "10만 원이 찍혔다. 오늘 하루가 확실히 달라졌다.",
+    memoryBody: "즉석복권 3등 당첨으로 10만 원이 생겼다.",
   }),
   Object.freeze({
     id: "large",
     label: "2등",
-    payout: 100000,
-    weight: 19,
+    scratchLabel: "100만",
+    payout: 1000000,
+    weight: 400,
     badge: "2등",
-    headlineText: "판매소 공기가 바로 달라질 정도의 큰 당첨이 터졌다.",
-    memoryBody: "로또 판매소에서 제법 큰 당첨을 받아 기분이 훅 올라갔다.",
+    headlineText: "100만 원이 찍혔다. 판매소 직원도 눈이 커졌다.",
+    memoryBody: "즉석복권 2등으로 100만 원을 받았다. 손이 조금 떨렸다.",
   }),
   Object.freeze({
     id: "jackpot",
     label: "1등",
-    payout: 500000,
-    weight: 1,
+    scratchLabel: "1천만",
+    payout: 10000000,
+    weight: 80,
     badge: "1등",
-    headlineText: "드물게 터지는 잭팟이 찍혔다. 판매소 안 공기가 한순간에 바뀌었다.",
-    memoryBody: "로또 판매소에서 잭팟급 당첨을 받아 손이 잠깐 떨릴 정도였다.",
+    headlineText: "1천만 원짜리 잭팟이 찍혔다. 판매소 안 공기가 한순간에 바뀌었다.",
+    memoryBody: "즉석복권 1등 당첨. 1천만 원이 손안에 들어왔다.",
+  }),
+  Object.freeze({
+    id: "super",
+    label: "특등",
+    scratchLabel: "1억",
+    payout: 100000000,
+    weight: 20,
+    badge: "특등 🎉",
+    headlineText: "1억이 찍혔다. 숫자를 세 번 다시 읽었는데 맞았다.",
+    memoryBody: "즉석복권에서 1억짜리 특등이 터졌다. 평생 기억할 날이다.",
   }),
 ]);
 
@@ -9287,12 +9767,17 @@ function normalizeLottoPickCandidate(candidate = null, index = 0) {
 
 function createLottoPickSession(targetState = state) {
   const today = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  const prizeRule = typeof pickWeightedEntry === "function"
+    ? (pickWeightedEntry(LOTTO_RETAILER_PRIZE_TABLE) || LOTTO_RETAILER_PRIZE_TABLE[0])
+    : LOTTO_RETAILER_PRIZE_TABLE[0];
   return {
     day: today,
     locationId: typeof getCurrentLocationId === "function"
       ? getCurrentLocationId(targetState) || "lotto-retailer-interior"
       : "lotto-retailer-interior",
-    candidates: Array.from({ length: LOTTO_PICK_OPTION_COUNT }, (_, index) => createLottoPickCandidate(index)),
+    prizeId: prizeRule.id,
+    board: buildLottoScratchBoard(prizeRule),
+    scratchedCount: 0,
   };
 }
 
@@ -9331,13 +9816,150 @@ function getImmediateLottoPrizeRule(matchCount = 0, bonusMatched = false) {
 }
 
 function buildLottoPrizeGuideLines() {
-  return [
-    `1등 6개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.first.payout)}`,
-    `2등 5개+보너스 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.second.payout)}`,
-    `3등 5개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.third.payout)}`,
-    `4등 4개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.fourth.payout)}`,
-    `5등 3개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.fifth.payout)}`,
-  ];
+  const totalWeight = LOTTO_RETAILER_PRIZE_TABLE.reduce((sum, entry) => sum + Math.max(0, Number(entry?.weight) || 0), 0);
+  return LOTTO_RETAILER_PRIZE_TABLE.map((entry) => {
+    const oddsPercent = totalWeight > 0
+      ? (Math.max(0, Number(entry?.weight) || 0) / totalWeight) * 100
+      : 0;
+    const formattedPercent = oddsPercent >= 1
+      ? `${oddsPercent.toFixed(2).replace(/\.00$/, "")}%`
+      : `${oddsPercent.toFixed(2)}%`;
+    return `${entry.label} ${formatMoney(Math.max(0, Number(entry?.payout) || 0))} · ${formattedPercent}`;
+  });
+}
+
+function getLottoPrizeRuleById(prizeId = "miss") {
+  const normalizedPrizeId = String(prizeId || "miss").trim() || "miss";
+  return LOTTO_RETAILER_PRIZE_TABLE.find((entry) => entry.id === normalizedPrizeId) || LOTTO_RETAILER_PRIZE_TABLE[0];
+}
+
+function createLottoScratchCell(prizeId = "miss", index = 0) {
+  const prizeRule = getLottoPrizeRuleById(prizeId);
+  return {
+    id: `lotto-scratch-${Date.now()}-${index + 1}-${Math.random().toString(36).slice(2, 6)}`,
+    prizeId: prizeRule.id,
+    revealed: false,
+  };
+}
+
+function normalizeLottoScratchCell(cell = null, index = 0) {
+  const prizeRule = getLottoPrizeRuleById(cell?.prizeId || "miss");
+  return {
+    id: String(cell?.id || `lotto-scratch-${index + 1}`).trim() || `lotto-scratch-${index + 1}`,
+    prizeId: prizeRule.id,
+    revealed: Boolean(cell?.revealed),
+  };
+}
+
+function shuffleLottoScratchValues(values = []) {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    const temporary = result[index];
+    result[index] = result[randomIndex];
+    result[randomIndex] = temporary;
+  }
+  return result;
+}
+
+function buildLottoScratchBoard(prizeRule = null) {
+  const resolvedPrizeRule = prizeRule?.id ? prizeRule : getLottoPrizeRuleById("miss");
+  const prizeIds = [];
+
+  if (resolvedPrizeRule.id === "miss") {
+    // 3칸 꽝: 모두 다른 값 — 3-of-a-kind 없음
+    const decoyPool = shuffleLottoScratchValues(
+      LOTTO_RETAILER_PRIZE_TABLE
+        .filter((entry) => entry.id !== "miss")
+        .map((entry) => entry.id),
+    );
+    prizeIds.push(decoyPool[0] || "refund");
+    prizeIds.push(decoyPool[1] || "small");
+    prizeIds.push("miss");
+  } else {
+    // 3칸 당첨: 모두 같은 값
+    for (let i = 0; i < LOTTO_SCRATCH_CELL_COUNT; i++) {
+      prizeIds.push(resolvedPrizeRule.id);
+    }
+  }
+
+  return shuffleLottoScratchValues(prizeIds.slice(0, LOTTO_SCRATCH_CELL_COUNT))
+    .map((prizeId, index) => createLottoScratchCell(prizeId, index));
+}
+
+function countLottoScratchMatches(board = []) {
+  return board.reduce((counts, cell) => {
+    const prizeId = getLottoPrizeRuleById(cell?.prizeId || "miss").id;
+    counts[prizeId] = (counts[prizeId] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function formatLottoScratchBreakdown(board = []) {
+  const counts = countLottoScratchMatches(board);
+  return Object.entries(counts)
+    .sort((left, right) => (getLottoPrizeRuleById(right[0]).payout || 0) - (getLottoPrizeRuleById(left[0]).payout || 0))
+    .map(([prizeId, count]) => `${getLottoPrizeRuleById(prizeId).scratchLabel || getLottoPrizeRuleById(prizeId).label} ${count}칸`)
+    .join(" / ");
+}
+
+function resolveLottoScratchPrizeRule(board = []) {
+  const counts = countLottoScratchMatches(board);
+  const winningRule = LOTTO_RETAILER_PRIZE_TABLE
+    .filter((entry) => entry.id !== "miss" && (counts[entry.id] || 0) >= LOTTO_SCRATCH_MATCH_COUNT)
+    .sort((left, right) => (Number(right?.payout) || 0) - (Number(left?.payout) || 0))[0];
+  return winningRule || getLottoPrizeRuleById("miss");
+}
+
+function buildLottoScratchResultSummary(pickSession = null, targetState = state) {
+  const board = Array.isArray(pickSession?.board)
+    ? pickSession.board.map((cell, index) => normalizeLottoScratchCell(cell, index))
+    : [];
+  const prizeRule = resolveLottoScratchPrizeRule(board);
+  const payout = Math.max(0, Number(prizeRule?.payout) || 0);
+  const net = payout - LOTTO_TICKET_PRICE;
+  const fallbackLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState) || "lotto-retailer-interior"
+    : "lotto-retailer-interior";
+  const rawReturnLocationId = String(
+    pickSession?.locationId
+      || fallbackLocationId
+      || "lotto-retailer-interior",
+  ).trim() || "lotto-retailer-interior";
+  const returnLocationId = rawReturnLocationId === "lotto-retailer"
+    ? "lotto-retailer-interior"
+    : rawReturnLocationId;
+  const scratchLabels = board.map((cell) => getLottoPrizeRuleById(cell?.prizeId || "miss").scratchLabel || "꽝");
+  const breakdownLine = formatLottoScratchBreakdown(board);
+  const lines = [
+    scratchLabels.length ? `긁은 칸: ${scratchLabels.join(" / ")}` : "긁은 칸이 없다.",
+    breakdownLine ? `칸 정리: ${breakdownLine}` : "",
+    payout > 0
+      ? `${prizeRule.scratchLabel || prizeRule.label} 3칸 일치. ${formatMoney(payout)} 당첨이다.`
+      : "같은 금액 3칸이 모이지 않아 꽝이다.",
+    `복권값 포함 순손익 ${net >= 0 ? "+" : "-"}${formatMoney(Math.abs(net))}`,
+    `확률표: ${buildLottoPrizeGuideLines().join(" / ")}`,
+  ].filter(Boolean);
+
+  if (prizeRule?.headlineText) {
+    lines.push(prizeRule.headlineText);
+  }
+
+  return {
+    badge: prizeRule?.badge || "즉석복권 결과",
+    title: payout > 0
+      ? `${prizeRule.scratchLabel || prizeRule.label} 당첨`
+      : "즉석복권 꽝",
+    lines,
+    payout,
+    net,
+    ticketCount: 1,
+    returnScene: "outside",
+    returnLocationId,
+    prizeId: prizeRule?.id || "miss",
+    scratchLabels,
+    breakdownLine,
+  };
 }
 
 function normalizeLottoPickSession(session = null, targetState = state) {
@@ -9347,18 +9969,23 @@ function normalizeLottoPickSession(session = null, targetState = state) {
 
   const today = Math.max(1, Math.round(Number(targetState?.day) || 1));
   const day = Math.max(1, Math.round(Number(session.day) || today));
-  const candidates = Array.isArray(session.candidates)
-    ? session.candidates.map((candidate, index) => normalizeLottoPickCandidate(candidate, index))
+  if (Array.isArray(session.candidates)) {
+    return null;
+  }
+  const board = Array.isArray(session.board)
+    ? session.board.map((cell, index) => normalizeLottoScratchCell(cell, index))
     : [];
 
-  if (day !== today || !candidates.length) {
+  if (day !== today || !board.length) {
     return null;
   }
 
   return {
     day,
     locationId: String(session.locationId || "lotto-retailer-interior").trim() || "lotto-retailer-interior",
-    candidates,
+    prizeId: getLottoPrizeRuleById(session.prizeId || "miss").id,
+    board,
+    scratchedCount: board.filter((cell) => cell.revealed).length,
   };
 }
 
@@ -9428,6 +10055,13 @@ function openLottoRetailerPickSession(targetState = state) {
     return false;
   }
 
+  const lottoState = syncLottoRetailerState(targetState);
+  if (lottoState.pickSession) {
+    targetState.scene = "lotto-pick";
+    renderGame();
+    return true;
+  }
+
   const purchaseSnapshot = getLottoRetailerPurchaseSnapshot(targetState);
   if (purchaseSnapshot.remaining <= 0) {
     targetState.headline = {
@@ -9447,10 +10081,25 @@ function openLottoRetailerPickSession(targetState = state) {
     return false;
   }
 
-  const lottoState = syncLottoRetailerState(targetState);
-  lottoState.lastDrawSummary = null;
-  lottoState.pickSession = createLottoPickSession(targetState);
+  if (typeof spendCash === "function" && !spendCash(LOTTO_TICKET_PRICE, targetState)) {
+    targetState.headline = {
+      badge: "구매 실패",
+      text: "현금을 꺼내려다 계산이 꼬였다.",
+    };
+    renderGame();
+    return false;
+  }
+
+  const today = Math.max(1, Math.round(Number(targetState.day) || 1));
+  const liveLottoState = syncLottoRetailerState(targetState);
+  liveLottoState.lastDrawSummary = null;
+  liveLottoState.pickSession = createLottoPickSession(targetState);
+  liveLottoState.dailyPurchaseDay = today;
+  liveLottoState.dailyPurchaseCount = purchaseSnapshot.purchaseCount + 1;
   targetState.scene = "lotto-pick";
+  if (typeof showMoneyEffect === "function") {
+    showMoneyEffect(-LOTTO_TICKET_PRICE);
+  }
   renderGame();
   return true;
 }
@@ -9511,7 +10160,78 @@ function buildImmediateLottoDrawSummary(chosenNumbers = [], targetState = state)
   };
 }
 
+function scratchLottoRetailerCell(cellIndex = 0, targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  const lottoState = syncLottoRetailerState(targetState);
+  const pickSession = lottoState.pickSession;
+  const board = Array.isArray(pickSession?.board) ? pickSession.board : [];
+  const resolvedIndex = Math.max(0, Math.round(Number(cellIndex) || 0));
+  const cell = board[resolvedIndex] || null;
+
+  if (!pickSession || !cell) {
+    targetState.scene = "outside";
+    renderGame();
+    return false;
+  }
+
+  if (cell.revealed) {
+    return false;
+  }
+
+  cell.revealed = true;
+  pickSession.scratchedCount = board.filter((entry) => entry.revealed).length;
+
+  if (pickSession.scratchedCount < board.length) {
+    renderGame();
+    return true;
+  }
+
+  const summary = buildLottoScratchResultSummary(pickSession, targetState);
+  lottoState.pickSession = null;
+  lottoState.lastDrawSummary = summary;
+
+  if (summary.payout > 0) {
+    if (typeof earnCash === "function") {
+      earnCash(summary.payout, targetState);
+    } else {
+      targetState.money = Math.max(0, Number(targetState.money) || 0) + summary.payout;
+    }
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(summary.payout);
+    }
+  }
+
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory(
+      summary.payout > 0 ? "즉석복권에서 당첨됐다" : "즉석복권이 꽝으로 끝났다",
+      summary.payout > 0
+        ? `${summary.title} 결과로 ${formatMoney(summary.payout)}을 챙겼다.`
+        : "복권을 끝까지 긁었지만 같은 금액 세 칸이 나오지 않았다.",
+      {
+        type: "gambling",
+        source: "배금역 복권판매점",
+        tags: ["즉석복권", "스크래치", summary.prizeId || "miss"].filter(Boolean),
+      },
+    );
+  }
+
+  targetState.headline = {
+    badge: summary.badge || "즉석복권 결과",
+    text: summary.lines[summary.lines.length - 1] || summary.title,
+  };
+  targetState.scene = "lotto-result";
+
+  spendMinorTime(PHONE_INTERACTION_MINUTES);
+  renderGame();
+  return true;
+}
+
 function confirmLottoRetailerPick(candidateIndex = 0, targetState = state) {
+  return scratchLottoRetailerCell(candidateIndex, targetState);
+
   if (!targetState) {
     return false;
   }
@@ -9611,6 +10331,18 @@ function cancelLottoRetailerPickSession(targetState = state) {
     return false;
   }
 
+  targetState.scene = "outside";
+  targetState.headline = {
+    badge: "즉석복권",
+    text: "긁던 복권은 잠깐 보관하고 판매장 화면으로 나온다.",
+  };
+  renderGame();
+  return true;
+
+  if (!targetState) {
+    return false;
+  }
+
   const lottoState = syncLottoRetailerState(targetState);
   lottoState.pickSession = null;
   targetState.scene = "outside";
@@ -9620,6 +10352,58 @@ function cancelLottoRetailerPickSession(targetState = state) {
 
 function resolvePendingLottoRetailerTickets(targetState = state) {
   const lottoState = syncLottoRetailerState(targetState);
+  const legacyPendingCount = Array.isArray(lottoState.pendingTickets)
+    ? lottoState.pendingTickets.length
+    : 0;
+  const legacyInventoryCount = typeof getInventoryItemQuantity === "function"
+    ? getInventoryItemQuantity("lotto-ticket", targetState)
+    : 0;
+  const legacyTicketCount = Math.max(legacyPendingCount, legacyInventoryCount);
+
+  lottoState.pendingTickets = [];
+  lottoState.lastDrawSummary = null;
+
+  if (legacyInventoryCount > 0 && typeof consumeInventoryItem === "function") {
+    consumeInventoryItem("lotto-ticket", legacyInventoryCount, targetState);
+  }
+
+  if (!legacyTicketCount) {
+    return null;
+  }
+
+  const refund = legacyTicketCount * LOTTO_TICKET_PRICE;
+  if (refund > 0) {
+    if (typeof earnCash === "function") {
+      earnCash(refund, targetState);
+    } else {
+      targetState.money = Math.max(0, Number(targetState.money) || 0) + refund;
+    }
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(refund);
+    }
+  }
+
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory(
+      "구형 로또 티켓이 환불 처리됐다",
+      `예전 방식으로 발권된 복권 ${legacyTicketCount}장을 정리하고 ${formatMoney(refund)}을 돌려받았다.`,
+      {
+        type: "gambling",
+        source: "배금역 복권판매점",
+        tags: ["즉석복권", "환불", "구형복권"],
+      },
+    );
+  }
+
+  if (!targetState.headline?.text) {
+    targetState.headline = {
+      badge: "즉석복권 전환",
+      text: `예전 복권 ${legacyTicketCount}장을 정리하고 ${formatMoney(refund)}을 환불했다.`,
+    };
+  }
+
+  return null;
+
   const today = Math.max(1, Math.round(Number(targetState?.day) || 1));
   const dueTickets = lottoState.pendingTickets.filter((ticket) => ticket.drawDay <= today);
 
@@ -9725,17 +10509,39 @@ function dismissLottoRetailerResult(targetState = state) {
     : null;
   lottoState.lastDrawSummary = null;
 
+  const fallbackLocationId = summary?.returnLocationId
+    || (typeof getCurrentLocationId === "function" ? getCurrentLocationId(targetState) : "")
+    || "lotto-retailer-interior";
+  const returnLocationId = String(fallbackLocationId).trim() || "lotto-retailer-interior";
+  const worldState = typeof syncWorldState === "function"
+    ? syncWorldState(targetState)
+    : (targetState.world || {});
+  worldState.currentLocation = returnLocationId;
+  worldState.currentDistrict = typeof getWorldLocationDistrictId === "function"
+    ? getWorldLocationDistrictId(returnLocationId, targetState.day)
+    : worldState.currentDistrict;
+  targetState.world = worldState;
+  targetState.scene = "outside";
+
+  if (hasPendingNightAutoSleep(targetState) && targetState === state) {
+    advanceDayOrFinish();
+    return;
+  }
+
+  renderGame();
+  return;
+
   const returnScene = String(summary?.returnScene || "room").trim() || "room";
-  const returnLocationId = String(summary?.returnLocationId || "").trim();
-  if (returnScene === "outside" && returnLocationId) {
-    const worldState = typeof syncWorldState === "function"
+  const legacyReturnLocationId = String(summary?.returnLocationId || "").trim();
+  if (returnScene === "outside" && legacyReturnLocationId) {
+    const legacyWorldState = typeof syncWorldState === "function"
       ? syncWorldState(targetState)
       : (targetState.world || {});
-    worldState.currentLocation = returnLocationId;
-    worldState.currentDistrict = typeof getWorldLocationDistrictId === "function"
-      ? getWorldLocationDistrictId(returnLocationId, targetState.day)
-      : worldState.currentDistrict;
-    targetState.world = worldState;
+    legacyWorldState.currentLocation = legacyReturnLocationId;
+    legacyWorldState.currentDistrict = typeof getWorldLocationDistrictId === "function"
+      ? getWorldLocationDistrictId(legacyReturnLocationId, targetState.day)
+      : legacyWorldState.currentDistrict;
+    targetState.world = legacyWorldState;
     targetState.scene = "outside";
   } else {
     targetState.scene = "room";
@@ -10209,7 +11015,13 @@ function runCoinEnter() {
   const balance = typeof getWalletBalance === "function" ? getWalletBalance(state) : state.money;
 
   const selectedRadio = document.querySelector(".coin-tab-radio:checked");
-  const coinType = selectedRadio ? selectedRadio.value : "MAMC";
+  const coinType = selectedRadio ? selectedRadio.value : "BTC";
+
+  if (typeof isCoinDelisted === "function" && isCoinDelisted(coinType, state)) {
+    const coinInfo = typeof getCoinTypeInfo === "function" ? getCoinTypeInfo(coinType) : { label: coinType };
+    setPhoneAppStatus("coin", { kicker: "COIN", title: "거래 중단", body: `${coinInfo.label}은 이번 하락장에서 상장폐지되어 더는 매수할 수 없다.`, tone: "fail" });
+    renderGame(); return;
+  }
 
   if (betAmount < 1000) {
     setPhoneAppStatus("coin", { kicker: "COIN", title: "금액 오류", body: "최소 1,000원 이상 입력하세요.", tone: "fail" });
@@ -10908,6 +11720,14 @@ function handlePhoneScreenClick(event) {
     return;
   }
 
+  if (phoneAction === "dis-switch-community-tab") {
+    if (typeof setDisCommunityTab === "function") {
+      setDisCommunityTab(actionTarget.dataset.tab);
+    }
+    openDisCommunityRoute("dis/singularity", { expandStage: true });
+    return;
+  }
+
   if (phoneAction === "dis-like-community-post") {
     if (typeof likeDisCommunityPost === "function") {
       likeDisCommunityPost(actionTarget.dataset.postId);
@@ -10945,6 +11765,47 @@ function handlePhoneScreenClick(event) {
 
   if (phoneAction === "dis-play-ladder") {
     runDisLadder(actionTarget);
+    return;
+  }
+
+  if (phoneAction === "call-show-incoming") {
+    state.callPending = {
+      contactId: actionTarget.dataset.contactId || "",
+      label: actionTarget.dataset.label || "연락처",
+      kind: actionTarget.dataset.kind || "family",
+    };
+    if (typeof openPhoneRoute === "function") {
+      openPhoneRoute("call/incoming", state);
+    } else {
+      state.phoneView = "call/incoming";
+      renderGame();
+    }
+    return;
+  }
+
+  if (phoneAction === "call-confirm-incoming") {
+    const pending = state.callPending || {};
+    state.callPending = null;
+    if (pending.kind === "romance" && pending.contactId) {
+      callRomancePhoneContact(pending.contactId);
+    } else {
+      callHomeContact();
+    }
+    state.phoneMinimized = true;
+    state.phoneStageExpanded = false;
+    state.phoneView = "call/home";
+    renderGame();
+    return;
+  }
+
+  if (phoneAction === "call-reject-incoming") {
+    state.callPending = null;
+    if (typeof openPhoneRoute === "function") {
+      openPhoneRoute("call/home", state);
+    } else {
+      state.phoneView = "call/home";
+      renderGame();
+    }
     return;
   }
 
@@ -12184,6 +13045,26 @@ function completePendingWorldTravel(config = {}) {
 }
 
 function moveToWorldLocation(targetLocation = "", config = {}, targetState = state) {
+  const normalizedTargetLocation = String(targetLocation || "").trim();
+  if (normalizedTargetLocation === "research-lab-interior" && !canAccessResearchLabInterior(targetState)) {
+    targetState.headline = {
+      badge: "출입 제한",
+      text: "연구원 신분이 아니면 연구동 안으로는 들어갈 수 없다.",
+    };
+    if (typeof setPhoneAppStatus === "function") {
+      setPhoneAppStatus("jobs", {
+        kicker: "ACCESS",
+        title: "연구동 출입 제한",
+        body: "배금연구소 연구동은 연구원만 출입할 수 있다.",
+        tone: "fail",
+      }, targetState);
+    }
+    if (targetState === state) {
+      renderGame();
+    }
+    return false;
+  }
+
   if (shouldResolveWorldMoveDirectly(targetLocation, config, targetState)) {
     return performWorldDirectMove(targetLocation, config, targetState);
   }
@@ -12361,6 +13242,7 @@ function handleOutsideOption(action) {
     moveToWorldLocation(option.targetLocation, {
       skipExitCheck: Boolean(cityMapSummary) || shouldUseBusTravel || option.skipExitCheck === true,
       forceTravelMode: Boolean(cityMapSummary) || shouldUseBusTravel,
+      forceDirectMove: option.forceDirectMove === true,
       travelMinutes: shouldUseBusTravel
         ? TIME_SLOT_MINUTES
         : (cityMapSummary?.minutes ?? directTravelMinutes),
@@ -12542,6 +13424,10 @@ function spendEnergy(amount) {
 }
 
 function completeDayAdvance({ recover = true } = {}) {
+  if (typeof settleOwnedRealEstateTurnIncome === "function") {
+    settleOwnedRealEstateTurnIncome(Math.max(1, Math.round(Number(state.day) || 1)), state);
+  }
+
   if (state.day >= MAX_DAYS) {
     finishRun();
     return;
@@ -12627,7 +13513,11 @@ function finishRun() {
   if (summary && Array.isArray(summary.lines) && Number.isFinite(summary.happinessBonus)) {
     const hasHappinessBonusLine = summary.lines.some((line) => String(line || "").includes("행복 보너스"));
     if (!hasHappinessBonusLine) {
-      summary.lines.splice(5, 0, `행복 보너스 ${formatMoney(summary.happinessBonus)}`);
+      const rankingLineIndex = summary.lines.findIndex((line) =>
+        String(line || "").includes(String(summary.rankingMetricLabel || "").trim())
+      );
+      const insertIndex = rankingLineIndex >= 0 ? rankingLineIndex : Math.min(5, summary.lines.length);
+      summary.lines.splice(insertIndex, 0, `행복 보너스 ${formatMoney(summary.happinessBonus)}`);
     }
   }
   state.headline = {
@@ -12761,6 +13651,9 @@ function buildEndingSummary() {
     ? syncHappinessState(state)
     : createDefaultHappinessState();
   const happinessBonus = Math.max(0, Number(happinessState.value) || 0) * 10000;
+  const ownedRealEstate = typeof getOwnedRealEstateInvestmentSummary === "function"
+    ? getOwnedRealEstateInvestmentSummary(state)
+    : null;
   const rankingValue = netWorth + happinessBonus;
   const rank = getRankByMoney(rankingValue);
   const rankingMetricLabel = "최종 순자산 + 행복 보너스";
@@ -12780,6 +13673,9 @@ function buildEndingSummary() {
     cashOnHand,
     bankBalance,
     assetValue,
+    realEstateValue: ownedRealEstate?.estimatedValue || 0,
+    realEstateProfit: ownedRealEstate?.cumulativeProfit || 0,
+    realEstateLabel: ownedRealEstate?.label || "",
     debtOutstanding,
     netWorth,
     happinessBonus,
@@ -12797,6 +13693,12 @@ function buildEndingSummary() {
       `현금 ${formatMoney(cashOnHand)}`,
       `계좌 잔고 ${formatMoney(bankBalance)}`,
       `보유 자산 가치 ${formatMoney(assetValue)}`,
+      ...(ownedRealEstate
+        ? [
+            `${ownedRealEstate.label} 자산 가치 ${formatMoney(ownedRealEstate.estimatedValue)}`,
+            `${ownedRealEstate.label} 누적 수익 ${formatMoney(ownedRealEstate.cumulativeProfit)}`,
+          ]
+        : []),
       `대출 잔액 ${formatMoney(debtOutstanding)}`,
       `${rankingMetricLabel} ${formatMoney(rankingValue)}`,
       `현재 직업 ${jobTitle}`,

@@ -479,19 +479,21 @@ function formatDisCommunityTimestamp(timestamp = 0) {
   }
 
   const date = new Date(normalizedTimestamp);
-  return `${date.getMonth() + 1}.${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
+
+const DIS_COMMUNITY_BEST_THRESHOLD = 5;
 
 function buildDisCommunityRoute(screenId = "singularity") {
   const normalizedScreenId = String(screenId || "singularity").trim().toLowerCase() || "singularity";
   return `dis/${normalizedScreenId}`;
 }
 
-function buildDisCommunityConnectionBadgeMarkup() {
+function buildDisCommunityConnectionBadgeMarkup(postCount = 0) {
   const connection = typeof getDisCommunityConnectionState === "function"
     ? getDisCommunityConnectionState()
-    : { mode: "offline", statusLabel: "오프라인 미리보기", detail: "실시간 미연결" };
-  const toneClass = connection.mode === "live"
+    : { mode: "offline", statusLabel: "오프라인", detail: "실시간 미연결" };
+  const dotClass = connection.mode === "live"
     ? " is-live"
     : connection.mode === "connecting"
       ? " is-connecting"
@@ -500,9 +502,10 @@ function buildDisCommunityConnectionBadgeMarkup() {
         : "";
 
   return `
-    <div class="dis-community-connection${toneClass}">
-      <span class="dis-community-connection-label">${escapePhoneAppHtml(connection.statusLabel || "오프라인 미리보기")}</span>
-      <span class="dis-community-connection-detail">${escapePhoneAppHtml(connection.detail || "실시간 미연결")}</span>
+    <div class="dis-community-conn-row">
+      <span class="dis-community-conn-dot${dotClass}"></span>
+      <span class="dis-community-conn-text">${escapePhoneAppHtml(connection.statusLabel || "오프라인")}</span>
+      ${postCount > 0 ? `<span class="dis-community-post-count">글 ${escapePhoneAppHtml(String(postCount))}개</span>` : ""}
     </div>
   `;
 }
@@ -519,11 +522,11 @@ function buildDisCommunityCompactMarkup(targetState = state) {
   return `
     <section class="dis-community-compact-shell">
       <div class="dis-community-compact-head">
-        <div class="dis-community-compact-kicker">LIVE GALLERY</div>
-        <div class="dis-community-compact-title">디특이점갤러리</div>
-        <div class="dis-community-compact-note">작은 화면에서는 최근 글만 보고, 펼치기에서 전체 글과 댓글을 확인한다.</div>
+        <div class="dis-community-compact-kicker">특이점갤 LIVE</div>
+        <div class="dis-community-compact-title">특이점이 온다</div>
+        <div class="dis-community-compact-note">최근 글 미리보기 · 펼치기에서 전체 목록·댓글 확인</div>
       </div>
-      ${buildDisCommunityConnectionBadgeMarkup()}
+      ${buildDisCommunityConnectionBadgeMarkup(posts.length)}
       <div class="dis-community-compact-list">
         ${posts.length
           ? posts.map((post) => `
@@ -533,8 +536,8 @@ function buildDisCommunityCompactMarkup(targetState = state) {
               data-phone-action="dis-open-community-post-stage"
               data-post-id="${escapePhoneAppHtml(post.id)}"
             >
-              <span class="dis-community-compact-item-title">${escapePhoneAppHtml(post.title)}</span>
-              <span class="dis-community-compact-item-meta">${escapePhoneAppHtml(`${post.author} · 댓글 ${post.comments?.length || 0}`)}</span>
+              <span class="dis-community-compact-item-title">${(post.likes || 0) >= DIS_COMMUNITY_BEST_THRESHOLD ? '<span class="dis-community-best-badge">개념</span> ' : ""}${escapePhoneAppHtml(post.title)}${post.comments?.length ? ` <span class="dis-community-compact-comment-count">[${post.comments.length}]</span>` : ""}</span>
+              <span class="dis-community-compact-item-meta">${escapePhoneAppHtml(`${post.author} · 추천 ${post.likes || 0}`)}</span>
             </button>
           `).join("")
           : '<div class="dis-community-empty">아직 올라온 글이 없습니다.</div>'}
@@ -542,7 +545,7 @@ function buildDisCommunityCompactMarkup(targetState = state) {
       <div class="dis-community-compact-actions">
         ${buildPhoneAppActionButtonMarkup({
           action: "dis-open-community-stage",
-          label: "펼쳐서 보기",
+          label: "갤러리 전체보기",
           className: "dis-community-compact-action is-primary",
         })}
         ${buildPhoneAppActionButtonMarkup({
@@ -555,6 +558,31 @@ function buildDisCommunityCompactMarkup(targetState = state) {
   `;
 }
 
+function buildDisCommunityPostRowMarkup(post) {
+  const isBest = (post.likes || 0) >= DIS_COMMUNITY_BEST_THRESHOLD;
+  const commentCount = post.comments?.length || 0;
+  return `
+    <button
+      class="dis-community-post-row"
+      type="button"
+      data-phone-action="dis-open-community-post"
+      data-post-id="${escapePhoneAppHtml(post.id)}"
+    >
+      <div class="dis-community-post-title-row">
+        ${isBest ? '<span class="dis-community-best-badge">개념</span>' : ""}
+        <span class="dis-community-post-title">${escapePhoneAppHtml(post.title)}</span>
+        ${commentCount > 0 ? `<span class="dis-community-post-comment-count">[${escapePhoneAppHtml(String(commentCount))}]</span>` : ""}
+      </div>
+      <div class="dis-community-post-meta-row">
+        <span>${escapePhoneAppHtml(post.author)}</span>
+        <span>${escapePhoneAppHtml(formatDisCommunityTimestamp(post.createdAt))}</span>
+        <span class="is-views">조회 ${escapePhoneAppHtml(String(post.views || 0))}</span>
+        <span class="is-likes">추천 ${escapePhoneAppHtml(String(post.likes || 0))}</span>
+      </div>
+    </button>
+  `;
+}
+
 function buildDisCommunityListStageMarkup(targetState = state) {
   if (typeof ensureDisCommunityRealtime === "function") {
     ensureDisCommunityRealtime(targetState);
@@ -564,57 +592,71 @@ function buildDisCommunityListStageMarkup(targetState = state) {
     ? getDisCommunityPosts()
     : [];
 
+  const activeTab = targetState?.disCommunity?.tab === "best" ? "best" : "all";
+  const bestPosts = posts.filter((p) => (p.likes || 0) >= DIS_COMMUNITY_BEST_THRESHOLD);
+  const displayPosts = activeTab === "best" ? bestPosts : posts;
+
+  const bestSectionMarkup = activeTab === "all" && bestPosts.length > 0
+    ? `
+      <div class="dis-community-best-section">
+        <div class="dis-community-best-header">🔥 개념글</div>
+        ${bestPosts.slice(0, 3).map((post) => `
+          <button
+            class="dis-community-best-row"
+            type="button"
+            data-phone-action="dis-open-community-post"
+            data-post-id="${escapePhoneAppHtml(post.id)}"
+          >
+            <span class="dis-community-best-title">${escapePhoneAppHtml(post.title)}</span>
+            <span class="dis-community-best-likes">추천 ${escapePhoneAppHtml(String(post.likes || 0))}</span>
+          </button>
+        `).join("")}
+      </div>
+    `
+    : "";
+
   return `
     <div class="dis-community-shell">
-      <div class="dis-community-header">
-        <div class="dis-community-header-copy">
-          <div class="dis-community-kicker">DIGGLE COMMUNITY</div>
-          <div class="dis-community-title">특이점이 온다 갤러리</div>
-          <div class="dis-community-note">기술적 특이점, AGI, 자동화, 기본소득 이야기가 실시간으로 올라온다.</div>
-        </div>
-        <div class="dis-community-header-actions">
-          ${buildPhoneRouteButtonMarkup({
-            route: DIS_GAMBLING_ROUTES.home,
-            label: "Diggle",
-            className: "dis-community-header-btn",
-          })}
+      <div class="dis-community-topbar">
+        <div class="dis-community-topbar-title">특이점이 온다 갤러리</div>
+        <div class="dis-community-topbar-actions">
           ${buildPhoneRouteButtonMarkup({
             route: DIS_GAMBLING_ROUTES.singularityWrite,
             label: "글쓰기",
-            className: "dis-community-header-btn is-primary",
+            className: "dis-community-header-btn",
+          })}
+          ${buildPhoneRouteButtonMarkup({
+            route: DIS_GAMBLING_ROUTES.home,
+            label: "홈",
+            className: "dis-community-header-btn",
           })}
         </div>
       </div>
 
-      ${buildDisCommunityConnectionBadgeMarkup()}
+      ${buildDisCommunityConnectionBadgeMarkup(posts.length)}
 
-      <div class="dis-community-board-head">
-        <div class="dis-community-board-title">실시간 글 목록</div>
-        <div class="dis-community-board-meta">${escapePhoneAppHtml(`${posts.length}개 글`)}</div>
+      <div class="dis-community-tabs" role="tablist">
+        ${buildPhoneAppActionButtonMarkup({
+          action: "dis-switch-community-tab",
+          label: "전체글",
+          data: { tab: "all" },
+          className: `dis-community-tab${activeTab === "all" ? " is-active" : ""}`,
+        })}
+        ${buildPhoneAppActionButtonMarkup({
+          action: "dis-switch-community-tab",
+          label: `개념글${bestPosts.length > 0 ? ` (${bestPosts.length})` : ""}`,
+          data: { tab: "best" },
+          className: `dis-community-tab${activeTab === "best" ? " is-active" : ""}`,
+        })}
       </div>
 
-      <div class="dis-community-post-list">
-        ${posts.length
-          ? posts.map((post, index) => `
-            <button
-              class="dis-community-post-row"
-              type="button"
-              data-phone-action="dis-open-community-post"
-              data-post-id="${escapePhoneAppHtml(post.id)}"
-            >
-              <span class="dis-community-post-index">${escapePhoneAppHtml(String(index + 1))}</span>
-              <span class="dis-community-post-main">
-                <span class="dis-community-post-title">${escapePhoneAppHtml(post.title)}</span>
-                <span class="dis-community-post-preview">${escapePhoneAppHtml(post.content)}</span>
-              </span>
-              <span class="dis-community-post-side">
-                <span>${escapePhoneAppHtml(post.author)}</span>
-                <span>${escapePhoneAppHtml(formatDisCommunityTimestamp(post.createdAt))}</span>
-                <span>${escapePhoneAppHtml(`조회 ${post.views || 0} · 추천 ${post.likes || 0}`)}</span>
-              </span>
-            </button>
-          `).join("")
-          : '<div class="dis-community-empty">아직 올라온 글이 없습니다. 첫 글을 남겨보세요.</div>'}
+      <div class="dis-community-board">
+        ${bestSectionMarkup}
+        <div class="dis-community-post-list">
+          ${displayPosts.length
+            ? displayPosts.map((post) => buildDisCommunityPostRowMarkup(post)).join("")
+            : `<div class="dis-community-empty">${activeTab === "best" ? "아직 개념글이 없습니다. (추천 ${DIS_COMMUNITY_BEST_THRESHOLD}개 이상)" : "아직 올라온 글이 없습니다. 첫 글을 남겨보세요."}</div>`}
+        </div>
       </div>
     </div>
   `;
@@ -633,33 +675,28 @@ function buildDisCommunityReadStageMarkup(targetState = state) {
   if (!post) {
     return `
       <div class="dis-community-shell">
-        <div class="dis-community-header">
-          <div class="dis-community-header-copy">
-            <div class="dis-community-kicker">DIGGLE COMMUNITY</div>
-            <div class="dis-community-title">게시글을 찾지 못했다</div>
-            <div class="dis-community-note">목록으로 돌아가서 다시 선택해 주세요.</div>
-          </div>
-          <div class="dis-community-header-actions">
+        <div class="dis-community-topbar">
+          <div class="dis-community-topbar-title">특이점이 온다 갤러리</div>
+          <div class="dis-community-topbar-actions">
             ${buildPhoneRouteButtonMarkup({
               route: DIS_GAMBLING_ROUTES.singularity,
               label: "목록",
-              className: "dis-community-header-btn is-primary",
+              className: "dis-community-header-btn",
             })}
           </div>
         </div>
+        <div class="dis-community-empty">게시글을 찾지 못했습니다. 목록으로 돌아가서 다시 선택해 주세요.</div>
       </div>
     `;
   }
 
+  const isBest = (post.likes || 0) >= DIS_COMMUNITY_BEST_THRESHOLD;
+
   return `
     <div class="dis-community-shell">
-      <div class="dis-community-header">
-        <div class="dis-community-header-copy">
-          <div class="dis-community-kicker">DIGGLE COMMUNITY</div>
-          <div class="dis-community-title">특이점이 온다 갤러리</div>
-          <div class="dis-community-note">실시간 글 읽기</div>
-        </div>
-        <div class="dis-community-header-actions">
+      <div class="dis-community-topbar">
+        <div class="dis-community-topbar-title">특이점이 온다 갤러리</div>
+        <div class="dis-community-topbar-actions">
           ${buildPhoneRouteButtonMarkup({
             route: DIS_GAMBLING_ROUTES.singularity,
             label: "목록",
@@ -668,26 +705,30 @@ function buildDisCommunityReadStageMarkup(targetState = state) {
           ${buildPhoneRouteButtonMarkup({
             route: DIS_GAMBLING_ROUTES.singularityWrite,
             label: "글쓰기",
-            className: "dis-community-header-btn is-primary",
+            className: "dis-community-header-btn",
           })}
         </div>
       </div>
 
       ${buildDisCommunityConnectionBadgeMarkup()}
 
-      <article class="dis-community-read-card">
-        <div class="dis-community-read-title">${escapePhoneAppHtml(post.title)}</div>
-        <div class="dis-community-read-meta">
-          <span>${escapePhoneAppHtml(post.author)}</span>
-          <span>${escapePhoneAppHtml(formatDisCommunityTimestamp(post.createdAt))}</span>
-          <span>${escapePhoneAppHtml(`조회 ${post.views || 0}`)}</span>
-          <span>${escapePhoneAppHtml(`추천 ${post.likes || 0}`)}</span>
+      <div class="dis-community-read-shell">
+        <div class="dis-community-read-head">
+          <div class="dis-community-read-title">
+            ${isBest ? '<span class="dis-community-best-badge">개념</span> ' : ""}${escapePhoneAppHtml(post.title)}
+          </div>
+          <div class="dis-community-read-meta">
+            <span>${escapePhoneAppHtml(post.author)}</span>
+            <span>${escapePhoneAppHtml(formatDisCommunityTimestamp(post.createdAt))}</span>
+            <span>조회 ${escapePhoneAppHtml(String(post.views || 0))}</span>
+            <span>추천 ${escapePhoneAppHtml(String(post.likes || 0))}</span>
+          </div>
         </div>
         <div class="dis-community-read-body">${escapePhoneAppHtml(post.content).replaceAll("\n", "<br />")}</div>
         <div class="dis-community-read-actions">
           ${buildPhoneAppActionButtonMarkup({
             action: "dis-like-community-post",
-            label: `추천 ${post.likes || 0}`,
+            label: `👍 추천 ${post.likes || 0}`,
             data: { postId: post.id },
             className: "dis-community-action-btn is-primary",
           })}
@@ -697,45 +738,45 @@ function buildDisCommunityReadStageMarkup(targetState = state) {
             className: "dis-community-action-btn",
           })}
         </div>
-      </article>
 
-      <section class="dis-community-comment-block">
-        <div class="dis-community-comment-head">댓글 ${escapePhoneAppHtml(String(post.comments?.length || 0))}</div>
-        <div class="dis-community-comment-list">
-          ${post.comments?.length
-            ? post.comments.map((comment) => `
-              <div class="dis-community-comment-item">
-                <div class="dis-community-comment-meta">
-                  <span>${escapePhoneAppHtml(comment.author)}</span>
-                  <span>${escapePhoneAppHtml(formatDisCommunityTimestamp(comment.createdAt))}</span>
+        <section class="dis-community-comment-block">
+          <div class="dis-community-comment-head">댓글 ${escapePhoneAppHtml(String(post.comments?.length || 0))}개</div>
+          <div class="dis-community-comment-list">
+            ${post.comments?.length
+              ? post.comments.map((comment) => `
+                <div class="dis-community-comment-item">
+                  <div class="dis-community-comment-meta">
+                    <span>${escapePhoneAppHtml(comment.author)}</span>
+                    <span>${escapePhoneAppHtml(formatDisCommunityTimestamp(comment.createdAt))}</span>
+                  </div>
+                  <div class="dis-community-comment-body">${escapePhoneAppHtml(comment.content).replaceAll("\n", "<br />")}</div>
                 </div>
-                <div class="dis-community-comment-body">${escapePhoneAppHtml(comment.content).replaceAll("\n", "<br />")}</div>
-              </div>
-            `).join("")
-            : '<div class="dis-community-empty is-comment">아직 댓글이 없습니다.</div>'}
-        </div>
-        <div class="dis-community-form">
-          <input
-            class="dis-community-input"
-            type="text"
-            value="${escapePhoneAppHtml(targetState?.disCommunity?.commentDraft?.author || "")}"
-            placeholder="닉네임"
-            data-dis-community-input="comment-author"
-          />
-          <textarea
-            class="dis-community-textarea is-comment"
-            rows="3"
-            placeholder="댓글을 남겨보세요"
-            data-dis-community-input="comment-content"
-          >${escapePhoneAppHtml(targetState?.disCommunity?.commentDraft?.content || "")}</textarea>
-          ${buildPhoneAppActionButtonMarkup({
-            action: "dis-submit-community-comment",
-            label: "댓글 등록",
-            data: { postId: post.id },
-            className: "dis-community-submit-btn",
-          })}
-        </div>
-      </section>
+              `).join("")
+              : '<div class="dis-community-empty is-comment">아직 댓글이 없습니다.</div>'}
+          </div>
+          <div class="dis-community-form">
+            <input
+              class="dis-community-input"
+              type="text"
+              value="${escapePhoneAppHtml(targetState?.disCommunity?.commentDraft?.author || "")}"
+              placeholder="닉네임"
+              data-dis-community-input="comment-author"
+            />
+            <textarea
+              class="dis-community-textarea is-comment"
+              rows="3"
+              placeholder="댓글을 남겨보세요"
+              data-dis-community-input="comment-content"
+            >${escapePhoneAppHtml(targetState?.disCommunity?.commentDraft?.content || "")}</textarea>
+            ${buildPhoneAppActionButtonMarkup({
+              action: "dis-submit-community-comment",
+              label: "댓글 등록",
+              data: { postId: post.id },
+              className: "dis-community-submit-btn",
+            })}
+          </div>
+        </section>
+      </div>
     </div>
   `;
 }
@@ -747,13 +788,9 @@ function buildDisCommunityWriteStageMarkup(targetState = state) {
 
   return `
     <div class="dis-community-shell">
-      <div class="dis-community-header">
-        <div class="dis-community-header-copy">
-          <div class="dis-community-kicker">DIGGLE COMMUNITY</div>
-          <div class="dis-community-title">특이점이 온다 갤러리 글쓰기</div>
-          <div class="dis-community-note">작은 폰에서는 펼치기 후 글을 작성하는 흐름을 기준으로 한다.</div>
-        </div>
-        <div class="dis-community-header-actions">
+      <div class="dis-community-topbar">
+        <div class="dis-community-topbar-title">글쓰기</div>
+        <div class="dis-community-topbar-actions">
           ${buildPhoneRouteButtonMarkup({
             route: DIS_GAMBLING_ROUTES.singularity,
             label: "목록",
@@ -1075,9 +1112,9 @@ function buildDisLadderScreenMarkup({ stageMode = false, targetState = state } =
 function getDisAppManifest(targetState = state) {
   return {
     id: "dis",
-    label: "Diggle",
-    icon: "🌐",
-    openRoute: DIS_GAMBLING_ROUTES.home,
+    label: "디시인사이드",
+    icon: "💬",
+    openRoute: DIS_GAMBLING_ROUTES.singularity,
     screenMode: "fullbleed",
     installable: false,
     isAvailable: () => (

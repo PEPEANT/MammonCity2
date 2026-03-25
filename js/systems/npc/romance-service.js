@@ -573,6 +573,33 @@ function buildRomanceHomeInviteSceneProfile(
   };
 }
 
+function buildRomanceSceneNpcActorOverride(contactId = "", sceneType = "") {
+  const normalizedContactId = String(contactId || "")
+    .trim()
+    .replace(/[\s_-]/g, "")
+    .toLowerCase();
+  const normalizedSceneType = String(sceneType || "").trim().toLowerCase();
+
+  if (normalizedSceneType === "home-invite" && normalizedContactId === "conveniencecashier") {
+    const homeInviteArt = String(CHARACTER_ART?.convenienceCashier?.homeInvite || "").trim();
+    if (!homeInviteArt) {
+      return null;
+    }
+
+    return {
+      kind: "npc",
+      src: homeInviteArt,
+      preserveSrc: true,
+      left: 72,
+      bottom: 0,
+      height: 96,
+      zIndex: 2,
+    };
+  }
+
+  return null;
+}
+
 function getRomancePlanStatusSummary(contact = {}, config = {}, targetState = state) {
   const activePlan = getRomanceActivePlanSnapshot(targetState);
   if (activePlan && activePlan.contactId === (contact.contactId || contact.id || "")) {
@@ -830,6 +857,7 @@ function createDefaultRomanceDomainState() {
     activeScene: null,
     lastOutcome: null,
     callScene: null,
+    callSession: null,
     girlfriendContactIds: [],
   };
 }
@@ -1688,6 +1716,24 @@ function getRomanceCallScene(targetState = state) {
   return syncRomanceDomainState(targetState).callScene;
 }
 
+function clearRomanceCallSession(targetState = state) {
+  const romanceState = syncRomanceDomainState(targetState);
+  romanceState.callSession = null;
+  return romanceState.callSession;
+}
+
+function setRomanceCallSession(session = null, targetState = state) {
+  const romanceState = syncRomanceDomainState(targetState);
+  romanceState.callSession = typeof cloneRomanceCallSessionSnapshot === "function"
+    ? cloneRomanceCallSessionSnapshot(session)
+    : (session && typeof session === "object" ? { ...session } : null);
+  return romanceState.callSession;
+}
+
+function getRomanceCallSession(targetState = state) {
+  return syncRomanceDomainState(targetState).callSession;
+}
+
 function normalizeRomancePlanSnapshot(plan = null) {
   if (!plan || typeof plan !== "object") {
     return null;
@@ -1781,6 +1827,9 @@ function syncRomanceDomainState(targetState = state) {
     ? { ...romanceState.lastOutcome }
     : null;
   romanceState.callScene = cloneRomanceCallSceneSnapshot(romanceState.callScene);
+  romanceState.callSession = typeof cloneRomanceCallSessionSnapshot === "function"
+    ? cloneRomanceCallSessionSnapshot(romanceState.callSession)
+    : (romanceState.callSession && typeof romanceState.callSession === "object" ? { ...romanceState.callSession } : null);
   romanceState.girlfriendContactIds = Array.isArray(romanceState.girlfriendContactIds)
     ? romanceState.girlfriendContactIds.map((id) => String(id || "").trim()).filter(Boolean).slice(0, getRomanceGirlfriendLimit())
     : [];
@@ -2165,6 +2214,18 @@ function buildRomanceGirlfriendCallScene(contactId = "", targetState = state) {
     return null;
   }
 
+  if (typeof buildRomanceGirlfriendSmallTalkCallScene === "function") {
+    const sessionBackedScene = buildRomanceGirlfriendSmallTalkCallScene({
+      contactId,
+      contact,
+      config,
+      targetState,
+    });
+    if (sessionBackedScene) {
+      return sessionBackedScene;
+    }
+  }
+
   const dialoguePool = Array.isArray(ROMANCE_GIRLFRIEND_CALL_LINES[config.npcId])
     ? ROMANCE_GIRLFRIEND_CALL_LINES[config.npcId]
     : [];
@@ -2474,6 +2535,13 @@ function applyAmbientRomanceCallChoice(choice = null, scene = null, targetState 
 }
 
 function chooseRomanceCallChoice(index = 0, targetState = state) {
+  const callSession = typeof getRomanceCallSession === "function"
+    ? getRomanceCallSession(targetState)
+    : null;
+  if (callSession?.active && typeof chooseRomanceCallSessionChoice === "function") {
+    return chooseRomanceCallSessionChoice(index, targetState);
+  }
+
   const callScene = getRomanceCallScene(targetState);
   const choices = Array.isArray(callScene?.choices) ? callScene.choices : [];
   const choice = choices[index];
@@ -2485,6 +2553,13 @@ function chooseRomanceCallChoice(index = 0, targetState = state) {
 }
 
 function finishRomanceCallScene(targetState = state) {
+  const callSession = typeof getRomanceCallSession === "function"
+    ? getRomanceCallSession(targetState)
+    : null;
+  if (callSession?.active && typeof finishRomanceCallSession === "function") {
+    return finishRomanceCallSession(targetState);
+  }
+
   const callScene = getRomanceCallScene(targetState);
   const previousScene = String(callScene?.previousScene || "room").trim() || "room";
   clearRomanceCallScene(targetState);
@@ -3717,6 +3792,7 @@ function startTodayRomanceEvent(contactId = "", sceneType = "date", targetState 
         venueLabel,
         relationshipStage: contact.relationshipStage || "contact",
       });
+  const npcActorOverride = buildRomanceSceneNpcActorOverride(contactId, normalizedSceneType);
   const nextScene = {
     sceneType: isHomeInvite ? "home-invite" : "date",
     contactId,
@@ -3731,6 +3807,7 @@ function startTodayRomanceEvent(contactId = "", sceneType = "date", targetState 
       : (venueLocation?.background ? { ...venueLocation.background } : null),
     plannedCost: Math.max(0, Number(planSnapshot.plannedCost) || 0),
     venueLabel,
+    ...(npcActorOverride ? { npcActor: npcActorOverride } : {}),
   };
 
   setRomanceActiveSceneSnapshot(nextScene, targetState);
@@ -3751,6 +3828,8 @@ function completeActiveRomanceScene(targetState = state) {
   if (!activeScene || !["date", "home-invite"].includes(String(activeScene.sceneType || "").trim().toLowerCase())) {
     return legacyCompleteActiveRomanceScene(targetState);
   }
+
+  const completedSceneSnapshot = cloneRomanceSceneSnapshot(activeScene);
 
   const contactId = activeScene.contactId;
   const contact = targetState?.social?.contacts?.[contactId] || null;
@@ -3825,7 +3904,7 @@ function completeActiveRomanceScene(targetState = state) {
   clearRomanceActivePlanSnapshot(targetState);
 
   targetState.scene = "room";
-  return applyRomanceActionResult({
+  const result = applyRomanceActionResult({
     ok: true,
     code: isHomeInvite ? "home-invite-complete" : "date-complete",
     outcome: {
@@ -3863,4 +3942,15 @@ function completeActiveRomanceScene(targetState = state) {
       ].filter(Boolean),
     },
   }, targetState);
+
+  if (typeof startRomancePostDateCallSession === "function") {
+    startRomancePostDateCallSession({
+      contactId,
+      config,
+      sourceScene: completedSceneSnapshot,
+      targetState,
+    });
+  }
+
+  return result;
 }

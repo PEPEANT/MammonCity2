@@ -31,7 +31,37 @@
   align-items: flex-end;
   justify-content: center;
   overflow: visible;
+  isolation: isolate;
   transition: transform 0.28s ease, opacity 0.28s ease, filter 0.28s ease;
+}
+
+#phone-panel.is-lowered-for-call {
+  transform: translateY(56px) scale(0.94);
+  opacity: 0.74;
+  filter: saturate(0.82);
+  pointer-events: none;
+}
+
+#phone-panel.is-lowered-for-call.is-hidden-panel {
+  transform: translateY(44px) scale(0.92);
+}
+
+#phone-panel.is-lowered-for-call .phone-shell > #phone-controls {
+  opacity: 0.42;
+}
+
+#phone-panel:not(.is-hidden-panel)::before {
+  content: "";
+  position: absolute;
+  inset: 18px -8px 18px -8px;
+  border-radius: 40px;
+  background:
+    radial-gradient(circle at center, rgba(17, 24, 39, 0.24), transparent 68%),
+    linear-gradient(180deg, rgba(6, 10, 20, 0.28) 0%, rgba(6, 10, 20, 0.10) 100%);
+  filter: blur(18px);
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 0;
 }
 
 #phone-panel.is-hidden-panel {
@@ -82,6 +112,7 @@
     0 10px 18px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
   overflow: visible;
+  z-index: 1;
 }
 
 .phone-shell::before,
@@ -144,7 +175,7 @@
   bottom: 0;
   left: auto;
   width: auto;
-  gap: 0;
+  gap: 8px;
   padding: 0;
   background: transparent;
   border: 0;
@@ -152,7 +183,7 @@
   backdrop-filter: none;
 }
 
-.phone-shell > #phone-controls.is-collapsed .phone-control-btn:not(#phone-home-btn) {
+.phone-shell > #phone-controls.is-collapsed .phone-control-btn:not(#phone-home-btn):not(#city-map-toggle-btn) {
   display: none;
 }
 
@@ -220,7 +251,17 @@
   gap: 0;
 }
 
+#city-map-toggle-btn {
+  flex: 0 0 58px;
+  padding: 6px;
+  gap: 0;
+}
+
 #phone-home-btn .phone-control-label {
+  display: none;
+}
+
+#city-map-toggle-btn .phone-control-label {
   display: none;
 }
 
@@ -259,6 +300,43 @@
   transform: translateX(-50%);
   border-radius: 999px;
   background: currentColor;
+}
+
+#city-map-toggle-btn .phone-control-icon {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  font-size: 0;
+  color: #f7fbff;
+}
+
+#city-map-toggle-btn .phone-control-icon::before,
+#city-map-toggle-btn .phone-control-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+}
+
+#city-map-toggle-btn .phone-control-icon::before {
+  background:
+    linear-gradient(105deg, rgba(113, 211, 255, 0.32) 0 31%, transparent 31% 34%, rgba(115, 214, 168, 0.26) 34% 64%, transparent 64% 67%, rgba(255, 211, 104, 0.24) 67% 100%),
+    linear-gradient(180deg, rgba(29, 48, 79, 0.92) 0%, rgba(12, 21, 39, 1) 100%);
+  border: 2px solid currentColor;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(78, 126, 255, 0.14);
+  transform: perspective(26px) rotateY(-15deg);
+  transform-origin: center;
+}
+
+#city-map-toggle-btn .phone-control-icon::after {
+  inset: 5px 4px 5px 4px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 24% 50%, rgba(255, 255, 255, 0.92) 0 1.5px, transparent 1.5px),
+    linear-gradient(90deg, transparent 0 18%, rgba(255, 255, 255, 0.88) 18% 74%, transparent 74% 100%);
+  opacity: 0.95;
 }
 
 #phone-stage-btn::before {
@@ -387,6 +465,66 @@
     0 2px 8px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   transform: translateY(-2px) scale(1.04);
+}
+
+#phone-panel.is-hidden-panel #city-map-toggle-btn {
+  position: relative;
+  width: 50px;
+  height: 76px;
+  flex: 0 0 50px;
+  padding: 0;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #25425f 0%, #15263e 58%, #0b1728 100%);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(88, 180, 210, 0.12);
+  overflow: hidden;
+}
+
+#phone-panel.is-hidden-panel #city-map-toggle-btn .phone-control-icon {
+  position: absolute;
+  inset: 9px 6px 13px 6px;
+  width: auto;
+  height: auto;
+}
+
+#phone-panel.is-hidden-panel #city-map-toggle-btn .phone-control-icon::before {
+  background:
+    linear-gradient(106deg, rgba(119, 228, 255, 0.28) 0 31%, transparent 31% 34%, rgba(115, 222, 173, 0.22) 34% 65%, transparent 65% 68%, rgba(255, 212, 110, 0.2) 68% 100%),
+    linear-gradient(180deg, rgba(27, 58, 87, 0.96) 0%, rgba(12, 24, 43, 0.98) 100%);
+  border-width: 1px;
+  transform: none;
+}
+
+#phone-panel.is-hidden-panel #city-map-toggle-btn .phone-control-icon::after {
+  inset: 7px 6px 7px 6px;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.95) 0 2px, transparent 2px),
+    linear-gradient(90deg, transparent 0 20%, rgba(255, 255, 255, 0.9) 20% 78%, transparent 78% 100%);
+}
+
+#phone-panel.is-hidden-panel #city-map-toggle-btn::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+#phone-panel.is-hidden-panel #city-map-toggle-btn:hover {
+  border-color: rgba(110, 215, 255, 0.48);
+  box-shadow:
+    0 10px 32px rgba(70, 170, 220, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px) scale(1.03);
 }
 
 #phone-stage {
@@ -669,11 +807,12 @@
   flex-direction: column;
   gap: 10px;
   background:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.28), transparent 18%),
-    radial-gradient(circle at 84% 10%, rgba(255, 255, 255, 0.14), transparent 16%),
-    linear-gradient(180deg, #4c78d6 0%, #6c97ff 18%, #6a96ff 42%, #4263c3 70%, #17243c 100%);
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.16), transparent 16%),
+    radial-gradient(circle at 84% 10%, rgba(255, 255, 255, 0.08), transparent 14%),
+    linear-gradient(180deg, #3558b8 0%, #5476d7 16%, #5576d0 42%, #2f4688 72%, #131d31 100%);
   color: #f8fbff;
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   transition: opacity 0.22s ease, transform 0.22s ease, filter 0.22s ease;
 }
 
@@ -691,11 +830,11 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(10, 20, 49, 0.44) 0%, rgba(10, 20, 49, 0.18) 15%, rgba(10, 20, 49, 0) 32%),
-    linear-gradient(0deg, rgba(8, 14, 29, 0.64) 0%, rgba(8, 14, 29, 0.2) 18%, rgba(8, 14, 29, 0) 34%),
-    radial-gradient(circle at 22% 74%, rgba(255, 255, 255, 0.18), transparent 22%),
-    radial-gradient(circle at 80% 66%, rgba(158, 197, 255, 0.26), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08));
+    linear-gradient(180deg, rgba(8, 16, 40, 0.34) 0%, rgba(8, 16, 40, 0.16) 14%, rgba(8, 16, 40, 0) 30%),
+    linear-gradient(0deg, rgba(7, 12, 24, 0.78) 0%, rgba(7, 12, 24, 0.28) 20%, rgba(7, 12, 24, 0) 36%),
+    radial-gradient(circle at 22% 74%, rgba(255, 255, 255, 0.10), transparent 20%),
+    radial-gradient(circle at 80% 66%, rgba(158, 197, 255, 0.16), transparent 20%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.04));
   pointer-events: none;
 }
 
@@ -804,26 +943,25 @@
   padding: 8px 5px 7px;
   border-radius: 16px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
+    0 10px 22px rgba(7, 12, 24, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
   transition: transform 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease;
   text-shadow: none;
 }
 
 .phone-app-btn:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.01);
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.22);
   box-shadow:
-    0 14px 24px rgba(8, 15, 28, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 16px 28px rgba(8, 15, 28, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .phone-app-btn:disabled {
@@ -831,11 +969,11 @@
 }
 
 .phone-app-btn.is-selected {
-  background: rgba(255, 255, 255, 0.20);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.30);
   box-shadow:
-    0 14px 26px rgba(7, 12, 22, 0.20),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 16px 30px rgba(7, 12, 22, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .phone-app-icon-tile {
@@ -2935,323 +3073,846 @@
   gap: 8px 12px;
 }
 
+/* ===== DIS COMMUNITY (DCInside-style) ===== */
+
 .dis-community-shell,
 .dis-community-compact-shell {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 18px 24px;
-  background:
-    radial-gradient(circle at top right, rgba(66, 133, 244, 0.14), transparent 34%),
-    linear-gradient(180deg, #ffffff 0%, #f4f6fb 100%);
-  color: #1f2937;
+  background: #f5f5f5;
+  color: #1a1a1a;
+  gap: 0;
+  padding: 0;
 }
 
-.dis-community-header,
-.dis-community-compact-head {
+/* ── 상단 네이비 바 ── */
+.dis-community-topbar {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.dis-community-header {
-  gap: 14px;
-}
-
-.dis-community-header-actions,
-.dis-community-compact-actions {
-  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 46px;
+  background: #0d47a1;
+  flex-shrink: 0;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.dis-community-kicker,
-.dis-community-compact-kicker {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: #3558d6;
-  text-transform: uppercase;
-}
-
-.dis-community-title,
-.dis-community-compact-title {
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  color: #111827;
-}
-
-.dis-community-note,
-.dis-community-compact-note {
-  font-size: 12px;
-  line-height: 1.55;
-  color: #5b6475;
-}
-
-.dis-community-connection {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: #edf3ff;
-  border: 1px solid rgba(53, 88, 214, 0.14);
-}
-
-.dis-community-connection.is-live {
-  background: #effcf4;
-  border-color: rgba(22, 163, 74, 0.16);
-}
-
-.dis-community-connection.is-connecting {
-  background: #fff7e8;
-  border-color: rgba(202, 138, 4, 0.16);
-}
-
-.dis-community-connection.is-error {
-  background: #fff1f2;
-  border-color: rgba(225, 29, 72, 0.16);
-}
-
-.dis-community-connection-label {
-  font-size: 12px;
-  font-weight: 800;
-  color: #111827;
-}
-
-.dis-community-connection-detail {
-  font-size: 11px;
-  color: #5b6475;
-  text-align: right;
-}
-
-.dis-community-board-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 2px 2px 0;
-}
-
-.dis-community-board-title {
+.dis-community-topbar-title {
   font-size: 15px;
   font-weight: 800;
-  color: #111827;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dis-community-board-meta {
+.dis-community-topbar-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+/* ── topbar 버튼 ── */
+.dis-community-header-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.dis-community-post-list,
-.dis-community-compact-list,
-.dis-community-comment-list {
+.dis-community-header-btn:active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── 연결 상태 row ── */
+.dis-community-conn-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  font-size: 11px;
+  color: #999;
+}
+
+.dis-community-conn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #bbb;
+  flex-shrink: 0;
+}
+
+.dis-community-conn-dot.is-live { background: #22c55e; }
+.dis-community-conn-dot.is-connecting { background: #f59e0b; }
+.dis-community-conn-dot.is-error { background: #ef4444; }
+
+.dis-community-conn-text { color: #777; font-weight: 500; }
+
+.dis-community-post-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: #bbb;
+}
+
+/* ── 탭 ── */
+.dis-community-tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dis-community-tab {
+  flex: 1;
+  height: 40px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #999;
+  cursor: pointer;
+}
+
+.dis-community-tab.is-active {
+  color: #0d47a1;
+  border-bottom-color: #0d47a1;
+}
+
+/* ── 보드 영역 ── */
+.dis-community-board {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  background: #fff;
 }
 
-.dis-community-post-row,
-.dis-community-compact-item {
-  width: 100%;
-  display: grid;
-  gap: 10px;
-  text-align: left;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+/* ── 개념글 미니 섹션 ── */
+.dis-community-best-section {
+  background: #fff8f0;
+  border-bottom: 1px solid #ffe0b2;
+  padding: 8px 12px 10px;
+}
+
+.dis-community-best-header {
+  font-size: 11px;
+  font-weight: 800;
+  color: #bf4400;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+
+.dis-community-best-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 0;
   cursor: pointer;
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+}
+
+.dis-community-best-row:active { background: #fff0e0; }
+
+.dis-community-best-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.dis-community-best-likes {
+  font-size: 11px;
+  color: #bf4400;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── 글 목록 ── */
+.dis-community-post-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .dis-community-post-row {
-  grid-template-columns: 34px minmax(0, 1fr) 140px;
-  align-items: center;
-  padding: 14px 16px;
-}
-
-.dis-community-compact-item {
-  padding: 12px 14px;
-}
-
-.dis-community-post-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #3558d6;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.dis-community-post-main,
-.dis-community-post-side {
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 9px 12px;
+  background: #fff;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.dis-community-post-title,
-.dis-community-compact-item-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.dis-community-post-row:active { background: #f6f6f6; }
+
+.dis-community-post-title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dis-community-post-title {
   font-size: 14px;
-  font-weight: 800;
-  color: #111827;
-}
-
-.dis-community-post-preview,
-.dis-community-compact-item-meta {
+  font-weight: 400;
+  color: #1a1a1a;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  color: #64748b;
+  flex: 1;
+  min-width: 0;
 }
 
-.dis-community-post-side {
-  align-items: flex-end;
-  font-size: 11px;
-  color: #64748b;
+.dis-community-post-comment-count {
+  font-size: 13px;
+  color: #0d47a1;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.dis-community-header-btn,
-.dis-community-action-btn,
-.dis-community-submit-btn,
-.dis-community-compact-action {
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid rgba(53, 88, 214, 0.16);
-  border-radius: 14px;
-  background: #ffffff;
-  color: #3558d6;
-  font-size: 12px;
+.dis-community-best-badge {
+  display: inline-block;
+  padding: 1px 4px;
+  background: #cc0000;
+  color: #fff;
+  font-size: 10px;
   font-weight: 800;
+  border-radius: 2px;
+  flex-shrink: 0;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.dis-community-post-meta-row {
+  font-size: 11px;
+  color: #aaa;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.dis-community-post-meta-row .is-views { color: #bbb; }
+.dis-community-post-meta-row .is-likes { color: #cc0000; font-weight: 600; }
+
+/* ── 액션·제출 버튼 (본문/댓글 영역) ── */
+.dis-community-action-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.dis-community-header-btn.is-primary,
-.dis-community-action-btn.is-primary,
-.dis-community-submit-btn.is-primary,
-.dis-community-compact-action.is-primary {
-  background: linear-gradient(180deg, #3558d6 0%, #2747ba 100%);
-  color: #ffffff;
-  box-shadow: 0 14px 24px rgba(39, 71, 186, 0.2);
+.dis-community-action-btn.is-primary {
+  background: #0d47a1;
+  border-color: #0d47a1;
+  color: #fff;
 }
 
-.dis-community-read-card,
-.dis-community-comment-block,
-.dis-community-form {
+.dis-community-action-btn:active { opacity: 0.82; }
+
+.dis-community-submit-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 3px;
+  background: #0d47a1;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.dis-community-submit-btn.is-primary {
+  width: 100%;
+  height: 44px;
+  font-size: 14px;
+  align-self: auto;
+}
+
+/* ── 글 읽기 뷰 ── */
+.dis-community-read-shell {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 22px;
-  background: #ffffff;
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+  background: #fff;
+}
+
+.dis-community-read-head {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #e8e8e8;
 }
 
 .dis-community-read-title {
-  font-size: 22px;
-  line-height: 1.22;
-  font-weight: 900;
-  color: #111827;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 8px;
 }
 
-.dis-community-read-meta,
-.dis-community-comment-meta {
+.dis-community-read-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 4px 10px;
   font-size: 11px;
-  color: #64748b;
+  color: #999;
 }
 
-.dis-community-read-body,
-.dis-community-comment-body {
-  font-size: 13px;
-  line-height: 1.7;
-  color: #1f2937;
+.dis-community-read-body {
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #222;
+  border-bottom: 6px solid #f5f5f5;
 }
 
 .dis-community-read-actions {
   display: flex;
+  justify-content: center;
   gap: 8px;
-  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+/* ── 댓글 영역 ── */
+.dis-community-comment-block {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
 }
 
 .dis-community-comment-head {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
-  color: #111827;
+  color: #1a1a1a;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dis-community-comment-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .dis-community-comment-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 0;
-  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  gap: 4px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.dis-community-comment-item:first-child {
-  border-top: 0;
-  padding-top: 0;
+.dis-community-comment-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #999;
+}
+
+.dis-community-comment-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #222;
+}
+
+/* ── 댓글·글쓰기 폼 ── */
+.dis-community-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 14px;
+  background: #f8f8f8;
+  border-top: 1px solid #e8e8e8;
+}
+
+.dis-community-form.is-write {
+  background: #fff;
+  padding: 14px;
+  flex: 1;
+  gap: 10px;
 }
 
 .dis-community-input,
 .dis-community-textarea {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 14px;
-  background: #f8fafc;
-  color: #111827;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  color: #1a1a1a;
   font-size: 13px;
-  padding: 12px 14px;
+  padding: 9px 11px;
   outline: none;
+  box-sizing: border-box;
 }
 
 .dis-community-input:focus,
 .dis-community-textarea:focus {
-  border-color: rgba(53, 88, 214, 0.36);
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(53, 88, 214, 0.08);
+  border-color: #0d47a1;
+  box-shadow: 0 0 0 2px rgba(13, 71, 161, 0.1);
 }
 
 .dis-community-textarea {
-  min-height: 120px;
+  min-height: 110px;
   resize: vertical;
   line-height: 1.6;
 }
 
 .dis-community-textarea.is-comment {
-  min-height: 74px;
+  min-height: 60px;
 }
 
+/* ── 빈 상태 ── */
 .dis-community-empty {
-  padding: 18px;
-  border: 1px dashed rgba(148, 163, 184, 0.28);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.75);
-  color: #64748b;
+  padding: 20px;
+  color: #bbb;
   font-size: 12px;
   text-align: center;
+  background: #fff;
 }
 
 .dis-community-empty.is-comment {
   padding: 14px;
 }
+
+/* ── Compact 미리보기 (폰 패널) ── */
+.dis-community-compact-shell {
+  gap: 10px;
+  padding: 14px 14px 18px;
+  background: #f5f5f5;
+}
+
+.dis-community-compact-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dis-community-compact-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #0d47a1;
+  text-transform: uppercase;
+}
+
+.dis-community-compact-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #111;
+  letter-spacing: -0.02em;
+}
+
+.dis-community-compact-note {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.5;
+}
+
+.dis-community-compact-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.dis-community-compact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 11px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  background: #fff;
+  text-align: left;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  box-shadow: none;
+}
+
+.dis-community-compact-item:last-child { border-bottom: none; }
+.dis-community-compact-item:active { background: #f6f6f6; }
+
+.dis-community-compact-item-title {
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dis-community-compact-comment-count {
+  font-size: 12px;
+  color: #0d47a1;
+  font-weight: 700;
+}
+
+.dis-community-compact-item-meta {
+  font-size: 10px;
+  color: #bbb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dis-community-compact-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.dis-community-compact-action {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+  color: #333;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dis-community-compact-action.is-primary {
+  background: #0d47a1;
+  border-color: #0d47a1;
+  color: #fff;
+}
+
+/* ===== CALL APP ===== */
+
+.call-app-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.call-app-topbar {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 52px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.call-app-topbar-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.03em;
+}
+
+.call-status-bar {
+  padding: 8px 16px;
+  background: #f0fff4;
+  border-bottom: 1px solid #d1fae5;
+  font-size: 12px;
+  color: #166534;
+  font-weight: 600;
+}
+
+.call-section-header {
+  padding: 10px 16px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #aaa;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.call-contact-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.call-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f5f5f5;
+  background: #fff;
+}
+
+.call-contact-row:active {
+  background: #f8f8f8;
+}
+
+/* 아바타 */
+.call-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.call-avatar.is-family {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+.call-avatar.is-romance {
+  background: linear-gradient(135deg, #f472b6, #ec4899);
+}
+
+.call-avatar.is-default {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+}
+
+/* 이름·태그 */
+.call-contact-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.call-contact-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-contact-tag {
+  font-size: 11px;
+  color: #aaa;
+}
+
+/* 액션 버튼 영역 */
+.call-contact-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.call-action-btn {
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-action-btn.is-call {
+  width: 40px;
+  height: 40px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+}
+
+.call-action-btn.is-call:active {
+  background: #16a34a;
+}
+
+.call-action-btn.is-secondary {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: #f0f0f0;
+  color: #333;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.call-action-btn.is-secondary:active {
+  background: #e0e0e0;
+}
+
+.call-action-btn.is-secondary.is-disabled,
+.call-action-btn.is-secondary:disabled {
+  background: #f5f5f5;
+  color: #ccc;
+  cursor: default;
+}
+
+/* 빈 상태 */
+.call-empty-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: #ccc;
+}
+
+.call-empty-icon {
+  font-size: 36px;
+  opacity: 0.4;
+}
+
+.call-empty-text {
+  font-size: 13px;
+  color: #bbb;
+  text-align: center;
+}
+
+/* ── 수신 전화 화면 ── */
+.call-incoming-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  color: #fff;
+  padding: 48px 0 52px;
+}
+
+.call-incoming-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+}
+
+.call-incoming-status {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.call-incoming-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.call-incoming-avatar.is-family {
+  background: radial-gradient(circle at 35% 35%, #6b7280, #374151);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.call-incoming-avatar.is-romance {
+  background: radial-gradient(circle at 35% 35%, #f9a8d4, #db2777);
+  box-shadow: 0 0 0 4px rgba(249,168,212,0.2), 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.call-incoming-name {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.call-incoming-tag {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.call-incoming-actions {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+  padding: 0 24px;
+}
+
+.call-incoming-action-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.call-incoming-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+
+.call-incoming-btn:active {
+  transform: scale(0.92);
+  opacity: 0.85;
+}
+
+.call-incoming-btn.is-reject {
+  background: #ef4444;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.45);
+}
+
+.call-incoming-btn.is-answer {
+  background: #22c55e;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.45);
+}
+
+.call-incoming-btn-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 600;
+}
+
+/* ===== END CALL APP ===== */
 
 .dis-gamble-app {
   display: flex;
@@ -4398,7 +5059,7 @@
     bottom: 0;
     left: auto;
     padding: 0;
-    gap: 0;
+    gap: 6px;
   }
 
   .phone-control-btn {
@@ -4420,6 +5081,12 @@
     padding: 4px;
   }
 
+  #city-map-toggle-btn {
+    flex: 0 1 42px;
+    min-width: 42px;
+    padding: 4px;
+  }
+
   #phone-stage-btn,
   #phone-back-btn {
     flex: 0 1 34px;
@@ -4430,6 +5097,11 @@
   #phone-home-btn .phone-control-icon {
     width: 12px;
     height: 18px;
+  }
+
+  #city-map-toggle-btn .phone-control-icon {
+    width: 15px;
+    height: 15px;
   }
 
   #phone-back-btn .phone-control-icon {
@@ -8421,7 +9093,13 @@
 #phone-panel .phone-app-screen .market-app-header-desktop-actions,
 #phone-panel .phone-app-screen .market-bottom-nav,
 #phone-panel .phone-app-screen .market-floating-write,
-#phone-panel .phone-app-screen .market-app-mobile-filter {
+#phone-panel .phone-app-screen .market-app-mobile-filter,
+#phone-stage .phone-stage-app-screen .market-app-header-nav,
+#phone-stage .phone-stage-app-screen .market-app-header-search,
+#phone-stage .phone-stage-app-screen .market-app-header-desktop-actions,
+#phone-stage .phone-stage-app-screen .market-bottom-nav,
+#phone-stage .phone-stage-app-screen .market-floating-write,
+#phone-stage .phone-stage-app-screen .market-app-mobile-filter {
   display: none !important;
 }
 
@@ -8961,35 +9639,6 @@
 #phone-panel .phone-app-screen .dis-community-compact-shell {
   gap: 10px;
   padding: 14px 14px 18px;
-}
-
-#phone-panel .phone-app-screen .dis-community-compact-item {
-  gap: 4px;
-  padding: 10px 12px;
-}
-
-#phone-panel .phone-app-screen .dis-community-compact-item-title {
-  font-size: 13px;
-}
-
-#phone-panel .phone-app-screen .dis-community-compact-item-meta,
-#phone-panel .phone-app-screen .dis-community-connection-detail {
-  font-size: 10px;
-}
-
-#phone-panel .phone-app-screen .dis-community-connection {
-  padding: 10px 12px;
-}
-
-#phone-panel .phone-app-screen .dis-community-compact-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-#phone-panel .phone-app-screen .dis-community-compact-action {
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 11px;
 }
 
 #phone-panel .phone-app-screen .market-compact-tab,

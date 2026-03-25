@@ -160,12 +160,11 @@ async function fetchTopRankings(limit = RANKING_LIMIT) {
       return [];
     }
 
-    const snapshot = await collectionRef
-      .limit(Math.max(1, Math.floor(Number(limit) || RANKING_LIMIT)))
-      .get();
+    const normalizedLimit = Math.max(1, Math.floor(Number(limit) || RANKING_LIMIT));
+    const snapshot = await collectionRef.get();
 
     const entries = snapshot.docs.map((doc) => normalizeRankingEntry(doc.id, doc.data()));
-    return sortRankingEntries(entries).slice(0, Math.max(1, Math.floor(Number(limit) || RANKING_LIMIT)));
+    return sortRankingEntries(entries).slice(0, normalizedLimit);
   } catch (error) {
     console.warn("[ranking] 조회 실패:", error);
     return [];

@@ -521,16 +521,38 @@ function getOwnedAssetRecord(kind = "", targetState = state) {
   return null;
 }
 
+function getOwnedRealEstateAssetRecord(targetState = state) {
+  const realEstateState = targetState?.business?.realEstate && typeof targetState.business.realEstate === "object"
+    ? targetState.business.realEstate
+    : null;
+  const ownedBuildingId = String(realEstateState?.ownedBuildingId || "").trim();
+  const estimatedValue = Math.max(0, Math.round(Number(realEstateState?.estimatedValue) || 0));
+  if (!ownedBuildingId || !estimatedValue) {
+    return null;
+  }
+
+  const buildingLabel = String(realEstateState?.buildingLabel || "").trim() || "수익형 건물";
+  return {
+    id: `real-estate:${ownedBuildingId}`,
+    label: buildingLabel,
+    estimatedValue,
+  };
+}
+
 function getOwnershipAssetPortfolio(targetState = state) {
   const portfolio = [];
   const homeAsset = getOwnedHomeAssetRecord(targetState);
   const vehicleAsset = getOwnedVehicleAssetRecord(targetState);
+  const realEstateAsset = getOwnedRealEstateAssetRecord(targetState);
 
   if (homeAsset) {
     portfolio.push(homeAsset);
   }
   if (vehicleAsset) {
     portfolio.push(vehicleAsset);
+  }
+  if (realEstateAsset) {
+    portfolio.push(realEstateAsset);
   }
 
   return portfolio;

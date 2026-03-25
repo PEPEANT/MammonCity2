@@ -97,6 +97,8 @@ function getCityMapNodes(targetState = state) {
       y: Number(location.mapNode.y) || 0,
       zoneTone: location.mapNode.zoneTone || location.districtId || "default",
       note: location.mapNode.note || location.note || "",
+      labelOffsetX: Number(location.mapNode.labelOffsetX) || 0,
+      labelOffsetY: Number(location.mapNode.labelOffsetY) || 0,
       order: Number(location.mapNode.order) || 0,
       current: locationId === currentMapLocationId,
       unlocked: !unlockedLocations.length || unlockedLocations.includes(locationId),

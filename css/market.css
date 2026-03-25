@@ -269,6 +269,13 @@
   color: #fff;
 }
 
+.market-product-art.is-photo {
+  background-color: #111827;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
 .market-product-art::after {
   content: "";
   position: absolute;
@@ -277,6 +284,11 @@
     radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 36%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(0, 0, 0, 0.18) 100%);
   pointer-events: none;
+}
+
+.market-product-art.is-photo::after {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.12) 0%, rgba(15, 23, 42, 0.5) 100%);
 }
 
 .market-product-art-kicker,
@@ -312,6 +324,14 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
+}
+
+.market-product-art.is-photo .market-product-art-kicker {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.market-product-art.is-photo .market-product-art-label {
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.34);
 }
 
 .market-product-art.is-detail {

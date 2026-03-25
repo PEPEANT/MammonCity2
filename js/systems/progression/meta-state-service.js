@@ -61,6 +61,16 @@ function createDefaultBusinessState() {
     ledger: [],
     permits: {},
     staff: {},
+    realEstate: {
+      ownedBuildingId: "",
+      buildingLabel: "",
+      purchasedDay: 0,
+      cumulativeProfit: 0,
+      lastProcessedTurnDay: 0,
+      purchasePrice: 0,
+      estimatedValue: 0,
+      incomePerTurn: 0,
+    },
   };
 }
 
@@ -126,6 +136,10 @@ function syncMetaRunState(targetState = state) {
       : [],
     permits: cloneMetaPlainObject(targetState.business?.permits),
     staff: cloneMetaPlainObject(targetState.business?.staff),
+    realEstate: {
+      ...(businessDefaults.realEstate || {}),
+      ...cloneMetaPlainObject(targetState.business?.realEstate),
+    },
   };
 
   return targetState;

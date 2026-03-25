@@ -106,6 +106,46 @@ const DAY01_WORLD_ALLEY_NPC_POOL = [
     approachText: "통근자는 짧게 목례하고는 곧장 큰길 쪽으로 보폭을 넓힌다.",
     memoryBody: "골목 입구에서 니트 차림 통근자와 짧게 눈을 마주쳤다.",
   }),
+  createWorldWanderNpc({
+    id: "cult-recruiter-young",
+    weight: 2,
+    tag: "사이비",
+    src: CHARACTER_ART.cultRecruiterYoung.default,
+    alt: "골목 권유녀",
+    left: 58,
+    bottom: 6,
+    height: 88,
+    sceneTitle: "골목 입구에서 후드 차림 여자가 지나가는 사람들의 표정을 살핀다",
+    sceneLines: [
+      "붙잡는 방식은 조심스럽지만 먼저 말을 꺼낼 타이밍을 재는 눈빛이 은근히 끈질기다.",
+      "가까이 가면 위로와 공감으로 말을 여는 타입처럼 보이지만 목적은 아직 드러나지 않는다.",
+    ],
+    headlineBadge: "골목 권유",
+    headlineText: "후드 차림 여자가 골목 입구에서 사람들의 흐름을 천천히 훑어본다.",
+    approachBadge: "부드러운 시선",
+    approachText: "여자는 잠깐 눈을 맞춘 뒤 무리하게 붙잡지 않고 골목 쪽으로 한 걸음 물러난다.",
+    memoryBody: "골목 입구에서 부드럽게 다가올 것 같은 여자를 스쳐 지나갔다.",
+  }),
+  createWorldWanderNpc({
+    id: "street-passer-004",
+    weight: 2,
+    tag: "청년",
+    src: CHARACTER_ART.streetPasser004.default,
+    alt: "골목 후드 청년",
+    left: 66,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "후드 차림 청년이 골목 입구를 가볍게 지나가며 앞만 보고 걷는다",
+    sceneLines: [
+      "잠깐은 시선을 주지만 오래 머물 생각은 없어 보인다.",
+      "말을 걸면 짧게 사과하고 바로 갈 길을 갈 분위기다.",
+    ],
+    headlineBadge: "스쳐 지나감",
+    headlineText: "후드 차림 청년이 골목을 스치듯 지나가며 발걸음을 재촉한다.",
+    approachBadge: "짧은 거절",
+    approachText: "청년은 미안하다고만 하고 그대로 걸음을 옮긴다.",
+    memoryBody: "골목 입구에서 후드 차림 청년이 바쁘게 지나가는 모습을 봤다.",
+  }),
 ];
 
 function createWorldWanderNpc({
@@ -248,6 +288,26 @@ const DAY01_WORLD_TERMINAL_NPC_POOL = [
     approachBadge: "출근길 한숨",
     approachText: "통근자는 작게 웃고는 다음 버스 홈 쪽으로 한 걸음 옮긴다.",
     memoryBody: "터미널에서 출근길을 계산하던 니트 차림 통근자와 스쳤다.",
+  }),
+  createWorldWanderNpc({
+    id: "street-passer-002",
+    weight: 2,
+    tag: "직장인",
+    src: CHARACTER_ART.streetPasser002.default,
+    alt: "터미널 지친 회사원",
+    left: 70,
+    bottom: 6,
+    height: 88,
+    sceneTitle: "지친 회사원이 터미널 인파 사이에서 시계를 확인하며 발걸음을 재촉한다",
+    sceneLines: [
+      "피곤해 보이지만 멈춰 설 틈은 전혀 없어 보인다.",
+      "괜히 붙잡으면 미안할 만큼 바쁜 걸음이다.",
+    ],
+    headlineBadge: "급한 걸음",
+    headlineText: "지친 회사원이 짧게 주변을 훑고는 터미널 쪽으로 바삐 지나간다.",
+    approachBadge: "짧은 사과",
+    approachText: "말을 걸자 그는 죄송하다고만 하고 바로 인파 속으로 섞여든다.",
+    memoryBody: "터미널 앞에서 지친 회사원이 바쁘게 지나가는 모습을 봤다.",
   }),
 ];
 
@@ -455,6 +515,46 @@ const DAY01_WORLD_STATION_FRONT_NPC_POOL = [
     approachText: "통근자는 짧게 받아주고는 바로 큰길 출구 쪽으로 몸을 튼다.",
     memoryBody: "역 앞 인파 속에서 출구를 고르던 가죽재킷 통근자와 스쳤다.",
   }),
+  createWorldWanderNpc({
+    id: "station-office-commuter",
+    weight: 2,
+    tag: "통근",
+    src: CHARACTER_ART.stationOfficeCommuter.default,
+    alt: "역 앞 직장인",
+    left: 88,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "역 앞 광장 벤치 옆에서 직장인 여자가 휴대폰으로 출근 시간을 다시 확인한다",
+    sceneLines: [
+      "피곤한 기색은 있지만 주변을 툭 훑는 시선은 익숙하게 차분하다.",
+      "조금만 더 있으면 바로 개찰구 쪽으로 움직일 것 같은 통근 리듬이 몸에 배어 있다.",
+    ],
+    headlineBadge: "역 앞 통근",
+    headlineText: "가방을 멘 직장인 여자가 역 앞에서 출근 동선을 다시 정리하고 있다.",
+    approachBadge: "짧은 눈맞춤",
+    approachText: "직장인 여자는 시선만 짧게 주고받고 다시 역 입구 쪽을 바라본다.",
+    memoryBody: "역 앞에서 출근 동선을 정리하던 직장인 여자를 봤다.",
+  }),
+  createWorldWanderNpc({
+    id: "street-passer-001",
+    weight: 2,
+    tag: "직장인",
+    src: CHARACTER_ART.streetPasser001.default,
+    alt: "역 앞 서류가방 직장인",
+    left: 69,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "서류가방을 든 직장인이 역 앞 광장을 가로지르며 앞만 보고 걷는다",
+    sceneLines: [
+      "차분한 얼굴인데도 걸음은 한 번도 느려지지 않는다.",
+      "말을 붙여도 짧게 사과하고 지나갈 분위기다.",
+    ],
+    headlineBadge: "바쁜 통과",
+    headlineText: "서류가방을 든 직장인이 역 앞을 스치듯 지나가며 발걸음을 재촉한다.",
+    approachBadge: "짧은 거절",
+    approachText: "직장인은 죄송하다고만 남기고 그대로 광장을 지나간다.",
+    memoryBody: "역 앞 광장에서 서류가방을 든 직장인이 바쁘게 지나가는 모습을 봤다.",
+  }),
 ];
 
 const DAY01_WORLD_DOWNTOWN_NPC_POOL = [
@@ -557,6 +657,46 @@ const DAY01_WORLD_DOWNTOWN_NPC_POOL = [
     approachBadge: "큰길 감각",
     approachText: "통근자는 짧게 반응하고는 간판 불빛이 많은 쪽 보도로 자연스럽게 섞여든다.",
     memoryBody: "중심가 간판 불빛 아래에서 가죽재킷 통근자와 잠깐 마주쳤다.",
+  }),
+  createWorldWanderNpc({
+    id: "downtown-golddigger",
+    weight: 2,
+    tag: "꽃뱀",
+    src: CHARACTER_ART.downtownGolddigger.default,
+    alt: "번화가 여자",
+    left: 88,
+    bottom: 7,
+    height: 90,
+    sceneTitle: "번화가 조명 아래에서 차려입은 여자가 지나가는 사람들의 반응을 훑어본다",
+    sceneLines: [
+      "친절한 첫인상과 다르게 누구에게 먼저 말을 걸지 계산하는 기색이 먼저 읽힌다.",
+      "돈 냄새를 맡으면 부드럽게 붙겠지만 형편이 애매하면 바로 다음 타깃으로 시선을 넘길 타입이다.",
+    ],
+    headlineBadge: "번화가 시선",
+    headlineText: "차려입은 여자가 번화가 간판 아래에서 사람들의 반응을 살핀다.",
+    approachBadge: "가벼운 미소",
+    approachText: "여자는 잠깐 웃어 보이다가도 곧 더 돈 돼 보이는 쪽으로 시선을 돌린다.",
+    memoryBody: "번화가에서 의도를 감춘 채 사람을 고르는 여자를 봤다.",
+  }),
+  createWorldWanderNpc({
+    id: "street-passer-003",
+    weight: 2,
+    tag: "청년",
+    src: CHARACTER_ART.streetPasser003.default,
+    alt: "번화가 휴대폰 청년",
+    left: 58,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "휴대폰을 보던 청년이 번화가 인파 속에서도 걸음을 늦추지 않는다",
+    sceneLines: [
+      "잠깐 시선은 주지만 대화를 나눌 만큼 여유 있어 보이진 않는다.",
+      "급한 연락을 확인하는 듯 손에서 폰을 놓지 않는다.",
+    ],
+    headlineBadge: "스쳐 가는 시선",
+    headlineText: "휴대폰을 보던 청년은 미안하다고만 남기고 다시 화면에 집중한다.",
+    approachBadge: "급한 연락",
+    approachText: "청년은 급한 연락을 기다린다며 짧게 사과하고 지나간다.",
+    memoryBody: "번화가에서 휴대폰을 보며 바삐 걷는 청년을 스쳐 지나갔다.",
   }),
 ];
 
@@ -661,6 +801,46 @@ const DAY01_WORLD_UNIVERSITY_NPC_POOL = [
     approachText: "학생은 안경을 한번 올리고는 다시 강의동 쪽으로 몸을 돌린다.",
     memoryBody: "대학가에서 가방끈을 고쳐 메던 안경 쓴 대학생과 말을 섞었다.",
   }),
+  createWorldWanderNpc({
+    id: "campus-glasses-girl",
+    weight: 2,
+    tag: "학생",
+    src: CHARACTER_ART.campusGlassesGirl.default,
+    alt: "캠퍼스 안경 여학생",
+    left: 58,
+    bottom: 7,
+    height: 90,
+    sceneTitle: "캠퍼스 건물 앞에서 안경을 쓴 여학생이 가방끈을 붙든 채 다음 강의 동선을 확인한다",
+    sceneLines: [
+      "먼저 말을 거는 타입은 아니지만 조심스러운 시선이 자꾸 주변을 되짚는다.",
+      "공부와 이동 동선이 머릿속에서 동시에 돌아가는 듯한 학생 특유의 리듬이 느껴진다.",
+    ],
+    headlineBadge: "캠퍼스 동선",
+    headlineText: "안경을 쓴 여학생이 캠퍼스 건물 앞에서 다음 강의 방향을 다시 맞춰 본다.",
+    approachBadge: "조심스러운 눈빛",
+    approachText: "여학생은 안경을 고쳐 쓰고 짧게 고개만 숙인 뒤 다시 강의동 쪽으로 시선을 둔다.",
+    memoryBody: "캠퍼스 건물 앞에서 조심스럽게 동선을 맞추는 안경 여학생을 봤다.",
+  }),
+  createWorldWanderNpc({
+    id: "street-passer-003",
+    weight: 2,
+    tag: "청년",
+    src: CHARACTER_ART.streetPasser003.default,
+    alt: "대학가 휴대폰 청년",
+    left: 76,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "휴대폰을 보던 청년이 대학가 건물 앞을 가볍게 지나간다",
+    sceneLines: [
+      "걸음을 멈추더라도 길게 이야기를 나눌 여유는 없어 보인다.",
+      "폰 화면에 뜬 알림이 더 급해 보인다.",
+    ],
+    headlineBadge: "짧은 스침",
+    headlineText: "휴대폰을 보던 청년은 미안하다고 말한 뒤 그대로 대학가를 지나친다.",
+    approachBadge: "급한 답장",
+    approachText: "청년은 급한 연락 중이라며 짧게 고개를 숙이고 지나간다.",
+    memoryBody: "대학가 건물 앞에서 휴대폰을 보던 청년이 바쁘게 지나갔다.",
+  }),
 ];
 
 const DAY01_WORLD_CAMPUS_PARK_NPC_POOL = [
@@ -764,6 +944,26 @@ const DAY01_WORLD_CAMPUS_PARK_NPC_POOL = [
     approachText: "학생은 안경을 한번 올리고는 다시 공원 바깥 강의동 쪽을 본다.",
     memoryBody: "캠퍼스 공원에서 안경 쓴 대학생과 잠깐 공부 얘기를 나눴다.",
   }),
+  createWorldWanderNpc({
+    id: "street-passer-004",
+    weight: 2,
+    tag: "청년",
+    src: CHARACTER_ART.streetPasser004.default,
+    alt: "공원 후드 청년",
+    left: 74,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "후드 차림 청년이 공원 산책로를 따라 바삐 걸어간다",
+    sceneLines: [
+      "잠깐 말을 붙일 순 있어도 오래 붙잡힐 생각은 없어 보인다.",
+      "걸음은 가볍지만 분명 어디론가 서두르는 분위기다.",
+    ],
+    headlineBadge: "가벼운 통과",
+    headlineText: "후드 차림 청년이 공원을 스쳐 지나가며 그대로 발걸음을 옮긴다.",
+    approachBadge: "짧은 사과",
+    approachText: "청년은 다음에 보자고만 남기고 공원 길을 따라 지나간다.",
+    memoryBody: "공원 산책로에서 후드 차림 청년이 빠르게 지나가는 모습을 봤다.",
+  }),
 ];
 
 const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
@@ -847,6 +1047,46 @@ const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
     approachText: "통근자는 목례만 남기고 게이트 안쪽 보행선에 자연스럽게 합류한다.",
     memoryBody: "디지털단지 정문에서 사원증을 확인하던 니트 차림 통근자와 잠깐 마주쳤다.",
   }),
+  createWorldWanderNpc({
+    id: "city-career-woman",
+    weight: 2,
+    tag: "도심",
+    src: CHARACTER_ART.cityCareerWoman.default,
+    alt: "도심 커리어우먼",
+    left: 86,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "오피스 플라자 안내판 앞에서 차분한 차림의 여자가 일정표와 건물 입구를 번갈아 본다",
+    sceneLines: [
+      "움직임은 서두르지 않지만 어떤 건물로 들어갈지 이미 계산이 끝난 사람처럼 침착하다.",
+      "가까이 가면 예의는 지켜주겠지만 허술한 접근엔 금방 선을 그을 것 같은 분위기다.",
+    ],
+    headlineBadge: "오피스 플라자",
+    headlineText: "차분한 차림의 여자가 오피스 플라자 안내판 앞에서 일정을 정리한다.",
+    approachBadge: "선 긋는 시선",
+    approachText: "여자는 짧게 시선을 주고받은 뒤 다시 안내판과 건물 입구를 번갈아 본다.",
+    memoryBody: "오피스 플라자에서 침착하게 일정을 정리하던 커리어우먼을 봤다.",
+  }),
+  createWorldWanderNpc({
+    id: "street-passer-001",
+    weight: 2,
+    tag: "직장인",
+    src: CHARACTER_ART.streetPasser001.default,
+    alt: "오피스 서류가방 직장인",
+    left: 68,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "서류가방을 든 직장인이 오피스 건물 앞을 빠른 걸음으로 지나간다",
+    sceneLines: [
+      "차분한 얼굴인데도 발걸음은 한 번도 느려지지 않는다.",
+      "괜히 붙잡으면 미안할 만큼 바쁜 출근길이다.",
+    ],
+    headlineBadge: "출근 동선",
+    headlineText: "서류가방을 든 직장인이 짧게 사과하고 그대로 오피스 쪽으로 향한다.",
+    approachBadge: "바쁜 표정",
+    approachText: "직장인은 잠깐 고개를 숙인 뒤 다시 건물 쪽으로 걸음을 옮긴다.",
+    memoryBody: "오피스 단지 앞에서 서류가방을 든 직장인이 바삐 지나가는 모습을 봤다.",
+  }),
 ];
 
 const DAY01_WORLD_LOGISTICS_HUB_NPC_POOL = [
@@ -895,141 +1135,193 @@ const DAY01_WORLD_LOGISTICS_HUB_NPC_POOL = [
 const DAY01_WORLD_BUS_ROUTE_STOPS = [
   {
     id: "bus-stop",
-    emoji: "🚌",
-    label: "배금시외버스터미널",
-    note: "현재 정차 중인 정류장, 시외·고속버스 환승",
+    emoji: "🚏",
+    label: "배금역 버스정류장",
+    note: "배금역 앞 승하차 구역, 생활권 순환 노선 출발",
     type: "major",
-    eta: "지금",
-    badge: "현재 정류장",
+    eta: "현재",
+    badge: "배금역 출발",
     travelVia: "",
-  },
-  {
-    id: "downtown",
-    emoji: "🛍️",
-    label: "중심상업구역",
-    note: "로데오거리, 백화점, 식당가",
-    type: "normal",
-    eta: "5분",
-    badge: "생활권",
-    travelVia: "bus",
   },
   {
     id: "city-crossroads",
     emoji: "🚦",
-    label: "배금 사거리",
-    note: "중앙 환승센터, 편의점과 상가 골목",
+    label: "배금사거리",
+    note: "중심 교차로, 병원·상권 갈림길",
     type: "normal",
-    eta: "8분",
-    badge: "환승",
+    eta: "4분",
+    badge: "중심 환승",
+    travelVia: "bus",
+  },
+  {
+    id: "downtown",
+    emoji: "🏙️",
+    label: "다운타운",
+    note: "먹자골목과 상가가 모인 생활 중심지",
+    type: "normal",
+    eta: "7분",
+    badge: "상권",
     travelVia: "bus",
   },
   {
     id: "office-plaza",
     emoji: "🏢",
     label: "배금디지털단지",
-    note: "단지 입구, 배금전자 사무동, 생산동, 배금연구소",
+    note: "오피스 타워와 업무동이 밀집한 디지털단지",
     type: "major",
     eta: "11분",
-    badge: "회사구역",
+    badge: "업무 지구",
     travelVia: "bus",
   },
   {
     id: "baegeum-hospital",
     emoji: "🏥",
     label: "배금병원",
-    note: "응급의료센터, 성형 상담 구역",
+    note: "병원 진료동과 생활 편의시설이 모인 구역",
     type: "major",
-    eta: "12분",
+    eta: "14분",
     badge: "의료",
     travelVia: "bus",
   },
   {
     id: "library",
     emoji: "📚",
-    label: "도서관 구역",
-    note: "도서관, 시험장, 대학가로 이어지는 학습 동선",
+    label: "배금도서관",
+    note: "도서관과 시험 준비 공간이 있는 학습 구역",
     type: "normal",
-    eta: "16분",
+    eta: "18분",
     badge: "학습",
     travelVia: "bus",
   },
   {
     id: "station-front",
     emoji: "🚉",
-    label: "배금역",
-    note: "도시철도 1호선 환승, 역전광장 진입",
+    label: "배금역 앞",
+    note: "역전 광장, 철도 출입구와 로또판매장 인접",
     type: "major",
-    eta: "20분",
-    badge: "철도",
+    eta: "22분",
+    badge: "역전 광장",
     travelVia: "bus",
   },
 ];
-
 const DAY01_WORLD_TERMINAL_SCHEDULE = [
   {
-    id: "seoul-premium",
-    destination: "서울시외버스터미널",
-    routeType: "프리미엄/고속",
-    platform: "1번 홈",
+    id: "station-front-shuttle",
+    destination: "배금역 앞",
+    routeType: "역전 순환",
+    platform: "1번 정류장",
     status: "여유",
     times: [
-      { time: "06:00", label: "우등" },
-      { time: "06:30", label: "프리미엄", highlight: true },
-      { time: "07:00", label: "우등" },
-      { time: "07:30", label: "일반" },
-      { time: "08:00", label: "프리미엄" },
-      { time: "수시운행", label: "30분 간격" },
+      { time: "06:00", label: "첫차" },
+      { time: "06:20", label: "역전광장" },
+      { time: "06:40", label: "환승 연계", highlight: true },
+      { time: "07:00", label: "출근 집중" },
+      { time: "수시", label: "10~15분 간격" },
     ],
   },
   {
-    id: "metropolis-express",
-    destination: "메트로폴리스 광역터미널",
-    routeType: "직행/고속",
-    platform: "3번 홈",
+    id: "crossroads-loop",
+    destination: "배금사거리",
+    routeType: "중심 순환",
+    platform: "2번 정류장",
+    status: "보통",
+    times: [
+      { time: "06:10", label: "첫차" },
+      { time: "06:30", label: "출근 연계" },
+      { time: "06:50", label: "상권 경유", highlight: true },
+      { time: "07:10", label: "순환 운행" },
+      { time: "수시", label: "15분 간격" },
+    ],
+  },
+  {
+    id: "downtown-loop",
+    destination: "다운타운",
+    routeType: "생활 순환",
+    platform: "3번 정류장",
+    status: "보통",
+    times: [
+      { time: "06:15", label: "첫차" },
+      { time: "06:40", label: "상가 연계" },
+      { time: "07:05", label: "먹자골목", highlight: true },
+      { time: "07:30", label: "출근 경유" },
+      { time: "수시", label: "20분 간격" },
+    ],
+  },
+  {
+    id: "office-plaza-link",
+    destination: "배금디지털단지",
+    routeType: "직행/급행",
+    platform: "4번 정류장",
+    status: "혼잡",
+    times: [
+      { time: "06:25", label: "첫차" },
+      { time: "06:45", label: "업무동 연계" },
+      { time: "07:05", label: "출근 집중", highlight: true },
+      { time: "07:25", label: "오피스권" },
+      { time: "수시", label: "15분 간격" },
+    ],
+  },
+  {
+    id: "hospital-link",
+    destination: "배금병원",
+    routeType: "병원/생활",
+    platform: "5번 정류장",
+    status: "보통",
+    times: [
+      { time: "06:35", label: "첫차" },
+      { time: "07:00", label: "진료 연계" },
+      { time: "07:25", label: "생활권 환승", highlight: true },
+      { time: "07:50", label: "병원 앞" },
+      { time: "수시", label: "20분 간격" },
+    ],
+  },
+  {
+    id: "library-link",
+    destination: "배금도서관",
+    routeType: "학습/생활",
+    platform: "6번 정류장",
+    status: "여유",
+    times: [
+      { time: "06:50", label: "첫차" },
+      { time: "07:20", label: "학습 구역" },
+      { time: "07:50", label: "조용한 시간", highlight: true },
+      { time: "08:20", label: "오전 순환" },
+      { time: "수시", label: "30분 간격" },
+    ],
+  },
+  {
+    id: "casino-express",
+    destination: "부산 카지노 앞",
+    routeType: "특별/고속",
+    platform: "7번 정류장",
     status: "혼잡",
     escapeEnding: true,
     times: [
-      { time: "09:00", label: "우등" },
-      { time: "12:00", label: "프리미엄", highlight: true },
-      { time: "15:00", label: "우등" },
-      { time: "18:30", label: "일반" },
-      { time: "20:00", label: "심야우등" },
-    ],
-  },
-  {
-    id: "seosan-local",
-    destination: "서산시외버스터미널",
-    routeType: "시외/일반",
-    platform: "5번 홈",
-    status: "보통",
-    times: [
-      { time: "08:00", label: "일반" },
-      { time: "10:30", label: "우등" },
-      { time: "14:00", label: "일반" },
-      { time: "16:30", label: "우등", highlight: true },
-      { time: "19:00", label: "일반" },
+      { time: "09:00", label: "첫차" },
+      { time: "12:00", label: "특별편", highlight: true },
+      { time: "15:00", label: "추가편" },
+      { time: "18:30", label: "야간 전" },
+      { time: "20:00", label: "막차" },
     ],
   },
 ];
-
 const DAY01_WORLD_BUS_MAP = {
-  variant: "bus-terminal",
-  routeTitle: "배금 100번",
-  routeSubtitle: "배금시외버스터미널 ↔ 배금디지털단지 ↔ 배금역",
-  serviceLabel: "간선버스",
-  statusLabel: "노선 개편",
-  nextStopLabel: "중심상업구역",
+  variant: "station-bus",
+  routeTitle: "배금 생활노선 100번",
+  routeSubtitle: "배금역 버스정류장 ↔ 배금디지털단지 ↔ 배금역 앞",
+  serviceLabel: "역전 순환버스",
+  statusLabel: "정류장 안내",
+  nextStopLabel: "배금사거리",
   intervalLabel: "10~15분",
-  helperText: "아래 정류장 버튼을 누르면 바로 해당 정차 구간으로 이동한다.",
+  helperText: "배금역에서 바로 갈 수 있는 실제 생활권 구역만 정리된 로컬 버스 안내다.",
   routeTabLabel: "노선도",
-  timetableTabLabel: "터미널 시간표",
-  terminalName: "배금시외버스터미널",
-  terminalSubtitle: "출발 시간표 및 운행 정보",
-  terminalNotice: "실시간 교통 상황과 승차 인원에 따라 출발 시각은 조금씩 달라질 수 있다.",
+  timetableTabLabel: "배금역 안내",
+  terminalName: "배금역",
+  terminalSubtitle: "실제 연결 구역 및 운행 정보",
+  terminalNotice: "배금역 버스정류장에서 출발하는 실제 구역만 표시된다. 생활권 이동과 특별 노선을 함께 확인할 수 있다.",
   timetableEntries: DAY01_WORLD_TERMINAL_SCHEDULE,
   nodes: DAY01_WORLD_BUS_ROUTE_STOPS,
 };
-
 const DAY01_WORLD_BUS_ROUTE_OPTIONS = DAY01_WORLD_BUS_ROUTE_STOPS.map((stop) => ({
   title: stop.label,
   action: "move",
@@ -1053,7 +1345,7 @@ const DAY01_WORLD_BUS_TIMETABLE_OPTIONS = [
 
 const DAY01_WORLD_BUS_TERMINAL_BACKGROUND = {
   className: "custom-location-bg",
-  image: "assets/backgrounds/day01/bus-terminal-exterior.png",
+  image: "assets/backgrounds/day01/station-front.jpg",
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%)",
@@ -1145,6 +1437,22 @@ const DAY01_WORLD_DOWNTOWN_BACKGROUND = {
   position: "center center",
   size: "cover",
   overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.18) 100%)",
+};
+
+const DAY01_WORLD_REAL_ESTATE_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/downtown-real-estate-exterior.png",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.22) 100%)",
+};
+
+const DAY01_WORLD_REAL_ESTATE_INTERIOR_BACKGROUND = {
+  className: "custom-location-bg",
+  image: "assets/backgrounds/day01/commercial/downtown-real-estate-interior.jpg",
+  position: "center center",
+  size: "cover",
+  overlay: "linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.22) 100%)",
 };
 
 const DAY01_WORLD_STATION_FRONT_BACKGROUND = {
@@ -1384,58 +1692,58 @@ const DAY01_WORLD_LOCATIONS = {
     order: 12,
   },
   "bus-stop": {
-    label: "배금시외버스터미널 앞",
-    speaker: "배금시외버스터미널 앞",
-    title: "터미널 앞 공기가 버스 소음과 함께 길게 번진다",
+    label: "배금역 버스정류장",
+    speaker: "배금역 버스정류장",
+    title: "배금역 앞 승하차 구역에 생활권 버스와 안내 표지판이 함께 서 있다",
     background: DAY01_WORLD_BUS_TERMINAL_BACKGROUND,
     lines: [
-      "시내버스 정차면과 시외버스 홈이 한곳에 붙어 있어 사람 흐름이 끊이지 않는다.",
-      "이제 노선도와 시간표는 전광판보다 스마트폰 앱으로 보는 편이 더 빠르다.",
+      "배금역 앞 도로변 정류장이라 역전 광장과 사거리, 디지털단지 쪽으로 이동하기 쉽다.",
+      "스마트폰에서 배금버스 앱을 열면 실제 연결 구역과 운행 간격을 한 번에 확인할 수 있다.",
     ],
-    tags: ["환승", "대기", "터미널"],
+    tags: ["배금역", "정류장", "이동"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
-    randomNpcPool: DAY01_WORLD_TERMINAL_NPC_POOL,
-    exits: ["apt-alley", "city-crossroads", "bus-stop-map"],
+    randomNpcPool: DAY01_WORLD_STATION_FRONT_NPC_POOL,
+    exits: ["station-front", "city-crossroads", "bus-stop-map"],
     options: [
       {
-        title: "터미널 안내판 앞으로 간다",
+        title: "배금역 안내판 앞으로 간다",
         action: "move",
         targetLocation: "bus-stop-map",
       },
       {
-        title: "현재 집 쪽으로 돌아간다",
+        title: "집 쪽으로 돌아간다",
         action: "move-home",
       },
       {
-        title: "배금시 사거리로 간다",
+        title: "배금역 앞으로 간다",
         action: "move",
-        targetLocation: "city-crossroads",
+        targetLocation: "station-front",
       },
     ],
   },
   "bus-stop-map": {
-    label: "배금시외버스터미널 안내판 앞",
-    speaker: "배금시외버스터미널",
-    title: "전광판 아래에서 스마트폰으로 버스 앱을 켠다",
+    label: "배금역 버스안내",
+    speaker: "배금역 안내판",
+    title: "배금역 버스정류장에서 갈 수 있는 실제 구역을 한눈에 정리한 안내판",
     background: DAY01_WORLD_BUS_TERMINAL_BACKGROUND,
     lines: [
-      "시내버스 노선도와 시외버스 시간표는 이제 폰 화면으로 보는 쪽이 훨씬 깔끔하다.",
-      "배금버스 앱을 열면 시내 노선과 터미널 시간표, 메트로폴리스행 고속버스까지 한 번에 확인할 수 있다.",
+      "배금역 앞 생활권 버스는 배금사거리, 다운타운, 디지털단지, 병원, 도서관 쪽으로 이어진다.",
+      "스마트폰 앱을 열면 노선도와 운행표를 나눠서 보고 필요한 정류장으로 바로 이동할 수 있다.",
     ],
-    tags: ["환승", "터미널", "스마트폰"],
+    tags: ["배금역", "버스안내", "스마트폰"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
-    exits: ["bus-stop", "city-crossroads", "station-front", "downtown", "library", "exam-center", "apt-alley"],
+    exits: ["bus-stop", "city-crossroads", "station-front", "downtown", "office-plaza", "baegeum-hospital", "library"],
     options: [
       {
-        title: "스마트폰으로 배금버스 노선도를 본다",
+        title: "스마트폰으로 배금버스 노선을 본다",
         action: "open-bus-route-app",
       },
       {
-        title: "스마트폰으로 터미널 시간표를 본다",
+        title: "스마트폰으로 배금역 운행표를 본다",
         action: "open-bus-timetable-app",
       },
       {
-        title: "정류장 자리로 돌아간다",
+        title: "버스정류장으로 돌아간다",
         action: "move",
         targetLocation: "bus-stop",
       },
@@ -1744,7 +2052,7 @@ const DAY01_WORLD_LOCATIONS = {
     tags: ["고액소비", "유흥", "위험"],
     actors: [DAY01_WORLD_PLAYER_ACTOR],
     randomNpcPool: DAY01_WORLD_DOWNTOWN_NPC_POOL,
-    exits: ["bus-stop", "city-crossroads"],
+    exits: ["bus-stop", "city-crossroads", "real-estate"],
     options: [
       {
         title: "버스 정류장으로 간다",
@@ -1755,6 +2063,70 @@ const DAY01_WORLD_LOCATIONS = {
         title: "배금시 사거리로 돌아간다",
         action: "move",
         targetLocation: "city-crossroads",
+      },
+      {
+        title: "부동산으로 들어간다",
+        action: "move",
+        targetLocation: "real-estate",
+        travelMinutes: 3,
+        keepVisible: true,
+      },
+    ],
+  },
+  "real-estate": {
+    label: "다운타운 부동산",
+    speaker: "다운타운 부동산",
+    title: "유리창 안쪽으로 매물판과 계약 테이블이 정갈하게 보인다",
+    background: DAY01_WORLD_REAL_ESTATE_BACKGROUND,
+    lines: [
+      "다운타운 매물을 정리한 전광판이 쇼윈도 쪽으로 길게 이어져 있다.",
+      "안으로 들어가면 수익형 건물 계약과 투자 상담을 바로 진행할 수 있다.",
+    ],
+    tags: ["부동산", "투자", "상업 구역"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["downtown", "real-estate-interior"],
+    options: [
+      {
+        title: "부동산 안으로 들어간다",
+        action: "move",
+        targetLocation: "real-estate-interior",
+        travelMinutes: 2,
+        keepVisible: true,
+      },
+      {
+        title: "다운타운 거리로 돌아간다",
+        action: "move",
+        targetLocation: "downtown",
+        travelMinutes: 3,
+        keepVisible: true,
+      },
+    ],
+  },
+  "real-estate-interior": {
+    label: "다운타운 부동산 내부",
+    speaker: "다운타운 부동산 내부",
+    title: "계약 테이블 위로 수익률표와 건물 자료가 정리돼 있다",
+    background: DAY01_WORLD_REAL_ESTATE_INTERIOR_BACKGROUND,
+    lines: [
+      "벽면 스크린에는 다운타운 상가 건물 수익률과 공실률이 차트로 정리돼 있다.",
+      "담당자가 계약만 끝나면 다음 턴부터 임대수익이 바로 계좌로 들어온다고 설명한다.",
+    ],
+    tags: ["부동산", "계약", "상업 구역"],
+    actors: [DAY01_WORLD_PLAYER_ACTOR],
+    districtId: "commercial",
+    exits: ["real-estate"],
+    options: [
+      {
+        title: "수익형 건물을 매입한다",
+        action: "buy-downtown-building",
+      },
+      {
+        title: "부동산 밖으로 나간다",
+        action: "move",
+        targetLocation: "real-estate",
+        travelMinutes: 2,
+        keepVisible: true,
       },
     ],
   },
@@ -1891,7 +2263,7 @@ const DAY01_WORLD_LOCATIONS = {
     exits: ["city-crossroads", "mcdonalds-counter"],
     options: [
       {
-        title: "카운터로 들어간다",
+        title: "매장 안으로 들어간다",
         action: "move",
         targetLocation: "mcdonalds-counter",
         travelMinutes: 4,
@@ -1930,6 +2302,7 @@ const DAY01_WORLD_LOCATIONS = {
         title: "건물 앞으로 나간다",
         action: "move",
         targetLocation: "mcdonalds",
+        forceDirectMove: true,
         travelMinutes: 4,
         keepVisible: true,
       },
@@ -2373,7 +2746,7 @@ const DAY01_WORLD_DISTRICTS = {
 const DAY01_WORLD_DISTRICT_MAP = {
   mode: "district",
   title: "도시 구역 노선도",
-  subtitle: "먼저 갈 구역을 고른 뒤, 그 안에서 세부 장소를 걸어 들어간다.",
+  subtitle: "",
   nodes: ["residential", "study", "commercial", "industrial"].map((districtId) => {
     const district = DAY01_WORLD_DISTRICTS[districtId];
     return {
@@ -2386,7 +2759,7 @@ const DAY01_WORLD_DISTRICT_MAP = {
             ? "🏢"
             : "🌆",
       label: district.label,
-      note: district.note,
+      note: "",
     };
   }),
 };
@@ -2401,6 +2774,7 @@ DAY01_WORLD_LOCATIONS["station-front"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS["station-interior"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS["station-seoul-route"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS.downtown.districtId = "commercial";
+DAY01_WORLD_LOCATIONS["real-estate"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS["baegeum-hospital"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS["convenience-store"].districtId = "commercial";
 DAY01_WORLD_LOCATIONS.mcdonalds.districtId = "commercial";
@@ -2463,24 +2837,24 @@ DAY01_WORLD_LOCATIONS["bus-stop-map"].exits = [
     .map((option) => option.targetLocation)
     .filter((locationId) => ![...DAY01_HOME_FRONT_LOCATION_IDS, "bus-stop"].includes(locationId)),
 ];
-DAY01_WORLD_LOCATIONS["bus-stop-map"].label = "배금시외버스터미널 안내";
-DAY01_WORLD_LOCATIONS["bus-stop-map"].speaker = "배금시외버스터미널";
-DAY01_WORLD_LOCATIONS["bus-stop-map"].title = "전광판 아래에서 스마트폰으로 버스 앱을 켠다";
+DAY01_WORLD_LOCATIONS["bus-stop-map"].label = "배금역 버스안내";
+DAY01_WORLD_LOCATIONS["bus-stop-map"].speaker = "배금역 안내판";
+DAY01_WORLD_LOCATIONS["bus-stop-map"].title = "배금역 버스정류장에서 갈 수 있는 실제 구역을 한눈에 정리한 안내판";
 DAY01_WORLD_LOCATIONS["bus-stop-map"].lines = [
-  "시내버스 노선도와 시외버스 시간표는 배금버스 앱에서 깔끔하게 확인할 수 있다.",
-  "앱이 아직 없다면 플레이스토어가 먼저 열리고, 설치돼 있다면 바로 교통 화면으로 이어진다.",
+  "배금역 앞 생활권 버스는 배금사거리, 다운타운, 디지털단지, 병원, 도서관 쪽으로 이어진다.",
+  "스마트폰 앱을 열면 노선도와 운행표를 나눠서 보고 필요한 정류장으로 바로 이동할 수 있다.",
 ];
 DAY01_WORLD_LOCATIONS["bus-stop-map"].options = [
   {
-    title: "스마트폰으로 배금버스 노선도를 본다",
+    title: "스마트폰으로 배금버스 노선을 본다",
     action: "open-bus-route-app",
   },
   {
-    title: "스마트폰으로 터미널 시간표를 본다",
+    title: "스마트폰으로 배금역 운행표를 본다",
     action: "open-bus-timetable-app",
   },
   {
-    title: "정류장 자리로 돌아간다",
+    title: "버스정류장으로 돌아간다",
     action: "move",
     targetLocation: "bus-stop",
   },
@@ -2496,7 +2870,7 @@ DAY01_WORLD_LOCATIONS["bus-stop"].exits = [
 ];
 DAY01_WORLD_LOCATIONS["bus-stop"].options = [
   {
-    title: "안내판 앞으로 간다",
+    title: "배금역 안내판 앞으로 간다",
     action: "move",
     targetLocation: "bus-stop-map",
   },
@@ -2505,9 +2879,9 @@ DAY01_WORLD_LOCATIONS["bus-stop"].options = [
     action: "move-home",
   },
   {
-    title: "배금시 사거리로 간다",
+    title: "배금역 앞으로 간다",
     action: "move",
-    targetLocation: "city-crossroads",
+    targetLocation: "station-front",
   },
 ];
 
@@ -2567,6 +2941,7 @@ DAY01_WORLD.initialUnlockedLocations = [
   "station-seoul-route",
   "lotto-retailer",
   "downtown",
+  "real-estate",
   "baegeum-hospital",
   "convenience-store",
   "mcdonalds",
@@ -2676,6 +3051,15 @@ const DAY01_CITY_MAP_NODE_META = {
     zoneTone: "commercial",
     order: 110,
   },
+  "real-estate": {
+    x: 72,
+    y: 57,
+    icon: "🏢",
+    shortLabel: "부동산",
+    note: "다운타운 수익형 건물과 상가 매물을 계약하는 부동산.",
+    zoneTone: "commercial",
+    order: 115,
+  },
   "baegeum-hospital": {
     label: "배금병원 성형외과",
     speaker: "배금병원 성형외과",
@@ -2711,7 +3095,7 @@ const DAY01_CITY_MAP_NODE_META = {
   },
   "lotto-retailer": {
     x: 58,
-    y: 36,
+    y: 27,
     icon: "🎟️",
     shortLabel: "로또",
     note: "배금역 앞 코너에 있는 로또판매장",
@@ -2733,7 +3117,7 @@ const DAY01_CITY_MAP_NODE_META = {
     exits: ["city-crossroads", "mcdonalds-counter"],
     options: [
       {
-        title: "카운터로 들어간다",
+        title: "매장 안으로 들어간다",
         action: "move",
         targetLocation: "mcdonalds-counter",
         travelMinutes: 4,
@@ -2771,6 +3155,7 @@ const DAY01_CITY_MAP_NODE_META = {
         title: "건물 앞으로 나간다",
         action: "move",
         targetLocation: "mcdonalds",
+        forceDirectMove: true,
         travelMinutes: 4,
       },
     ],
@@ -2825,26 +3210,23 @@ DAY01_WORLD_LOCATIONS.mcdonalds.mapNode = {
   icon: "🍔",
   shortLabel: "맥도날드",
   note: "배금사거리 코너 매장. 손님 모드와 알바 동선이 여기서 갈라진다.",
+  labelOffsetX: 16,
   zoneTone: "commercial",
   order: 140,
 };
 
 Object.assign(DAY01_WORLD_LOCATIONS["baegeum-hospital"], {
-  label: "배금은행 금융센터",
-  speaker: "배금은행 금융센터",
-  title: "유리 자동문 너머로 번호표 기계와 상담 창구가 차분하게 돌아간다",
+  label: "배금병원 성형외과",
+  speaker: "배금병원 성형외과",
+  title: "로비 안내문 아래로 성형 상담 배너가 차갑게 줄지어 서 있다",
   lines: [
-    "1층 창구 쪽에는 입출금과 대출 안내 전광판이 반듯하게 켜져 있다.",
-    "건물 상층에는 외모 상담실도 함께 있어, 은행 업무를 보러 왔다가도 괜히 시선이 끌린다.",
+    "수술 전후 사진과 상담 안내 문구가 복도 벽면에 가지런히 붙어 있다.",
+    "로비 공기에는 소독약 냄새와 함께 묘한 긴장감이 천천히 번진다.",
   ],
-  tags: ["은행", "금융", "상업 구역"],
+  tags: ["병원", "성형", "상업 구역"],
   options: [
     {
-      title: "스마트폰으로 계좌를 확인한다",
-      action: "open-bank-app",
-    },
-    {
-      title: "상층 상담실로 올라가 외모 시술 상담을 받는다",
+      title: "천천히 성형 상담을 진행한다",
       action: "get-plastic-surgery",
     },
     {
@@ -2858,9 +3240,10 @@ Object.assign(DAY01_WORLD_LOCATIONS["baegeum-hospital"], {
 DAY01_WORLD_LOCATIONS["baegeum-hospital"].mapNode = {
   x: 52,
   y: 45,
-  icon: "🏦",
-  shortLabel: "배금은행",
-  note: "중앙 상권 쪽에 붙어 있는 금융센터. 상층 상담실로 올라가 외모 시술 상담도 가능하다.",
+  icon: "🏥",
+  shortLabel: "배금병원",
+  note: "중앙 상권 옆에 붙어 있는 병원. 성형 상담과 수술 관련 안내가 이어진다.",
+  labelOffsetX: -16,
   zoneTone: "commercial",
   order: 120,
 };
@@ -2874,6 +3257,58 @@ Object.assign(DAY01_WORLD_LOCATIONS["lotto-retailer-interior"], {
   options: [
     {
       title: "로또 번호 고르고 바로 추첨하기",
+      action: "buy-lotto-ticket",
+    },
+    {
+      title: "판매장 밖으로 나간다",
+      action: "move",
+      targetLocation: "lotto-retailer",
+      travelMinutes: 2,
+      keepVisible: true,
+    },
+  ],
+});
+
+Object.assign(DAY01_WORLD_LOCATIONS["lotto-retailer"], {
+  title: "작은 판매대와 즉석복권 안내판이 입구를 채우고 있다",
+  lines: [
+    "역 앞 복권판매점은 오래 머무는 곳이 아니라 바로 한 장 긁고 나오는 분위기다.",
+    "창문 아래에는 오늘의 즉석복권 안내와 당첨 금액 표가 간단히 붙어 있다.",
+  ],
+  tags: ["즉석복권", "복권", "상업 구역"],
+  options: [
+    {
+      title: "판매장 안으로 들어간다",
+      action: "move",
+      targetLocation: "lotto-retailer-interior",
+      travelMinutes: 2,
+      keepVisible: true,
+    },
+    {
+      title: "배금거리로 돌아간다",
+      action: "move",
+      targetLocation: "city-crossroads",
+    },
+    {
+      title: "배금역 앞으로 간다",
+      action: "move",
+      targetLocation: "station-front",
+      travelMinutes: 3,
+      keepVisible: true,
+    },
+  ],
+});
+
+Object.assign(DAY01_WORLD_LOCATIONS["lotto-retailer-interior"], {
+  title: "창구 앞에서 즉석복권을 사고 바로 긁을 수 있다",
+  lines: [
+    "번호를 고르는 방식이 아니라 3x3 즉석복권을 바로 긁는다.",
+    "같은 금액이 3칸 나오면 당첨이고, 아래 확률표로 등급을 바로 확인할 수 있다.",
+  ],
+  tags: ["즉석복권", "스크래치", "상업 구역"],
+  options: [
+    {
+      title: "즉석복권 한 장 긁기",
       action: "buy-lotto-ticket",
     },
     {
@@ -2916,6 +3351,7 @@ DAY01_WORLD_LOCATIONS["golden-home-front"].mapNode = {
   "walk-travel",
   "station-seoul-route",
   "logistics-center",
+  "real-estate-interior",
   "lotto-retailer-interior",
   "mcdonalds-counter",
   "mcdonalds-kitchen",
@@ -2931,6 +3367,7 @@ DAY01_WORLD_LOCATIONS["bus-stop-map"].cityMapAnchorId = "bus-stop";
 DAY01_WORLD_LOCATIONS["bus-ride"].cityMapHidden = true;
 DAY01_WORLD_LOCATIONS["walk-travel"].cityMapHidden = true;
 DAY01_WORLD_LOCATIONS["logistics-center"].cityMapAnchorId = "station-front";
+DAY01_WORLD_LOCATIONS["real-estate-interior"].cityMapAnchorId = "real-estate";
 DAY01_WORLD_LOCATIONS["lotto-retailer-interior"].cityMapAnchorId = "lotto-retailer";
 DAY01_WORLD_LOCATIONS["mcdonalds-counter"].cityMapAnchorId = "mcdonalds";
 DAY01_WORLD_LOCATIONS["mcdonalds-kitchen"].cityMapAnchorId = "mcdonalds";
@@ -2940,12 +3377,35 @@ DAY01_WORLD_LOCATIONS["station-seoul-route"].cityMapAnchorId = "station-interior
 
 DAY01_WORLD.cityMap = {
   title: "배금시 이동 지도",
-  subtitle: "이동은 지도에서 고르고, 도착한 장소에서 할 수 있는 행동만 버튼으로 남긴다.",
+  subtitle: "",
   zones: [
     { id: "study", label: "학습 구역", tone: "study", x: 6, y: 4, width: 60, height: 30 },
     { id: "commercial", label: "상업 구역", tone: "commercial", x: 27, y: 25, width: 45, height: 57 },
     { id: "industrial", label: "배금디지털단지", tone: "industrial", x: 73, y: 28, width: 23, height: 56 },
     { id: "residential", label: "주거 구역", tone: "residential", x: 4, y: 58, width: 34, height: 30 },
+  ],
+  visualLinks: [
+    { from: "silver-home-front", to: "bus-stop", style: "near" },
+    { from: "apt-alley", to: "bus-stop", style: "near" },
+    { from: "golden-home-front", to: "bus-stop", style: "near" },
+    { from: "bus-stop", to: "city-crossroads", style: "connector" },
+    { from: "bus-stop", to: "study-hub", style: "connector" },
+    { from: "study-hub", to: "library", style: "near" },
+    { from: "study-hub", to: "exam-center", style: "near" },
+    { from: "study-hub", to: "university-district", style: "near" },
+    { from: "university-district", to: "campus-park", style: "near" },
+    { from: "city-crossroads", to: "convenience-store", style: "near" },
+    { from: "city-crossroads", to: "mcdonalds", style: "near" },
+    { from: "city-crossroads", to: "baegeum-hospital", style: "near" },
+    { from: "city-crossroads", to: "station-front", style: "connector" },
+    { from: "station-front", to: "lotto-retailer", style: "near" },
+    { from: "station-front", to: "station-interior", style: "near" },
+    { from: "city-crossroads", to: "downtown", style: "connector" },
+    { from: "downtown", to: "real-estate", style: "near" },
+    { from: "downtown", to: "office-plaza", style: "connector" },
+    { from: "office-plaza", to: "mobility-control-center", style: "near" },
+    { from: "office-plaza", to: "tower-cafe", style: "near" },
+    { from: "office-plaza", to: "logistics-hub", style: "near" },
   ],
   links: [
     { from: "apt-alley", to: "bus-stop", minutes: 8, mode: "walk" },
@@ -2975,6 +3435,7 @@ DAY01_WORLD.cityMap = {
     { from: "station-front", to: "station-interior", minutes: 4, mode: "walk" },
     { from: "station-front", to: "lotto-retailer", minutes: 3, mode: "walk" },
     { from: "station-front", to: "office-plaza", minutes: 8, mode: "walk" },
+    { from: "downtown", to: "real-estate", minutes: 3, mode: "walk" },
     { from: "downtown", to: "office-plaza", minutes: 8, mode: "walk" },
     { from: "office-plaza", to: "mobility-control-center", minutes: 4, mode: "walk" },
     { from: "office-plaza", to: "tower-cafe", minutes: 4, mode: "walk" },

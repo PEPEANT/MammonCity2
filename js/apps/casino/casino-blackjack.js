@@ -207,6 +207,7 @@ function startCasinoBlackjackRound(targetState = state) {
   }
 
   blackjackState.phase = "player-turn";
+  blackjackState.roundDay = Math.max(1, Math.round(Number(targetState?.day) || 1));
   blackjackState.dealerHidden = true;
   blackjackState.playerAcePreference = 11;
   blackjackState.playerHand = [];
@@ -585,9 +586,9 @@ function buildCasinoBlackjackScreenMarkup({ stageMode = false, targetState = sta
     <div class="casino-app casino-blackjack-screen ${stageMode ? "is-stage" : ""}">
       <div class="casino-app-top">
         <div class="casino-app-copy">
-          <span class="casino-app-kicker">BLACKJACK</span>
-          <div class="casino-app-title">전략 블랙잭 테이블</div>
-          <div class="casino-app-note">칩을 걸고 한 판을 진행합니다. 하루에 한 번만 결과가 정산됩니다.</div>
+          ${stageMode ? "" : '<span class="casino-app-kicker">BLACKJACK</span>'}
+          <div class="casino-app-title">${stageMode ? "블랙잭" : "전략 블랙잭 테이블"}</div>
+          ${stageMode ? "" : '<div class="casino-app-note">칩을 걸고 한 판을 진행합니다. 하루에 한 번만 결과가 정산됩니다.</div>'}
         </div>
         <div class="casino-app-top-actions">
           ${!stageMode ? '<button class="casino-mini-btn" type="button" data-phone-route="casino/home">홈</button>' : ""}

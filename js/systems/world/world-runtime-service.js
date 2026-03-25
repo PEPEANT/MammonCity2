@@ -106,6 +106,8 @@ function createDefaultWorldState(day = getCurrentDayNumber(), targetState = null
     alleyNpcId: "",
     activeNpcLocationId: "",
     ambientNpcCache: {},
+    ambientNpcTurnRoster: createDefaultAmbientNpcTurnRoster(getWorldTurnStamp(stateForHomeResolution)),
+    recentNpcSightings: {},
     wanderedLocations: [],
     wanderNpcByLocation: {},
     wanderResult: {
@@ -178,6 +180,12 @@ function syncWorldState(targetState = state) {
   const ambientNpcCache = worldState.ambientNpcCache && typeof worldState.ambientNpcCache === "object"
     ? worldState.ambientNpcCache
     : {};
+  const ambientNpcTurnRoster = worldState.ambientNpcTurnRoster && typeof worldState.ambientNpcTurnRoster === "object"
+    ? worldState.ambientNpcTurnRoster
+    : {};
+  const currentTurnStamp = getWorldTurnStamp(targetState);
+  const normalizedAmbientNpcTurnRoster = normalizeAmbientNpcTurnRoster(ambientNpcTurnRoster, currentTurnStamp);
+  const recentNpcSightings = normalizeRecentNpcSightings(worldState.recentNpcSightings, currentTurnStamp);
   const wanderNpcByLocation = worldState.wanderNpcByLocation && typeof worldState.wanderNpcByLocation === "object"
     ? worldState.wanderNpcByLocation
     : {};
@@ -222,6 +230,8 @@ function syncWorldState(targetState = state) {
         && typeof snapshot === "object"
       )
     ),
+    ambientNpcTurnRoster: normalizedAmbientNpcTurnRoster,
+    recentNpcSightings,
     wanderedLocations,
     wanderNpcByLocation: Object.fromEntries(
       Object.entries(wanderNpcByLocation).filter(([locationId, npcId]) =>
@@ -484,6 +494,31 @@ const WORLD_NPC_METADATA = {
     talkable: true,
     timeBands: ["morning", "day", "evening"],
   },
+  "station-office-commuter": {
+    gender: "female",
+    talkable: true,
+    timeBands: ["morning", "day", "evening"],
+  },
+  "street-passer-001": {
+    gender: "male",
+    talkable: true,
+    timeBands: ["morning", "day", "evening"],
+  },
+  "street-passer-002": {
+    gender: "male",
+    talkable: true,
+    timeBands: ["morning", "day", "evening"],
+  },
+  "street-passer-003": {
+    gender: "male",
+    talkable: true,
+    timeBands: ["day", "evening", "night"],
+  },
+  "street-passer-004": {
+    gender: "male",
+    talkable: true,
+    timeBands: ["day", "evening", "night"],
+  },
   "smart-casual-commuter": {
     gender: "female",
     talkable: true,
@@ -497,6 +532,26 @@ const WORLD_NPC_METADATA = {
   "campus-glasses-student": {
     gender: "female",
     talkable: true,
+    timeBands: ["day", "evening"],
+  },
+  "campus-glasses-girl": {
+    gender: "female",
+    talkable: false,
+    timeBands: ["day", "evening"],
+  },
+  "city-career-woman": {
+    gender: "female",
+    talkable: false,
+    timeBands: ["day", "evening"],
+  },
+  "downtown-golddigger": {
+    gender: "female",
+    talkable: false,
+    timeBands: ["day", "evening", "night"],
+  },
+  "cult-recruiter-young": {
+    gender: "female",
+    talkable: false,
     timeBands: ["day", "evening"],
   },
   "alley-office-worker": {
@@ -535,6 +590,23 @@ const WORLD_NPC_METADATA = {
     timeBands: ["day", "evening", "night"],
   },
 };
+
+const WORLD_NPC_ACTOR_ADJUSTMENTS = {
+  "assets/characters/npc/alley-office-worker/default.png": {
+    heightScale: 0.82,
+    bottomDelta: 0,
+  },
+  "assets/characters/npc/cult-recruiter-young/default.png": {
+    heightScale: 0.84,
+    bottomDelta: 0,
+  },
+  "assets/characters/npc/street-passer-004/default.png": {
+    heightScale: 0.82,
+    bottomDelta: 0,
+  },
+};
+
+const WORLD_AMBIENT_NPC_ROSTER_VERSION = "20260325-passerby-1";
 
 const WORLD_FALLBACK_CROWD_LAYOUTS = {
   default: [
@@ -596,6 +668,222 @@ function cloneWorldNpcEntry(entry = null) {
   };
 }
 
+function roundWorldActorMetric(value = 0) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized)) {
+    return 0;
+  }
+  return Math.round(normalized * 10) / 10;
+}
+
+function applyWorldNpcActorAdjustments(actor = null, entryId = "") {
+  if (!actor || typeof actor !== "object") {
+    return actor;
+  }
+
+  const normalizedEntryId = String(entryId || "").trim();
+  const normalizedSrc = String(actor.src || "").trim();
+  const adjustment = WORLD_NPC_ACTOR_ADJUSTMENTS[normalizedEntryId]
+    || WORLD_NPC_ACTOR_ADJUSTMENTS[normalizedSrc]
+    || null;
+
+  if (!adjustment) {
+    return { ...actor };
+  }
+
+  const nextActor = { ...actor };
+  if (Number.isFinite(nextActor.height) && Number.isFinite(adjustment.heightScale)) {
+    nextActor.height = roundWorldActorMetric(
+      Math.max(56, Number(nextActor.height) * Number(adjustment.heightScale))
+    );
+  }
+  if (Number.isFinite(nextActor.bottom) && Number.isFinite(adjustment.bottomDelta)) {
+    nextActor.bottom = roundWorldActorMetric(Number(nextActor.bottom) + Number(adjustment.bottomDelta));
+  }
+  if (Number.isFinite(adjustment.cropTop)) {
+    nextActor.cropTop = Math.max(0, Number(adjustment.cropTop));
+  }
+  if (Number.isFinite(adjustment.cropRight)) {
+    nextActor.cropRight = Math.max(0, Number(adjustment.cropRight));
+  }
+  if (Number.isFinite(adjustment.cropBottom)) {
+    nextActor.cropBottom = Math.max(0, Number(adjustment.cropBottom));
+  }
+  if (Number.isFinite(adjustment.cropLeft)) {
+    nextActor.cropLeft = Math.max(0, Number(adjustment.cropLeft));
+  }
+
+  return nextActor;
+}
+
+function getWorldTurnStamp(targetState = state) {
+  const day = Math.max(0, Number(targetState?.day) || 0);
+  const timeSlot = Math.max(0, Number(targetState?.timeSlot) || 0);
+  return (day * 1000) + timeSlot;
+}
+
+function createDefaultAmbientNpcTurnRoster(turnStamp = 0) {
+  const normalizedTurnStamp = Number.isFinite(turnStamp)
+    ? Math.max(0, Math.round(Number(turnStamp) || 0))
+    : 0;
+
+  return {
+    version: WORLD_AMBIENT_NPC_ROSTER_VERSION,
+    turnStamp: normalizedTurnStamp,
+    assignments: {},
+    usedNpcIds: [],
+  };
+}
+
+function normalizeAmbientNpcTurnRoster(source = {}, currentTurnStamp = 0) {
+  const normalizedTurnStamp = Number.isFinite(currentTurnStamp)
+    ? Math.max(0, Math.round(Number(currentTurnStamp) || 0))
+    : 0;
+  if (!source || typeof source !== "object") {
+    return createDefaultAmbientNpcTurnRoster(normalizedTurnStamp);
+  }
+
+  const roster = {
+    version: source.version === WORLD_AMBIENT_NPC_ROSTER_VERSION
+      ? source.version
+      : WORLD_AMBIENT_NPC_ROSTER_VERSION,
+    turnStamp: Number.isFinite(source.turnStamp)
+      ? Math.max(0, Math.round(Number(source.turnStamp) || 0))
+      : normalizedTurnStamp,
+    assignments: Object.fromEntries(
+      Object.entries(source.assignments && typeof source.assignments === "object" ? source.assignments : {})
+        .filter(([locationId]) => typeof locationId === "string" && locationId)
+        .map(([locationId, npcIds]) => [
+          locationId,
+          (Array.isArray(npcIds) ? npcIds : [npcIds])
+            .map((npcId) => String(npcId || "").trim())
+            .filter(Boolean),
+        ])
+    ),
+    usedNpcIds: Array.isArray(source.usedNpcIds)
+      ? source.usedNpcIds.map((npcId) => String(npcId || "").trim()).filter(Boolean)
+      : [],
+  };
+
+  if (roster.version !== WORLD_AMBIENT_NPC_ROSTER_VERSION || roster.turnStamp !== normalizedTurnStamp) {
+    return createDefaultAmbientNpcTurnRoster(normalizedTurnStamp);
+  }
+
+  return roster;
+}
+
+function getAmbientNpcTurnRoster(targetState = state) {
+  const worldState = syncWorldState(targetState);
+  const currentTurnStamp = getWorldTurnStamp(targetState);
+  worldState.ambientNpcTurnRoster = normalizeAmbientNpcTurnRoster(
+    worldState.ambientNpcTurnRoster,
+    currentTurnStamp,
+  );
+  return worldState.ambientNpcTurnRoster;
+}
+
+function getAmbientNpcTurnAssignment(locationId = "", targetState = state) {
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    return [];
+  }
+
+  const roster = getAmbientNpcTurnRoster(targetState);
+  return Array.isArray(roster.assignments?.[normalizedLocationId])
+    ? roster.assignments[normalizedLocationId]
+    : [];
+}
+
+function setAmbientNpcTurnAssignment(locationId = "", npcIds = [], targetState = state) {
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    return [];
+  }
+
+  const roster = getAmbientNpcTurnRoster(targetState);
+  const normalizedNpcIds = (Array.isArray(npcIds) ? npcIds : [npcIds])
+    .map((npcId) => String(npcId || "").trim())
+    .filter(Boolean);
+  roster.assignments[normalizedLocationId] = normalizedNpcIds;
+  normalizedNpcIds.forEach((npcId) => {
+    if (!roster.usedNpcIds.includes(npcId)) {
+      roster.usedNpcIds.push(npcId);
+    }
+  });
+  return roster.assignments[normalizedLocationId];
+}
+
+function clearAmbientNpcTurnAssignment(locationId = "", targetState = state) {
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    return {};
+  }
+
+  const roster = getAmbientNpcTurnRoster(targetState);
+  delete roster.assignments[normalizedLocationId];
+  return roster.assignments;
+}
+
+function normalizeRecentNpcSightings(source = {}, currentTurnStamp = 0) {
+  if (!source || typeof source !== "object") {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(source).filter(([npcId, sighting]) => {
+      const turnStamp = Number(sighting?.turnStamp);
+      return typeof npcId === "string"
+        && npcId
+        && Number.isFinite(turnStamp)
+        && currentTurnStamp - turnStamp <= 1;
+    }).map(([npcId, sighting]) => [
+      npcId,
+      {
+        turnStamp: Math.max(0, Math.round(Number(sighting.turnStamp) || 0)),
+        locationId: typeof sighting?.locationId === "string" ? sighting.locationId : "",
+      },
+    ])
+  );
+}
+
+function getRecentNpcSightings(targetState = state) {
+  const worldState = syncWorldState(targetState);
+  if (!worldState.recentNpcSightings || typeof worldState.recentNpcSightings !== "object") {
+    worldState.recentNpcSightings = {};
+  }
+  return worldState.recentNpcSightings;
+}
+
+function getRecentNpcSightingTurnDistance(npcId = "", targetState = state) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const sighting = getRecentNpcSightings(targetState)[normalizedNpcId];
+  const sightingTurnStamp = Number(sighting?.turnStamp);
+  if (!Number.isFinite(sightingTurnStamp)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.max(0, getWorldTurnStamp(targetState) - sightingTurnStamp);
+}
+
+function recordRecentNpcSighting(npcId = "", targetState = state, locationId = getCurrentLocationId(targetState)) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return null;
+  }
+
+  const sightings = getRecentNpcSightings(targetState);
+  sightings[normalizedNpcId] = {
+    turnStamp: getWorldTurnStamp(targetState),
+    locationId: String(locationId || "").trim(),
+  };
+
+  return sightings[normalizedNpcId];
+}
+
 function getWorldNpcMetadata(npcId = "") {
   return WORLD_NPC_METADATA[String(npcId || "").trim()] || {};
 }
@@ -610,6 +898,81 @@ function getLocationCrowdTargetCount(locationId = "", targetState = state, optio
     return 0;
   }
   return 1;
+}
+
+function getWorldNpcRuntimeConfig(npcId = "") {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return null;
+  }
+
+  if (typeof getNpcConfig === "function") {
+    return getNpcConfig(normalizedNpcId);
+  }
+
+  if (typeof NPC_DATA === "object" && NPC_DATA !== null) {
+    return NPC_DATA[normalizedNpcId] || null;
+  }
+
+  return null;
+}
+
+function getWorldNpcDialogueDefinition(npcId = "") {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return null;
+  }
+
+  if (typeof getNpcDialogueEntry === "function") {
+    return getNpcDialogueEntry(normalizedNpcId);
+  }
+
+  if (typeof NPC_DIALOGUES === "object" && NPC_DIALOGUES !== null) {
+    return NPC_DIALOGUES[normalizedNpcId] || null;
+  }
+
+  return null;
+}
+
+function shouldSpawnWorldNpcEntry(npcId = "") {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return false;
+  }
+
+  const metadata = getWorldNpcMetadata(normalizedNpcId);
+  if (metadata.spawnEnabled === false) {
+    return false;
+  }
+
+  const npcConfig = getWorldNpcRuntimeConfig(normalizedNpcId);
+  if (!npcConfig) {
+    return true;
+  }
+
+  return Boolean(getWorldNpcDialogueDefinition(normalizedNpcId));
+}
+
+function canTalkToWorldNpcEntry(npcId = "", targetState = state) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return false;
+  }
+
+  const metadata = getWorldNpcMetadata(normalizedNpcId);
+  if (metadata.talkable === false || metadata.spawnEnabled === false) {
+    return false;
+  }
+
+  const npcConfig = getWorldNpcRuntimeConfig(normalizedNpcId);
+  const interactionTypes = Array.isArray(npcConfig?.interactionTypes)
+    ? npcConfig.interactionTypes
+    : [];
+  if (!npcConfig || !interactionTypes.includes("talk")) {
+    return false;
+  }
+
+  return Boolean(getWorldNpcDialogueDefinition(normalizedNpcId));
 }
 
 function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrentLocationId(targetState)) {
@@ -627,12 +990,14 @@ function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrent
     const avoidingPlayer = typeof isNpcAvoidingPlayer === "function"
       ? isNpcAvoidingPlayer(entry.id, targetState)
       : false;
+    const recentTurnDistance = getRecentNpcSightingTurnDistance(entry.id, targetState);
+    const canTalk = canTalkToWorldNpcEntry(entry.id, targetState);
     let weight = Math.max(0, Number(entry.weight) || 0);
 
     if (appearanceLevel >= 2 && metadata.gender === "female") {
       weight *= 1.75;
     }
-    if (appearanceLevel >= 3 && metadata.talkable !== false) {
+    if (appearanceLevel >= 3 && canTalk) {
       weight *= 1.25;
     }
     if (Array.isArray(metadata.timeBands) && metadata.timeBands.includes(timeBand)) {
@@ -641,13 +1006,17 @@ function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrent
     if (avoidingPlayer) {
       weight = 0;
     }
+    if (recentTurnDistance === 0) {
+      weight = 0;
+    }
 
     return {
       ...entry,
+      actor: applyWorldNpcActorAdjustments(entry.actor, entry.id),
       weight,
       metadata: {
         ...metadata,
-        talkable: metadata.talkable !== false && !avoidingPlayer,
+        talkable: canTalk && !avoidingPlayer,
         avoidsPlayer: avoidingPlayer,
       },
     };
@@ -655,6 +1024,9 @@ function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrent
 
   const filtered = rawPool.filter((entry) => {
     const metadata = getWorldNpcMetadata(entry.id);
+    if (!shouldSpawnWorldNpcEntry(entry.id)) {
+      return false;
+    }
     return !Array.isArray(metadata.timeBands)
       || !metadata.timeBands.length
       || metadata.timeBands.includes(timeBand);
@@ -686,14 +1058,14 @@ function createFallbackWorldNpcEntry(locationId = "", slotIndex = 0, targetState
     weight: 1,
     tag: "행인",
     isFallback: true,
-    actor: {
+    actor: applyWorldNpcActorAdjustments({
       src: artMap[fallbackId] || artMap["alley-office-worker"] || "",
       alt: `${locationId || "street"}-fallback-npc`,
       left: layout.left,
       bottom: layout.bottom,
       height: layout.height,
       zIndex: 1,
-    },
+    }, fallbackId),
     headlineBadge: "주변 사람들",
     headlineText: `${locationLabel}에는 항상 누군가가 지나가고 있다.`,
     approachBadge: "짧은 스침",
@@ -713,13 +1085,15 @@ function createFallbackWorldNpcEntry(locationId = "", slotIndex = 0, targetState
 
 function buildAmbientNpcRefreshKey(locationId = "", targetState = state) {
   const day = Number(targetState?.day || 0);
+  const timeSlot = Number(targetState?.timeSlot || 0);
   const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
     ? getPlayerAppearanceLevel(targetState)
     : 1;
   return [
+    WORLD_AMBIENT_NPC_ROSTER_VERSION,
     day,
     String(locationId || "").trim(),
-    getWorldTimeBand(targetState),
+    timeSlot,
     appearanceLevel,
   ].join(":");
 }
@@ -751,10 +1125,14 @@ function clearAmbientNpcCache(locationId = "", targetState = state) {
   const normalizedLocationId = String(locationId || "").trim();
   if (!normalizedLocationId) {
     worldState.ambientNpcCache = {};
+    const turnRoster = getAmbientNpcTurnRoster(targetState);
+    turnRoster.assignments = {};
+    turnRoster.usedNpcIds = [];
     return worldState.ambientNpcCache;
   }
 
   delete worldState.ambientNpcCache[normalizedLocationId];
+  clearAmbientNpcTurnAssignment(normalizedLocationId, targetState);
   return worldState.ambientNpcCache;
 }
 
@@ -820,7 +1198,45 @@ function getLocationAmbientNpcSnapshot(targetState = state, locationId = getCurr
   const filteredPool = normalizedFocusNpcId
     ? candidatePool.filter((entry) => String(entry?.id || "") === normalizedFocusNpcId)
     : candidatePool;
-  const selected = pickWeightedEntries(filteredPool, Math.min(targetCount, filteredPool.length));
+  const preferredPool = normalizedFocusNpcId
+    ? filteredPool
+    : (() => {
+        const talkablePool = filteredPool.filter((entry) => entry?.metadata?.talkable !== false);
+        return talkablePool.length ? talkablePool : filteredPool;
+      })();
+  let selected = [];
+  if (normalizedFocusNpcId) {
+    selected = pickWeightedEntries(preferredPool, Math.min(targetCount, preferredPool.length));
+  } else {
+    const assignedNpcIds = getAmbientNpcTurnAssignment(normalizedLocationId, targetState);
+    const assignedEntries = assignedNpcIds
+      .map((npcId) => preferredPool.find((entry) => String(entry?.id || "") === npcId))
+      .filter(Boolean);
+    const requiredCount = Math.min(targetCount, preferredPool.length);
+
+    if (assignedEntries.length >= requiredCount) {
+      selected = assignedEntries.slice(0, requiredCount);
+    } else {
+      const usedNpcIds = new Set(getAmbientNpcTurnRoster(targetState).usedNpcIds || []);
+      assignedNpcIds.forEach((npcId) => usedNpcIds.delete(npcId));
+      const uniquePool = preferredPool.filter((entry) => !usedNpcIds.has(String(entry?.id || "")));
+      const pickedEntries = pickWeightedEntries(
+        uniquePool.length ? uniquePool : preferredPool,
+        Math.max(0, requiredCount - assignedEntries.length),
+      );
+      selected = [...assignedEntries];
+      pickedEntries.forEach((entry) => {
+        if (!selected.some((selectedEntry) => selectedEntry.id === entry.id)) {
+          selected.push(entry);
+        }
+      });
+      setAmbientNpcTurnAssignment(
+        normalizedLocationId,
+        selected.map((entry) => entry.id),
+        targetState,
+      );
+    }
+  }
   const roster = selected.map((entry) => ({
     id: entry.id,
     actor: entry.actor && typeof entry.actor === "object"
@@ -831,7 +1247,7 @@ function getLocationAmbientNpcSnapshot(targetState = state, locationId = getCurr
       metadata: { ...(entry.metadata || {}) },
     }));
 
-  while (!roster.length && roster.length < targetCount) {
+  while (!normalizedFocusNpcId && !roster.length && roster.length < targetCount) {
     const fallbackEntry = createFallbackWorldNpcEntry(normalizedLocationId, roster.length, targetState);
     roster.push({
       id: fallbackEntry.id,
@@ -894,7 +1310,14 @@ function getActiveAlleyNpcConfig(targetState = state) {
 }
 
 function hasUsedLocationWander(locationId = getCurrentLocationId(state), targetState = state) {
-  return false;
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    return false;
+  }
+
+  const worldState = syncWorldState(targetState);
+  return Array.isArray(worldState.wanderedLocations)
+    && worldState.wanderedLocations.includes(normalizedLocationId);
 }
 
 function markLocationWanderUsed(locationId = getCurrentLocationId(state), targetState = state) {
@@ -963,7 +1386,7 @@ function canUseLocationWander(locationId = getCurrentLocationId(state), targetSt
   }
 
   const npcPool = getAdjustedLocationNpcPool(targetState, locationId);
-  return npcPool.length > 0;
+  return npcPool.some((entry) => entry?.metadata?.talkable !== false);
 }
 
 function pickWeightedEntry(entries = []) {

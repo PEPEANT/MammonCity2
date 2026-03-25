@@ -7,9 +7,9 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css?v=20260324-romance2">
-  <link rel="stylesheet" href="css/components.css?v=20260324-ranktrophy1">
-  <link rel="stylesheet" href="css/city-map.css?v=20260324-maplayout1">
-  <link rel="stylesheet" href="css/phone.css?v=20260324-phonefocus2">
+  <link rel="stylesheet" href="css/components.css?v=20260325-lottoscratch1">
+  <link rel="stylesheet" href="css/city-map.css?v=20260325-mapmobile2">
+  <link rel="stylesheet" href="css/phone.css?v=20260325-mapquick1">
   <link rel="stylesheet" href="css/market.css?v=20260323-assets1">
   <link rel="stylesheet" href="css/ranking.css?v=20260324-rankingpreview1">
 </head>
@@ -169,6 +169,10 @@
               <span class="phone-control-icon" aria-hidden="true">⛶</span>
               <span class="phone-control-label"></span>
             </button>
+            <button id="city-map-toggle-btn" class="phone-control-btn is-map" type="button" aria-expanded="false" aria-label="지도 열기">
+              <span class="phone-control-icon" aria-hidden="true"></span>
+              <span class="phone-control-label"></span>
+            </button>
             <button id="phone-home-btn" class="phone-control-btn is-home" type="button" aria-expanded="false">
               <span class="phone-control-icon" aria-hidden="true"></span>
               <span class="phone-control-label"></span>
@@ -312,12 +316,13 @@
       console.warn("[ranking] Firebase app id를 읽지 못했습니다.", error);
     }
     const firebaseConfig = window.__MAMMONCITY_FIREBASE_CONFIG__ || firebaseConfigOverride || {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID",
+      apiKey: "AIzaSyA1rS4hMdzIInEyaKjsMkJxPOi8ihPeuxs",
+      authDomain: "mammoncity.firebaseapp.com",
+      projectId: "mammoncity",
+      storageBucket: "mammoncity.firebasestorage.app",
+      messagingSenderId: "85158535723",
+      appId: "1:85158535723:web:e77f5d3abeed8d97ad006e",
+      measurementId: "G-BJSJTGR1MF",
     };
     if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
       firebase.initializeApp(firebaseConfig);
@@ -333,12 +338,13 @@
   <script src="js/data/jobs/advanced-job-events-data.js"></script>
   <script src="js/data/jobs/job-events-data.js?v=20260323-market6"></script>
   <script src="js/data/constants.js?v=20260324-hunger100b"></script>
-  <script src="js/data/characters.js?v=20260324-playerlv1"></script>
-  <script src="js/data/npcs/npc-data.js?v=20260324-romance2"></script>
-  <script src="js/data/npcs/npc-dialogue-data.js?v=20260324-romance2"></script>
+  <script src="js/data/characters.js?v=20260325-passerby1"></script>
+  <script src="js/data/npcs/npc-data.js?v=20260325-passerby1"></script>
+  <script src="js/data/npcs/npc-dialogue-data.js?v=20260325-passerby1"></script>
+  <script src="js/data/npcs/romance-call-dialogues.js?v=20260325-romancecall1"></script>
   <script src="js/data/days/day01/story.js?v=20260324-homefix1"></script>
   <script src="js/data/days/day01/events.js"></script>
-  <script src="js/data/days/day01/world.js?v=20260325-silverlobby1"></script>
+  <script src="js/data/days/day01/world.js?v=20260325-passerby1"></script>
   <script src="js/data/days/day01/index.js"></script>
   <script src="js/data/days/day02/index.js"></script>
   <script src="js/data/days/day03/index.js"></script>
@@ -348,22 +354,23 @@
   <script src="js/data/days/day07/index.js"></script>
   <script src="js/data/days/index.js"></script>
   <script src="js/systems/world/world-service.js"></script>
-  <script src="js/systems/world/world-runtime-service.js?v=20260324-spoon3tier1"></script>
-  <script src="js/systems/world/city-map-service.js?v=20260324-casinomove1"></script>
+  <script src="js/systems/world/world-runtime-service.js?v=20260325-passerby1"></script>
+  <script src="js/systems/world/city-map-service.js?v=20260325-mapmobile1"></script>
   <script src="js/systems/progression/meta-state-service.js"></script>
   <script src="js/systems/progression/happiness-service.js"></script>
   <script src="js/systems/progression/spoon-start-service.js?v=20260325-silverintro1"></script>
   <script src="js/systems/progression/hunger-service.js?v=20260324-hunger100b"></script>
   <script src="js/systems/progression/player-stats-service.js?v=20260324-hunger100b"></script>
-  <script src="js/systems/presentation/presentation-service.js?v=20260324-playerlv1"></script>
-  <script src="js/systems/npc/romance-service.js?v=20260324-romance10"></script>
+  <script src="js/systems/presentation/presentation-service.js?v=20260325-homeinvite1"></script>
+  <script src="js/systems/npc/romance-service.js?v=20260325-homeinvite1"></script>
+  <script src="js/systems/npc/romance-call-session.js?v=20260325-romancecall1"></script>
   <script src="js/systems/npc/social-scam-service.js?v=20260325-socialscam1"></script>
   <script src="js/data/search/search-route-registry.js?v=20260324-digglelive1"></script>
   <script src="js/data/market/market-listings.js?v=20260323-market6"></script>
   <script src="js/data/economy/economy-calendar.js?v=20260323-markethost1"></script>
   <script src="js/systems/economy/wallet-service.js"></script>
   <script src="js/systems/economy/bank-loan-service.js?v=20260323-assets1"></script>
-  <script src="js/systems/economy/economy-service.js?v=20260324-btcstart1"></script>
+  <script src="js/systems/economy/economy-service.js?v=20260325-coincycle2"></script>
   <script src="js/systems/economy/market-cycle-service.js?v=20260324-marketcycle1"></script>
   <script src="js/systems/economy/inventory-service.js?v=20260324-feedback2"></script>
   <script src="js/systems/actions/action-runner.js?v=20260323-assets1"></script>
@@ -371,17 +378,17 @@
   <script src="js/systems/jobs/jobs-action-service.js?v=20260323-gates1"></script>
   <script src="js/systems/market/market-service.js?v=20260323-assets1"></script>
   <script src="js/systems/memory/memory-service.js"></script>
-  <script src="js/systems/npc/dialogue-service.js?v=20260324-romance2"></script>
+  <script src="js/systems/npc/dialogue-service.js?v=20260325-dialoguefix1"></script>
   <script src="js/systems/ranking-service.js?v=20260324-rankinglive2"></script>
-  <script src="js/devices/phone/phone-session.js?v=20260324-casinomove1"></script>
+  <script src="js/devices/phone/phone-session.js?v=20260325-phoneapps1"></script>
   <script src="js/apps/app-ui-helpers.js?v=20260323-bankloan1"></script>
-  <script src="js/apps/trading-terminal.js?v=20260324-holdingsfix1"></script>
+  <script src="js/apps/trading-terminal.js?v=20260325-coincycle2"></script>
   <script src="js/apps/jobs/jobs-app-state.js"></script>
   <script src="js/apps/jobs/jobs-app-ui.js?v=20260323-gates1"></script>
   <script src="js/apps/jobs/jobs-manifest.js"></script>
   <script src="js/apps/dis/dis-community-service.js?v=20260324-digglelive1"></script>
   <script src="js/apps/dis/dis-manifest.js?v=20260324-digglelive1"></script>
-  <script src="js/apps/market/market-manifest.js?v=20260323-assets1"></script>
+  <script src="js/apps/market/market-manifest.js?v=20260325-phoneapps1"></script>
   <script src="js/apps/news/news-manifest.js?v=20260324-newscompact1"></script>
   <script src="js/apps/playstore/playstore-manifest.js"></script>
   <script src="js/apps/bus/bus-manifest.js?v=20260323-bus4"></script>
@@ -399,12 +406,12 @@
   <script src="js/apps/delivery/delivery-manifest.js"></script>
   <script src="js/apps/video/video-manifest.js"></script>
   <script src="js/devices/phone/phone-app-registry.js?v=20260324-casinomove1"></script>
-  <script src="js/devices/phone/phone-shell-ui.js"></script>
+  <script src="js/devices/phone/phone-shell-ui.js?v=20260325-mapquick1"></script>
   <script src="js/devices/phone/phone-router.js"></script>
-  <script src="js/ui.js?v=20260324-romancecall1"></script>
-  <script src="js/ui/city-map/city-map-ui.js?v=20260324-maplayout1"></script>
-  <script src="js/systems/progression/turn-briefing-service.js?v=20260324-briefing2"></script>
-  <script src="js/logic.js?v=20260325-silverintro1"></script>
+  <script src="js/ui.js?v=20260325-mapquick1"></script>
+  <script src="js/ui/city-map/city-map-ui.js?v=20260325-mapquick1"></script>
+  <script src="js/systems/progression/turn-briefing-service.js?v=20260325-lottoscratch1"></script>
+  <script src="js/logic.js?v=20260325-mapquick1"></script>
   <script src="js/dev.js?v=20260324-statcap1"></script>
 </body>
 </html>

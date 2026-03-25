@@ -152,10 +152,7 @@ function advanceTurnBriefing(targetState = state) {
 
   const lastEntry = briefing.entries[briefing.entries.length - 1] || null;
   targetState.turnBriefing = null;
-  const lottoState = typeof syncLottoRetailerState === "function"
-    ? syncLottoRetailerState(targetState)
-    : null;
-  targetState.scene = lottoState?.lastDrawSummary ? "lotto-result" : "room";
+  targetState.scene = "room";
   targetState.headline = lastEntry
     ? {
         badge: lastEntry.badge || "다음날 소식",

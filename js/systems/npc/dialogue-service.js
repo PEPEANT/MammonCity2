@@ -6,6 +6,8 @@ function createDefaultDialogueState() {
     returnScene: "outside",
     returnLocationId: "",
     source: "",
+    backgroundSnapshot: null,
+    actorsSnapshot: [],
   };
 }
 
@@ -18,6 +20,14 @@ function syncDialogueState(targetState = state) {
   const dialogueState = targetState.dialogue && typeof targetState.dialogue === "object"
     ? targetState.dialogue
     : {};
+  const backgroundSnapshot = dialogueState.backgroundSnapshot && typeof dialogueState.backgroundSnapshot === "object"
+    ? dialogueState.backgroundSnapshot
+    : null;
+  const actorsSnapshot = Array.isArray(dialogueState.actorsSnapshot)
+    ? dialogueState.actorsSnapshot
+        .filter((actor) => actor && typeof actor === "object")
+        .map((actor) => ({ ...actor }))
+    : defaults.actorsSnapshot;
 
   targetState.dialogue = {
     ...defaults,
@@ -32,6 +42,13 @@ function syncDialogueState(targetState = state) {
       ? dialogueState.returnLocationId
       : defaults.returnLocationId,
     source: typeof dialogueState.source === "string" ? dialogueState.source : defaults.source,
+    backgroundSnapshot: backgroundSnapshot
+      ? {
+          className: typeof backgroundSnapshot.className === "string" ? backgroundSnapshot.className : "",
+          background: typeof backgroundSnapshot.background === "string" ? backgroundSnapshot.background : "",
+        }
+      : defaults.backgroundSnapshot,
+    actorsSnapshot,
   };
 
   return targetState.dialogue;
@@ -61,6 +78,75 @@ function getNpcDialogueNode(npcId = "", nodeId = "") {
   }
 
   return entry.nodes[nodeId] || null;
+}
+
+function buildDialogueSceneTextProgressKey(npcId = "", nodeId = "", targetState = state) {
+  if (typeof buildSceneTextProgressKey !== "function") {
+    return "";
+  }
+
+  const normalizedNpcId = String(npcId || "").trim();
+  const normalizedNodeId = String(nodeId || "").trim();
+  if (!normalizedNpcId || !normalizedNodeId) {
+    return "";
+  }
+
+  const resolvedNode = resolveDialogueNodeForState(
+    getNpcDialogueNode(normalizedNpcId, normalizedNodeId),
+    targetState,
+  );
+  if (!resolvedNode) {
+    return "";
+  }
+
+  return buildSceneTextProgressKey(
+    `dialogue:${targetState?.day || 1}:${normalizedNpcId}:${normalizedNodeId}`,
+    resolvedNode.title || "",
+    resolvedNode.lines || [],
+  );
+}
+
+function resetDialogueSceneTextProgress(npcId = "", nodeId = "", targetState = state) {
+  if (typeof resetSceneTextProgress !== "function") {
+    return;
+  }
+
+  const progressKey = buildDialogueSceneTextProgressKey(npcId, nodeId, targetState);
+  if (progressKey) {
+    resetSceneTextProgress(progressKey);
+  }
+}
+
+function resolveDialogueNodeForState(node = null, targetState = state) {
+  if (!node || !targetState || !node.appearanceVariants || typeof node.appearanceVariants !== "object") {
+    return node;
+  }
+
+  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
+    ? getPlayerAppearanceLevel(targetState)
+    : 1;
+
+  const variant = appearanceLevel >= 2 && node.appearanceVariants.level2Plus
+    ? node.appearanceVariants.level2Plus
+    : null;
+
+  if (!variant || typeof variant !== "object") {
+    return node;
+  }
+
+  return {
+    ...node,
+    ...variant,
+    lines: Array.isArray(variant.lines)
+      ? [...variant.lines]
+      : (Array.isArray(node.lines) ? [...node.lines] : []),
+    choices: Array.isArray(variant.choices)
+      ? variant.choices.map((choice) => ({ ...choice }))
+      : (Array.isArray(node.choices) ? node.choices.map((choice) => ({ ...choice })) : []),
+    tags: Array.isArray(variant.tags)
+      ? [...variant.tags]
+      : (Array.isArray(node.tags) ? [...node.tags] : []),
+  };
 }
 
 function getNpcDialogueStartNodeId(npcId = "", targetState = state, context = {}) {
@@ -163,6 +249,21 @@ function startNpcDialogue(npcId, options = {}, targetState = state) {
   dialogueState.returnScene = options.returnScene || targetState.scene || "outside";
   dialogueState.returnLocationId = options.returnLocationId || "";
   dialogueState.source = options.source || "";
+  dialogueState.backgroundSnapshot = options.backgroundSnapshot && typeof options.backgroundSnapshot === "object"
+    ? {
+        className: typeof options.backgroundSnapshot.className === "string" ? options.backgroundSnapshot.className : "",
+        background: typeof options.backgroundSnapshot.background === "string" ? options.backgroundSnapshot.background : "",
+      }
+    : null;
+  dialogueState.actorsSnapshot = Array.isArray(options.actorsSnapshot)
+    ? options.actorsSnapshot
+        .filter((actor) => actor && typeof actor === "object")
+        .map((actor) => ({ ...actor }))
+    : [];
+  if (typeof resetSceneTextProgressByPrefix === "function") {
+    resetSceneTextProgressByPrefix(`dialogue:${targetState?.day || 1}:${resolvedNpcId}:`);
+  }
+  resetDialogueSceneTextProgress(resolvedNpcId, startNodeId, targetState);
   targetState.scene = "dialogue";
 
   return true;
@@ -175,7 +276,8 @@ function getActiveDialogueNode(targetState = state) {
   }
 
   const npc = getNpcConfig(dialogueState.npcId);
-  const node = getNpcDialogueNode(dialogueState.npcId, dialogueState.nodeId);
+  const baseNode = getNpcDialogueNode(dialogueState.npcId, dialogueState.nodeId);
+  const node = resolveDialogueNodeForState(baseNode, targetState);
   const presentation = typeof getNpcPresentation === "function"
     ? getNpcPresentation(dialogueState.npcId, targetState, {
         scene: "dialogue",
@@ -295,6 +397,7 @@ function chooseDialogueOption(index, targetState = state) {
       return false;
     }
 
+    resetDialogueSceneTextProgress(activeNode.npcId, choice.next, targetState);
     syncDialogueState(targetState).nodeId = choice.next;
     return true;
   }
