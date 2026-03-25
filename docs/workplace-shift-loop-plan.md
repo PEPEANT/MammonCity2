@@ -1,6 +1,6 @@
 # 근무지-출근 루프 작업 계획
 
-현재 결론: 오늘 작업은 `근무지 도착형 출근 루프`를 한 흐름으로 정리하는 데 집중한다. 이미 들어간 `공고 앱`, `근무지 요약`, `도시 지도`, `예약 출근`을 묶고, 그 과정에서 `jobs` 관련 로직을 더 분리한다.
+현재 결론: 오늘 작업은 `근무지 도착형 출근 루프`를 한 흐름으로 정리하는 데 집중한다. 특히 맥도날드처럼 `외부 진입점 1개 + 카운터/주방 2포지션` 구조를 안전하게 굴리는 방향을 기준으로 잡는다.
 
 ## 목적
 
@@ -62,6 +62,27 @@
 - 출근 실패/결근/시간 놓침 처리 문구가 근무지 정보와 함께 일관되게 나온다.
 - 이번 작업으로 늘어난 출근 규칙이 `logic.js`에 직접 더 얹히지 않는다.
 
+## 맥도날드 2포지션 현재 기준
+
+- 맥도날드는 더 이상 `카운터만 있는 단일 알바`가 아니다.
+- 현재 기준 venue는 아래 3단 구조다.
+
+```text
+mcdonalds
+  -> mcdonalds-counter
+  -> mcdonalds-kitchen
+```
+
+- 잡 포지션은 아래 2개로 분리한다.
+  - `mcd-counter`
+  - `mcd-kitchen`
+- 도시 지도와 출근 앵커는 `mcdonalds` 하나만 쓴다.
+- 카운터는 손님 행동과 근무 행동이 같이 붙는 기본 스테이지다.
+- 주방은 조리 포지션 전용 스테이지다.
+- 카운터 미니게임 기준은 `fast-food-counter-rush`다.
+- 주방은 `fast-food-kitchen-rush` 정적 뼈대와 `dynamic-kitchen` 런타임 세션을 함께 쓰는 예약형 구조다.
+- 근무 종료 후 플레이어는 안전한 카운터/외부 위치로 되돌아와야 한다.
+
 ## 확인 방법
 
 1. 알바 지원 후 다음 턴 예약 출근 생성 확인
@@ -83,27 +104,27 @@
 - [design/job-tracks.md](./design/job-tracks.md)
 - [design/logic-split-plan.md](./design/logic-split-plan.md)
 
-## 2026-03 current implemented status
+## 2026-03 현재 구현 메모
 
-- McDonald's venue flow is no longer a single mixed branch. The live state machine distinguishes:
-  - not hired
-  - inquiry available
-  - hired
-  - on-shift window
-  - off-shift window
-  - customer mode
-- Job inquiry is time-gated. If the player asks outside the inquiry window, the venue rejects the request instead of silently mixing it with shift entry.
-- After hiring, shift start is only available during the assigned window. Outside that window the venue stays in customer mode.
-- Customer mode keeps the kiosk usable even when the player is an employee.
-- Counter and kitchen paths are now separated, and shift cleanup returns the player to a safe counter/outside location instead of leaving them stuck in kitchen state.
-- Minigame entry is routed through shared checks for job, place, and time so duplicate entry and missing-trigger cases are easier to trace.
+- 맥도날드 venue 흐름은 단일 혼합 분기가 아니라 아래 상태를 나눠서 계산한다.
+  - 미지원
+  - 문의 가능
+  - 예약근무 보유
+  - 근무 대기 시간
+  - 근무 가능 시간
+  - 손님 모드
+- 문의 시간대가 닫혀 있으면 지원 문의 대신 시간 안내 문구를 보여준다.
+- 예약근무가 잡힌 뒤에는 지정 시간대에만 `대기 / 출근 시작` 흐름이 열린다.
+- 근무 시간이 아니면 직원이어도 손님 모드 카운터를 계속 쓸 수 있다.
+- 카운터와 주방은 위치/근무 경로가 분리돼 있고, 주방 종료 후에도 안전 위치 복귀가 들어간다.
+- 미니게임 진입은 `잡 ID + 위치 + 시간` 공통 체크를 먼저 거친다.
 
 ## Remaining release gap
 
 - This document is still partly a plan document. Before release, the manual smoke pass should confirm at least one full McDonald's loop:
-  - inquiry rejected outside inquiry time
-  - inquiry accepted in inquiry time
-  - off-shift customer kiosk access
-  - on-shift entry
-  - minigame start
-  - shift completion and safe return
+  - 문의 시간 외 안내
+  - 카운터 지원 및 예약 생성
+  - 카운터 손님 모드 이용
+  - 카운터 근무 시작과 종료
+  - 주방 지원 및 주방 세션 시작
+  - 주방 종료 후 안전 복귀

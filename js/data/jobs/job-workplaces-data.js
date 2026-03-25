@@ -146,6 +146,14 @@ const CAREER_POSTING_WORKPLACE_REGISTRY = {
     routeStopId: "office-plaza",
     commuteHint: "배금디지털단지 안쪽 연구동으로 들어가면 연구지원 면접실이 이어진다.",
   },
+  "ai-researcher": {
+    employerName: "배금AI연구원",
+    workplaceName: "배금AI연구원 메인랩",
+    locationId: "research-lab-interior",
+    districtId: "industrial",
+    routeStopId: "office-plaza",
+    commuteHint: "배금디지털단지 안쪽 메인랩으로 들어가면 인공지능 연구원 출근 동선이 이어진다.",
+  },
 };
 
 JOB_WORKPLACE_REGISTRY.warehouse.locationId = "logistics-center";

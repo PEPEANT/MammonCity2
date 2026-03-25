@@ -26,18 +26,18 @@ function createCasinoBlackjackShoe(deckCount = CASINO_BLACKJACK_DECK_COUNT) {
   return shoe;
 }
 
-function ensureCasinoBlackjackShoe(targetState = state) {
-  const blackjackState = syncCasinoState(targetState).blackjack;
-  if (blackjackState.shoe.length < 20) {
-    blackjackState.shoe = createCasinoBlackjackShoe();
+function ensureCasinoBlackjackShoe(targetState = state, blackjackState = null) {
+  const resolvedBlackjackState = blackjackState || syncCasinoState(targetState).blackjack;
+  if (resolvedBlackjackState.shoe.length < 20) {
+    resolvedBlackjackState.shoe = createCasinoBlackjackShoe();
   }
-  return blackjackState.shoe;
+  return resolvedBlackjackState.shoe;
 }
 
-function drawCasinoBlackjackCard(targetState = state) {
-  const blackjackState = syncCasinoState(targetState).blackjack;
-  ensureCasinoBlackjackShoe(targetState);
-  return blackjackState.shoe.pop() || { suit: "S", value: "A" };
+function drawCasinoBlackjackCard(targetState = state, blackjackState = null) {
+  const resolvedBlackjackState = blackjackState || syncCasinoState(targetState).blackjack;
+  ensureCasinoBlackjackShoe(targetState, resolvedBlackjackState);
+  return resolvedBlackjackState.shoe.pop() || { suit: "S", value: "A" };
 }
 
 function getCasinoBlackjackCardValue(card) {
@@ -215,12 +215,12 @@ function startCasinoBlackjackRound(targetState = state) {
   blackjackState.messageBody = "";
   blackjackState.outcome = "";
   blackjackState.resultTone = "accent";
-  ensureCasinoBlackjackShoe(targetState);
+  ensureCasinoBlackjackShoe(targetState, blackjackState);
 
-  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState));
-  blackjackState.dealerHand.push(drawCasinoBlackjackCard(targetState));
-  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState));
-  blackjackState.dealerHand.push(drawCasinoBlackjackCard(targetState));
+  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
+  blackjackState.dealerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
+  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
+  blackjackState.dealerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
 
   const playerScore = calculateCasinoBlackjackScore(blackjackState.playerHand, {
     isPlayer: true,
@@ -262,7 +262,7 @@ function casinoBlackjackHit(targetState = state) {
     return false;
   }
 
-  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState));
+  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
   const playerScore = calculateCasinoBlackjackScore(blackjackState.playerHand, {
     isPlayer: true,
     acePreference: blackjackState.playerAcePreference,
@@ -303,7 +303,7 @@ function casinoBlackjackDoubleDown(targetState = state) {
 
   casinoState.chips -= blackjackState.bet;
   blackjackState.bet *= 2;
-  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState));
+  blackjackState.playerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
 
   const playerScore = calculateCasinoBlackjackScore(blackjackState.playerHand, {
     isPlayer: true,
@@ -331,7 +331,7 @@ function casinoBlackjackStand(targetState = state) {
   blackjackState.dealerHidden = false;
 
   while (calculateCasinoBlackjackScore(blackjackState.dealerHand) < 17) {
-    blackjackState.dealerHand.push(drawCasinoBlackjackCard(targetState));
+    blackjackState.dealerHand.push(drawCasinoBlackjackCard(targetState, blackjackState));
   }
 
   const playerScore = calculateCasinoBlackjackScore(blackjackState.playerHand, {
@@ -411,7 +411,8 @@ function finishCasinoBlackjackRound(winner, body, {
       ? `${body} 손실 ${formatMoney(Math.abs(wealthDelta))}.`
       : body;
 
-  casinoState.lastResult = {
+  const refreshedCasinoState = syncCasinoState(targetState);
+  refreshedCasinoState.lastResult = {
     title,
     body: finalMessage,
     tone,

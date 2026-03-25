@@ -194,6 +194,9 @@ function syncWorldState(targetState = state) {
   if (currentLocation && !unlockedLocations.includes(currentLocation)) {
     unlockedLocations.push(currentLocation);
   }
+  if (locations?.["lotto-retailer"] && !unlockedLocations.includes("lotto-retailer")) {
+    unlockedLocations.push("lotto-retailer");
+  }
 
   targetState.world = {
     ...worldState,
@@ -467,6 +470,31 @@ const WORLD_NPC_METADATA = {
     timeBands: ["morning", "day", "evening"],
   },
   "office-plaza-recruiter": {
+    gender: "female",
+    talkable: true,
+    timeBands: ["day", "evening"],
+  },
+  "city-knit-commuter": {
+    gender: "female",
+    talkable: true,
+    timeBands: ["morning", "day", "evening"],
+  },
+  "station-alt-student": {
+    gender: "female",
+    talkable: true,
+    timeBands: ["morning", "day", "evening"],
+  },
+  "smart-casual-commuter": {
+    gender: "female",
+    talkable: true,
+    timeBands: ["morning", "day", "evening"],
+  },
+  "campus-hoodie-student": {
+    gender: "female",
+    talkable: true,
+    timeBands: ["day", "evening"],
+  },
+  "campus-glasses-student": {
     gender: "female",
     talkable: true,
     timeBands: ["day", "evening"],

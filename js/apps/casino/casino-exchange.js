@@ -299,12 +299,13 @@ function runCasinoExchange(direction, targetState = state) {
       targetState.money = Math.max(0, getCasinoCashBalance(targetState) - amount);
     }
 
-    casinoState.chips += amount;
+    const refreshedCasinoState = syncCasinoState(targetState);
+    refreshedCasinoState.chips += amount;
     updateCasinoExchangeDraft("buy", "", targetState);
     updateCasinoExchangeDraft("sell", "", targetState);
 
     const message = `${formatMoney(amount)}을 칩으로 환전했습니다. 이제 테이블에 앉을 수 있습니다.`;
-    casinoState.lastResult = { title: "환전 완료", body: message, tone: "accent", delta: 0 };
+    refreshedCasinoState.lastResult = { title: "환전 완료", body: message, tone: "accent", delta: 0 };
     setCasinoExchangeStatus("환전 완료", message, "accent", targetState);
     if (typeof setHeadline === "function") {
       setHeadline("카지노 환전소", message);
@@ -357,17 +358,19 @@ function runCasinoExchange(direction, targetState = state) {
     return false;
   }
 
-  casinoState.chips = Math.max(0, casinoState.chips - amount);
+  const nextChipBalance = Math.max(0, casinoState.chips - amount);
   if (typeof earnCash === "function") {
     earnCash(amount, targetState);
   } else {
     targetState.money = getCasinoCashBalance(targetState) + amount;
   }
+  const refreshedCasinoState = syncCasinoState(targetState);
+  refreshedCasinoState.chips = nextChipBalance;
   updateCasinoExchangeDraft("buy", "", targetState);
   updateCasinoExchangeDraft("sell", "", targetState);
 
   const message = `${formatMoney(amount)}어치 칩을 현금으로 출금했습니다. 환전 자금이 다시 손에 들어왔습니다.`;
-  casinoState.lastResult = { title: "출금 완료", body: message, tone: "success", delta: 0 };
+  refreshedCasinoState.lastResult = { title: "출금 완료", body: message, tone: "success", delta: 0 };
   setCasinoExchangeStatus("출금 완료", message, "success", targetState);
   if (typeof setHeadline === "function") {
     setHeadline("카지노 환전소", message);

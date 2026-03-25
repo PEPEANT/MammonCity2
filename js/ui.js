@@ -1532,6 +1532,7 @@ function setProgressByScene(scene) {
     "home-transition": 24,
     outside: 42,
     "casino-floor": 50,
+    "lotto-pick": 46,
     dialogue: 46,
     board: 18,
     "job-minigame": 56,
@@ -1560,14 +1561,18 @@ function clearMessage() {
   syncTextboxContentState();
 }
 
-function setSceneInteractionPrompt(text = "", visible = false) {
+function setSceneInteractionPrompt(text = "", visible = false, { routeLabel = "" } = {}) {
   if (!ui.outsideGoal) {
     return;
   }
 
   const normalizedText = String(text || "").trim();
+  const normalizedRouteLabel = String(routeLabel || "").trim();
   const shouldShow = Boolean(visible && normalizedText);
-  ui.outsideGoal.textContent = shouldShow ? `현재 목표 · ${normalizedText}` : "";
+  const prefix = normalizedRouteLabel
+    ? `- (${normalizedRouteLabel}) 힌트: `
+    : "- 힌트: ";
+  ui.outsideGoal.textContent = shouldShow ? `${prefix}${normalizedText}` : "";
   ui.outsideGoal.style.display = shouldShow ? "block" : "none";
   ui.outsideGoal.classList.toggle("is-visible", shouldShow);
 }
@@ -1579,9 +1584,11 @@ function syncGameplayObjectivePrompt(targetState = state) {
   const interactiveStartScene = targetState?.scene === "prologue"
     && ui.game?.classList.contains("interactive-start-mode");
   const supportedScene = interactiveStartScene
-    || !["prologue", "cleanup", "job-minigame", "ending", "ranking", "turn-briefing"].includes(targetState?.scene);
+    || !["prologue", "cleanup", "job-minigame", "ending", "ranking", "turn-briefing", "night-auto-sleep", "lotto-pick", "lotto-result", "plastic-surgery"].includes(targetState?.scene);
   const promptText = objective?.prompt || "";
-  setSceneInteractionPrompt(promptText, supportedScene && Boolean(promptText));
+  setSceneInteractionPrompt(promptText, supportedScene && Boolean(promptText), {
+    routeLabel: objective?.routeLabel || "",
+  });
 }
 
 function hideTrashGame() {
@@ -2921,6 +2928,7 @@ function renderRomanceScene() {
   const sceneType = String(romanceScene.sceneType || "").trim().toLowerCase();
   const isHomeInvite = sceneType === "home-invite";
   const isAmbientScene = sceneType.startsWith("ambient");
+  const isSocialScamScene = sceneType.startsWith("social-scam");
 
   setWorldMode(isHomeInvite ? "room" : "outside");
   setCharacter("");
@@ -3014,6 +3022,13 @@ function renderRomanceScene() {
         title: choiceLabel,
         gateActionId: `romance-choice:${romanceScene.eventId || romanceScene.contactId || romanceScene.npcId || "scene"}:${choice.id || index}`,
         onClick: () => {
+          if (isSocialScamScene) {
+            if (typeof chooseSocialScamChoice === "function" && chooseSocialScamChoice(index, state) !== false) {
+              renderGame();
+            }
+            return;
+          }
+
           if (typeof chooseAmbientRomanceChoice === "function" && chooseAmbientRomanceChoice(index, state) !== false) {
             renderGame();
           }
@@ -3023,14 +3038,35 @@ function renderRomanceScene() {
     return;
   }
 
+  if (isSocialScamScene) {
+    createChoiceButton({
+      title: "상황 정리하기",
+      onClick: () => {
+        if (typeof completeSocialScamScene === "function" && completeSocialScamScene(state) !== false) {
+          renderGame();
+        }
+      },
+    });
+    return;
+  }
+
   createChoiceButton({
     title: isAmbientScene
       ? "이야기 마치기"
       : (isHomeInvite ? "집 초대 마치기" : "데이트 마치기"),
-    earnText: romanceScene.plannedCost > 0 ? `-${formatMoney(romanceScene.plannedCost)}` : "",
+    earnText: romanceScene.plannedCost > 0 && !romanceScene.resolvedChoiceId
+      ? `-${formatMoney(romanceScene.plannedCost)}`
+      : "",
     onClick: () => {
       if (isAmbientScene) {
         if (typeof completeAmbientRomanceScene === "function" && completeAmbientRomanceScene(state) !== false) {
+          renderGame();
+        }
+        return;
+      }
+
+      if (isSocialScamScene) {
+        if (typeof completeSocialScamScene === "function" && completeSocialScamScene(state) !== false) {
           renderGame();
         }
         return;
@@ -3165,6 +3201,145 @@ function renderTurnBriefingScene() {
   });
 }
 
+function renderNightAutoSleepScene() {
+  const summary = state.nightAutoSleep && typeof state.nightAutoSleep === "object"
+    ? state.nightAutoSleep
+    : null;
+
+  if (!summary?.pending) {
+    state.scene = "room";
+    renderGame();
+    return;
+  }
+
+  setBackgroundByTone("night");
+  if (ui.bg) {
+    ui.bg.className = "night";
+    ui.bg.style.background = "linear-gradient(180deg, #000000 0%, #020202 45%, #0b0b0b 100%)";
+    ui.bg.style.transition = "none";
+  }
+  setWorldMode("result");
+  setCharacter("");
+  renderActors([]);
+  setCharacterPosition(50, 1);
+  setSceneSpeaker("야간 귀가");
+  renderTags(["22:00", "자동 취침", "집 복귀"]);
+  const lines = Array.isArray(summary.lines) && summary.lines.length
+    ? summary.lines
+    : [
+        "밤 10시가 넘자 더 돌아다니지 못하고 집으로 돌아갔다.",
+        "다음 턴은 아침 8시, 집 안에서 다시 시작된다.",
+      ];
+  const showChoices = renderMessage(summary.title || "밤이 깊어졌다", lines, {
+    progressKey: buildSceneTextProgressKey(
+      `night-auto-sleep:${summary.triggeredDay || state.day}:${summary.triggeredSlot || 44}`,
+      summary.title || "밤이 깊어졌다",
+      lines,
+    ),
+  });
+  clearChoices();
+  syncGameplayObjectivePrompt(state);
+
+  if (!showChoices) {
+    return;
+  }
+
+  createChoiceButton({
+    title: "집으로 돌아가 잠든다",
+    onClick: () => {
+      if (typeof confirmNightAutoSleep === "function") {
+        confirmNightAutoSleep();
+      }
+    },
+  });
+}
+
+function renderLottoPickScene() {
+  const lottoState = typeof syncLottoRetailerState === "function"
+    ? syncLottoRetailerState(state)
+    : null;
+  const pickSession = lottoState?.pickSession || null;
+  if (!pickSession) {
+    state.scene = "outside";
+    renderGame();
+    return;
+  }
+
+  const venueLocation = typeof getWorldLocationConfig === "function"
+    ? getWorldLocationConfig("lotto-retailer-interior", state.day)
+    : null;
+  const purchaseSnapshot = typeof getLottoRetailerPurchaseSnapshot === "function"
+    ? getLottoRetailerPurchaseSnapshot(state)
+    : null;
+  const remainingCount = Math.max(
+    0,
+    Number(purchaseSnapshot?.remaining)
+      || (typeof LOTTO_TICKET_DAILY_LIMIT === "number" ? LOTTO_TICKET_DAILY_LIMIT : 5),
+  );
+  const lines = [
+    `번호 하나를 고르면 ${typeof formatMoney === "function" ? formatMoney(LOTTO_TICKET_PRICE) : "1,000원"}으로 바로 추첨한다.`,
+    `오늘 남은 구매 가능 수량은 ${remainingCount}장이다.`,
+    "등수 안내: 1등 6개 / 2등 5개+보너스 / 3등 5개 / 4등 4개 / 5등 3개 일치",
+  ];
+
+  setBackgroundByTone("outside");
+  if (!applySceneBackgroundConfig(venueLocation?.background || null)) {
+    clearSceneBackgroundOverride();
+  }
+  setWorldMode("incident");
+  setCharacter("");
+  renderActors([]);
+  setCharacterPosition(50, 1);
+  setSceneSpeaker("로또판매장");
+  renderTags(["번호 선택", "즉시 추첨", `${remainingCount}장 남음`]);
+  const showChoices = renderMessage("번호를 고른다", lines, {
+    progressKey: buildSceneTextProgressKey(
+      `lotto-pick:${state.day}:${remainingCount}:${pickSession.candidates?.length || 0}`,
+      "번호를 고른다",
+      lines,
+    ),
+  });
+  clearChoices();
+  syncGameplayObjectivePrompt(state);
+
+  if (!showChoices) {
+    return;
+  }
+
+  (pickSession.candidates || []).forEach((candidate, index) => {
+    const numberText = typeof formatLottoNumberSet === "function"
+      ? formatLottoNumberSet(candidate?.numbers || [])
+      : "";
+    createChoiceButton({
+      title: `번호 ${numberText}`,
+      earnText: typeof formatMoney === "function" ? formatMoney(LOTTO_TICKET_PRICE) : "1,000원",
+      onClick: () => {
+        if (typeof confirmLottoRetailerPick === "function") {
+          confirmLottoRetailerPick(index);
+        }
+      },
+    });
+  });
+
+  createChoiceButton({
+    title: "번호 다시 받기",
+    onClick: () => {
+      if (typeof rerollLottoRetailerPickSession === "function") {
+        rerollLottoRetailerPickSession();
+      }
+    },
+  });
+
+  createChoiceButton({
+    title: "구매 취소",
+    onClick: () => {
+      if (typeof cancelLottoRetailerPickSession === "function") {
+        cancelLottoRetailerPickSession();
+      }
+    },
+  });
+}
+
 function renderLottoResultScene() {
   const lottoState = typeof syncLottoRetailerState === "function"
     ? syncLottoRetailerState(state)
@@ -3189,7 +3364,7 @@ function renderLottoResultScene() {
   renderActors([]);
   setCharacterPosition(50, 1);
   setSceneSpeaker("복권 결과");
-  renderTags(["로또", "다음날 결과"]);
+  renderTags(["로또", "추첨 결과"]);
   const showChoices = renderMessage(summary.title || "복권 결과", summary.lines || [], {
     progressKey: buildSceneTextProgressKey(
       `lotto-result:${state.day}:${summary.ticketCount || 0}:${summary.payout || 0}`,
@@ -3205,7 +3380,7 @@ function renderLottoResultScene() {
   }
 
   createChoiceButton({
-    title: "하루 시작",
+    title: summary.returnScene === "outside" ? "판매장으로 돌아간다" : "다음으로 넘어간다",
     onClick: () => dismissLottoRetailerResult(state),
   });
 }
@@ -3656,6 +3831,16 @@ function renderGame() {
 
   if (state.scene === "turn-briefing") {
     renderTurnBriefingScene();
+    return;
+  }
+
+  if (state.scene === "night-auto-sleep") {
+    renderNightAutoSleepScene();
+    return;
+  }
+
+  if (state.scene === "lotto-pick") {
+    renderLottoPickScene();
     return;
   }
 

@@ -151,7 +151,7 @@ const SPOON_START_HOME_CONFIGS = Object.freeze({
     residenceLabel: "배금아파트",
     spawnBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/silverspoon_spawn.jpg"),
     roomBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/living_room.png"),
-    outsideBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/my_house.jpg"),
+    outsideBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/lobby.jpg"),
     lobbyBackground: createSpoonStartBackgroundConfig("assets/days/silver_spoon/lobby.jpg"),
     transitBackground: null,
     spawnPlayerLayout: Object.freeze({
@@ -374,6 +374,40 @@ function getSpoonStartRoomActorLayout(targetState = state) {
 
 function getSpoonStartHomeLocationId(targetState = state) {
   return getSpoonStartHomeConfig(targetState)?.homeLocationId || "";
+}
+
+function getSpoonStartOriginIntroSteps(targetState = state) {
+  const originState = ensureSpoonStartState(targetState);
+  const visualTierId = String(originState?.visualTierId || "").trim().toLowerCase();
+  const homeConfig = getSpoonStartHomeConfig(targetState);
+  const introBackground = cloneSpoonStartBackgroundConfig(
+    homeConfig?.lobbyBackground
+    || homeConfig?.outsideBackground
+    || homeConfig?.spawnBackground
+  );
+
+  if (visualTierId === "silver_spoon") {
+    return [
+      {
+        speaker: "나레이션",
+        title: "여기는 한강뷰 아파트다.",
+        lines: [
+          "나는 이곳에서 부족함 없이 태어났다.",
+          "문을 나서면 바로 아파트 로비 앞이다.",
+        ],
+        character: "",
+        background: introBackground,
+        options: [
+          {
+            title: "계속",
+            action: "beginStandardIntro",
+          },
+        ],
+      },
+    ];
+  }
+
+  return [];
 }
 
 function getAllSpoonStartHomeLocationIds() {

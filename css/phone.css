@@ -36,15 +36,15 @@
 
 #phone-panel.is-hidden-panel {
   top: auto;
-  right: 10px;
-  bottom: 10px;
+  right: 12px;
+  bottom: 12px;
   left: auto;
   width: auto;
   height: auto;
   opacity: 1;
-  transform: translateX(16px) scale(0.82);
+  transform: none;
   transform-origin: right bottom;
-  filter: saturate(0.88);
+  filter: none;
 }
 
 #phone-panel.is-hidden-panel .phone-shell {
@@ -298,8 +298,95 @@
   opacity: 0.92;
 }
 
+/* ── 접힌 상태 폰 버튼: 미니 스마트폰 실루엣 ── */
 #phone-panel.is-hidden-panel #phone-home-btn {
-  background: linear-gradient(180deg, rgba(88, 142, 255, 0.98) 0%, rgba(48, 102, 240, 0.98) 100%);
+  position: relative;
+  width: 44px;
+  height: 76px;
+  flex: 0 0 44px;
+  padding: 0;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #2a3248 0%, #141824 60%, #0b0e18 100%);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 0 1px rgba(80, 120, 255, 0.12);
+  overflow: hidden;
+}
+
+/* 화면 영역 */
+#phone-panel.is-hidden-panel #phone-home-btn .phone-control-icon {
+  position: absolute;
+  inset: 8px 5px 14px 5px;
+  width: auto;
+  height: auto;
+  border-radius: 5px;
+  background: linear-gradient(160deg, rgba(60, 100, 255, 0.22) 0%, rgba(20, 40, 100, 0.38) 100%);
+  border: 1px solid rgba(100, 140, 255, 0.2);
+  font-size: 0;
+  overflow: hidden;
+}
+
+/* 화면 안 반짝임 */
+#phone-panel.is-hidden-panel #phone-home-btn .phone-control-icon::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, transparent 100%);
+  border-radius: 4px 4px 0 0;
+}
+
+/* 홈 인디케이터 바 */
+#phone-panel.is-hidden-panel #phone-home-btn .phone-control-icon::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* 노치 */
+#phone-panel.is-hidden-panel #phone-home-btn::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 2;
+}
+
+/* 측면 버튼 (우측) */
+#phone-panel.is-hidden-panel #phone-home-btn::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: 22px;
+  width: 3px;
+  height: 18px;
+  border-radius: 0 2px 2px 0;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+#phone-panel.is-hidden-panel #phone-home-btn:hover {
+  border-color: rgba(100, 150, 255, 0.5);
+  box-shadow:
+    0 10px 32px rgba(60, 100, 255, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px) scale(1.04);
 }
 
 #phone-stage {
@@ -334,9 +421,9 @@
 
 #phone-panel.is-stage-docked {
   top: auto;
-  right: auto;
+  right: 16px;
   bottom: 16px;
-  left: 16px;
+  left: auto;
   width: auto;
   height: auto;
   z-index: 24;
@@ -4380,8 +4467,9 @@
   }
 
   #phone-panel.is-stage-docked {
-    left: 8px;
+    right: 8px;
     bottom: 8px;
+    left: auto;
   }
 
   .phone-stage-shell {
@@ -8379,56 +8467,101 @@
   display: none !important;
 }
 
+#phone-panel .phone-app-screen .news-app-header {
+  gap: 8px;
+  padding: 8px 10px 6px;
+}
+
+#phone-panel .phone-app-screen .news-app-header-main {
+  gap: 6px;
+}
+
+#phone-panel .phone-app-screen .news-app-icon-btn {
+  min-width: 30px;
+  min-height: 30px;
+  font-size: 16px;
+}
+
+#phone-panel .phone-app-screen .news-google-logo {
+  font-size: 16px;
+}
+
+#phone-panel .phone-app-screen .news-google-logo-tail {
+  margin-left: 3px;
+  font-size: 13px;
+}
+
 #phone-panel .phone-app-screen .news-hero-card,
 #phone-panel .phone-app-screen .news-story-card {
   flex-direction: column;
 }
 
 #phone-panel .phone-app-screen .news-hero-card.is-headline-only {
-  padding: 12px;
+  padding: 10px 11px;
 }
 
 #phone-panel .phone-app-screen .news-hero-title {
-  font-size: 14px;
-  -webkit-line-clamp: 2;
+  font-size: 15px;
+  line-height: 1.38;
+  display: block;
+  overflow: visible;
 }
 
 #phone-panel .phone-app-screen .news-app-content {
-  padding: 0 10px 14px;
+  padding: 0 11px 14px;
 }
 
 #phone-panel .phone-app-screen .news-app-section-head {
   gap: 6px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
 }
 
 #phone-panel .phone-app-screen .news-app-section-title {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.24;
+  letter-spacing: -0.02em;
+  white-space: normal;
 }
 
 #phone-panel .phone-app-screen .news-refresh-btn {
-  min-height: 26px;
-  padding: 0 8px;
+  min-height: 24px;
+  padding: 0 7px;
   font-size: 10px;
 }
 
 #phone-panel .phone-app-screen .news-hero-summary {
   font-size: 12px;
-  -webkit-line-clamp: 2;
+  display: block;
+  line-height: 1.55;
+  overflow: visible;
 }
 
 #phone-panel .phone-app-screen .news-headline-list .news-compact-card {
-  padding: 10px 12px;
+  padding: 10px 11px;
+}
+
+#phone-panel .phone-app-screen .news-compact-title {
+  line-height: 1.45;
+}
+
+#phone-panel .phone-app-screen .news-story-card {
+  grid-template-columns: 1fr 78px;
+  gap: 10px;
+}
+
+#phone-panel .phone-app-screen .news-story-card-visual {
+  width: 78px;
+  min-width: 78px;
+  min-height: 82px;
+  padding: 9px 10px;
 }
 
 #phone-panel .phone-app-screen .news-story-card-title {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.42;
 }
 
 #phone-panel .phone-app-screen .news-google-logo {

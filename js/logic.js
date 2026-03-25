@@ -192,7 +192,7 @@ function getCurrentOutsideSceneConfig(targetState = state) {
 
     applyMcDonaldsVenueSceneState(resolvedScene, locationId, targetState);
 
-    if (locationId === "baegeum-hospital") {
+    if (false && locationId === "baegeum-hospital") {
       resolvedScene.options = resolvedScene.options.map((option) =>
         option?.action === "get-plastic-surgery"
           ? {
@@ -570,6 +570,7 @@ function getCurrentInputGateMode(targetState = state) {
     "clockout",
     "result",
     "lecture",
+    "lotto-pick",
     "plastic-surgery",
     "turn-briefing",
     "romance",
@@ -1024,6 +1025,10 @@ function formatClockTime(slot = DAY_START_TIME_SLOT, minuteOffset = 0) {
 }
 
 function getDefaultTimeSlotForState(targetState = state) {
+  if (targetState.scene === "prologue" && targetState.storyKey === "originIntro") {
+    return PROLOGUE_TIME_SLOTS.introWake;
+  }
+
   if (targetState.scene === "prologue" && targetState.storyKey === "intro") {
     if (targetState.storyStep <= 0) {
       return PROLOGUE_TIME_SLOTS.introWake;
@@ -1512,6 +1517,16 @@ function createInitialState() {
         lastTriggerId: "",
         activeEventId: "",
       };
+  const socialScamDefaults = typeof createDefaultSocialScamState === "function"
+    ? createDefaultSocialScamState()
+    : {
+        shownDay: 0,
+        activeEventId: "",
+        activeNpcId: "",
+        seenEventIds: [],
+        cooldownUntilDayByEventId: {},
+        lastResult: null,
+      };
 
   return {
     playerName: "이름 없음",
@@ -1673,11 +1688,18 @@ function createInitialState() {
       cooldownUntilDayByNpcId: { ...(ambientRomanceDefaults.cooldownUntilDayByNpcId || {}) },
       followUpStateByNpcId: { ...(ambientRomanceDefaults.followUpStateByNpcId || {}) },
     },
+    socialScams: {
+      ...socialScamDefaults,
+      seenEventIds: [...(socialScamDefaults.seenEventIds || [])],
+      cooldownUntilDayByEventId: { ...(socialScamDefaults.cooldownUntilDayByEventId || {}) },
+      lastResult: socialScamDefaults.lastResult ? { ...socialScamDefaults.lastResult } : null,
+    },
     romanceScene: null,
     plasticSurgeryEvent: null,
     lottoRetailer: createDefaultLottoRetailerState(),
     pendingTurnEvents: [],
     turnBriefing: null,
+    nightAutoSleep: null,
     homeTransition: null,
     lastResult: null,
     endingSummary: null,
@@ -1793,6 +1815,11 @@ function buildPersistenceSceneFrame(targetState = state) {
     return frame;
   }
 
+  if (frame.scene === "night-auto-sleep") {
+    collapsePhone();
+    return frame;
+  }
+
   if (frame.scene === "job-minigame") {
     const restoreLocationId = resolveJobMiniGameRestoreLocationId(targetState, frame.jobMiniGame);
     frame.worldPatch = buildWorldLocationPersistencePatch(targetState, restoreLocationId);
@@ -1900,6 +1927,10 @@ function stabilizeRestoredStateForPlay(targetState = state) {
 
   if (targetState.scene === "plastic-surgery" && !targetState.plasticSurgeryEvent) {
     targetState.scene = "outside";
+  }
+
+  if (targetState.scene === "night-auto-sleep" && !targetState.nightAutoSleep?.pending) {
+    targetState.scene = "room";
   }
 
   targetState.inputGate = createDefaultInputGateState();
@@ -2281,6 +2312,41 @@ function hydrateState(rawState = {}) {
   if (typeof syncAmbientRomanceState === "function") {
     syncAmbientRomanceState(mergedState);
   }
+  mergedState.socialScams = rawState.socialScams && typeof rawState.socialScams === "object"
+    ? {
+        ...rawState.socialScams,
+        shownDay: Math.max(0, Math.round(Number(rawState.socialScams.shownDay) || 0)),
+        activeEventId: String(rawState.socialScams.activeEventId || "").trim(),
+        activeNpcId: String(rawState.socialScams.activeNpcId || "").trim(),
+        seenEventIds: Array.isArray(rawState.socialScams.seenEventIds)
+          ? rawState.socialScams.seenEventIds.map((id) => String(id || "").trim()).filter(Boolean)
+          : [],
+        cooldownUntilDayByEventId: rawState.socialScams.cooldownUntilDayByEventId
+          && typeof rawState.socialScams.cooldownUntilDayByEventId === "object"
+          ? { ...rawState.socialScams.cooldownUntilDayByEventId }
+          : {},
+        lastResult: rawState.socialScams.lastResult && typeof rawState.socialScams.lastResult === "object"
+          ? {
+              eventId: String(rawState.socialScams.lastResult.eventId || "").trim(),
+              outcome: String(rawState.socialScams.lastResult.outcome || "").trim(),
+              amount: Math.max(0, Math.round(Number(rawState.socialScams.lastResult.amount) || 0)),
+              day: Math.max(0, Math.round(Number(rawState.socialScams.lastResult.day) || 0)),
+            }
+          : null,
+      }
+    : (typeof createDefaultSocialScamState === "function"
+      ? createDefaultSocialScamState()
+      : {
+          shownDay: 0,
+          activeEventId: "",
+          activeNpcId: "",
+          seenEventIds: [],
+          cooldownUntilDayByEventId: {},
+          lastResult: null,
+        });
+  if (typeof syncSocialScamState === "function") {
+    syncSocialScamState(mergedState);
+  }
   mergedState.lottoRetailer = rawState.lottoRetailer && typeof rawState.lottoRetailer === "object"
     ? {
         pendingTickets: Array.isArray(rawState.lottoRetailer.pendingTickets)
@@ -2292,6 +2358,9 @@ function hydrateState(rawState = {}) {
               lines: [...(rawState.lottoRetailer.lastDrawSummary.lines || [])],
             }
           : null,
+        pickSession: normalizeLottoPickSession(rawState.lottoRetailer.pickSession, mergedState),
+        dailyPurchaseDay: Math.max(0, Math.round(Number(rawState.lottoRetailer.dailyPurchaseDay) || 0)),
+        dailyPurchaseCount: Math.max(0, Math.round(Number(rawState.lottoRetailer.dailyPurchaseCount) || 0)),
       }
     : createDefaultLottoRetailerState();
   mergedState.pendingTurnEvents = Array.isArray(rawState.pendingTurnEvents)
@@ -2549,6 +2618,184 @@ function hydrateState(rawState = {}) {
   return mergedState;
 }
 
+function getCareerRouteHintLabel(routeId = "") {
+  switch (String(routeId || "").trim().toLowerCase()) {
+    case "ai":
+      return "AI 루트";
+    case "electronics":
+      return "전자공학 루트";
+    case "management":
+      return "경영 루트";
+    case "finance":
+      return "금융 루트";
+    default:
+      return "";
+  }
+}
+
+function createCareerRouteHintSnapshot(targetState = state, buildObjective = null) {
+  if (!targetState || typeof targetState !== "object" || typeof buildObjective !== "function") {
+    return null;
+  }
+
+  const routeProgress = typeof getCareerRouteProgress === "function"
+    ? getCareerRouteProgress(targetState)
+    : {};
+  let routeId = String(routeProgress.activeRouteId || "").trim().toLowerCase();
+
+  if (!routeId && (routeProgress.aiStudyBookPublished || routeProgress.aiDepartmentEstablished)) {
+    routeId = "ai";
+  }
+
+  if (!routeId || routeId !== "ai" || !routeProgress.aiStudyBookPublished) {
+    return null;
+  }
+
+  const routeLabel = String(routeProgress.activeRouteLabel || getCareerRouteHintLabel(routeId)).trim();
+  const jobsState = typeof syncJobsDomainState === "function"
+    ? syncJobsDomainState(targetState)
+    : (targetState.jobs || {});
+  const career = jobsState?.career || null;
+  const certifications = typeof getCareerCertificationSnapshotForState === "function"
+    ? getCareerCertificationSnapshotForState(targetState)
+    : {
+        driverLicense: false,
+        computerCert: false,
+        universityDegree: false,
+      };
+  const prepState = typeof getCareerPrepSnapshotForState === "function"
+    ? getCareerPrepSnapshotForState(targetState)
+    : {
+        service: 0,
+        labor: 0,
+        office: 0,
+        academic: 0,
+      };
+  const hasSuit = typeof hasEquippedInventoryItem === "function"
+    ? hasEquippedInventoryItem("outfit-suit", targetState)
+    : false;
+  const careerOffers = typeof buildCareerOffersForState === "function"
+    ? buildCareerOffersForState(targetState)
+    : (Array.isArray(jobsState?.careerOffers) ? jobsState.careerOffers : []);
+  const aiOffer = Array.isArray(careerOffers)
+    ? careerOffers.find((offer) => String(offer?.id || "").trim() === "ai-researcher") || null
+    : null;
+  const activePostingId = typeof getCareerEmploymentPostingId === "function"
+    ? getCareerEmploymentPostingId(targetState)
+    : "";
+
+  if (!routeProgress.aiDepartmentEstablished) {
+    return buildObjective({
+      appId: "jobs",
+      prompt: "대학가에서 인공지능학과를 찾아보자.",
+      title: "AI 루트 힌트",
+      body: "도서관에서 만든 AI 서적 덕분에 대학가에서 새 학과 이야기가 돌고 있다. 다음엔 인공지능학과를 직접 찾아가자.",
+      tone: "PREP",
+      routeLabel,
+    });
+  }
+
+  if (!certifications.universityDegree) {
+    if ((prepState.academic || 0) < 2) {
+      return buildObjective({
+        appId: "jobs",
+        prompt: "대학가에서 학업 준비를 더 쌓자.",
+        title: "AI 루트 힌트",
+        body: "인공지능학과 루트를 탄 만큼 학업 준비를 더 모아야 한다. 대학가에서 공부를 이어 가며 졸업 심사 단계까지 올리자.",
+        tone: "PREP",
+        routeLabel,
+      });
+    }
+
+    return buildObjective({
+      appId: "jobs",
+      prompt: "대학가에서 졸업 심사를 받아보자.",
+      title: "AI 루트 힌트",
+      body: "이제 대학 졸업장을 챙길 타이밍이다. 졸업 조건을 마무리해야 연구직 문이 열린다.",
+      tone: "PREP",
+      routeLabel,
+    });
+  }
+
+  if (!certifications.computerCert) {
+    return buildObjective({
+      appId: "jobs",
+      prompt: "시험장에서 컴퓨터 자격증을 챙기자.",
+      title: "AI 루트 힌트",
+      body: "AI 연구원 조건에는 컴퓨터 자격증도 포함된다. 시험장으로 가서 자격증을 먼저 확보하자.",
+      tone: "PREP",
+      routeLabel,
+    });
+  }
+
+  if (!hasSuit) {
+    return buildObjective({
+      appId: "market",
+      prompt: "호박마켓에서 정장을 챙기자.",
+      title: "AI 루트 힌트",
+      body: "연구직 면접은 복장까지 본다. 호박마켓에서 정장을 마련해 두면 다음 단계가 열린다.",
+      tone: "GEAR",
+      routeLabel,
+    });
+  }
+
+  if (activePostingId === "ai-researcher") {
+    return buildObjective({
+      appId: "jobs",
+      prompt: "AI 연구원 기본금과 근무를 굴려 자산을 늘리자.",
+      title: "AI 루트 힌트",
+      body: "이미 AI 연구원으로 들어갔다. 기본금과 근무 수익을 안정적으로 굴리면서 다음 자산 루프를 만들자.",
+      tone: "CAREER",
+      routeLabel,
+    });
+  }
+
+  if (career?.status === "employed") {
+    return buildObjective({
+      appId: "jobs",
+      prompt: "지금 루프를 정리하고 AI 연구원 지원 타이밍을 보자.",
+      title: "AI 루트 힌트",
+      body: "현재 직장을 굴리면서도 AI 루트 준비는 이어 갈 수 있다. 타이밍이 오면 공고 앱에서 연구직으로 넘어가자.",
+      tone: "CAREER",
+      routeLabel,
+    });
+  }
+
+  if (aiOffer?.eligible && (Number(aiOffer.successChance) || 0) > 0) {
+    return buildObjective({
+      appId: "jobs",
+      prompt: "공고 앱에서 AI 연구원에 지원하자.",
+      title: "AI 루트 힌트",
+      body: "연구원 조건을 거의 다 갖췄다. 공고 앱으로 가서 AI 연구원 채용에 바로 지원하자.",
+      tone: "CAREER",
+      routeLabel,
+    });
+  }
+
+  if (aiOffer) {
+    const firstGate = aiOffer.unmetRequirements?.[0]
+      || aiOffer.requirementTags?.[0]
+      || "AI 연구원 준비";
+    return buildObjective({
+      appId: "jobs",
+      prompt: `${firstGate}부터 채우자.`,
+      title: "AI 루트 힌트",
+      body: `AI 연구원으로 가려면 먼저 ${firstGate}을(를) 갖춰야 한다. 부족한 조건부터 하나씩 정리하자.`,
+      tone: "PREP",
+      routeLabel,
+    });
+  }
+
+  return buildObjective({
+    appId: "jobs",
+    prompt: "도서관과 대학가를 오가며 AI 준비를 더 쌓자.",
+    title: "AI 루트 힌트",
+    body: "AI 루트는 학과 개방, 졸업, 자격증, 정장, 연구직 지원 순서로 이어진다. 아직 비어 있는 준비를 계속 채우자.",
+    tone: "PREP",
+    routeLabel,
+  });
+}
+
 function createGameplayObjectiveSnapshot(targetState = null) {
   if (!targetState || typeof targetState !== "object") {
     return null;
@@ -2595,12 +2842,14 @@ function createGameplayObjectiveSnapshot(targetState = null) {
     title = "",
     body = "",
     tone = "NOW",
+    routeLabel = "",
   } = {}) => ({
     appId,
     prompt: String(prompt || title || "").trim(),
     title: String(title || prompt || "").trim(),
     body: String(body || "").trim(),
     tone: String(tone || "NOW").trim().toUpperCase(),
+    routeLabel: String(routeLabel || "").trim(),
   });
 
   if (targetState.clockOutSummary) {
@@ -2707,6 +2956,21 @@ function createGameplayObjectiveSnapshot(targetState = null) {
     if (lectureGig && canHostHomeLectureGig(targetState)) {
       return buildObjective({
         appId: "jobs",
+        prompt: "\uC9D1\uC5D0\uC11C \uAC15\uC5F0 \uD558\uAE30",
+        title: lectureGig.objectiveTitle || lectureGig.title,
+        body: lectureGig.objectiveBody || `${lectureGig.title}\uC73C\uB85C ${lectureGig.payoutRangeLabel} \uC218\uC775\uC744 \uB0BC \uC900\uBE44\uAC00 \uB418\uC5C8\uB2E4.`,
+        tone: "BONUS",
+      });
+    }
+  }
+
+  if (false && career?.status === "employed" && !createCareerRouteHintSnapshot(targetState, buildObjective)) {
+    const lectureGig = typeof getHomeLectureGigDefinition === "function"
+      ? getHomeLectureGigDefinition(targetState)
+      : null;
+    if (lectureGig && canHostHomeLectureGig(targetState)) {
+      return buildObjective({
+        appId: "jobs",
         prompt: "집에서 강연 열기",
         title: lectureGig.objectiveTitle || lectureGig.title,
         body: lectureGig.objectiveBody || `${lectureGig.title}을 열어 ${lectureGig.payoutRangeLabel} 수준의 사례비를 노릴 수 있다.`,
@@ -2735,6 +2999,8 @@ function createGameplayObjectiveSnapshot(targetState = null) {
       tone: romanceRoomEvent.sceneType === "home-invite" ? "HOME" : "DATE",
     });
   }
+
+  return createCareerRouteHintSnapshot(targetState, buildObjective);
 
   if (liquidFunds < 50000) {
     return buildObjective({
@@ -2837,7 +3103,7 @@ function createPhoneHomePreview(day = 1, targetState = null) {
   if (objective) {
     return {
       appId: objective.appId || "",
-      kicker: "GOAL",
+      kicker: objective.routeLabel ? "HINT" : "GOAL",
       state: objective.tone || "NOW",
       title: objective.title || `${typeof formatTurnLabel === "function" ? formatTurnLabel(day) : `${day}턴`} 목표`,
       body: objective.body || objective.prompt || "",
@@ -3296,11 +3562,12 @@ function completeHomeLectureGig(targetState = state) {
     adjustHappiness(3, targetState);
   }
 
-  spendTimeSlots(2);
+  const reachedNightBoundary = spendTimeSlots(2);
   targetState.lectureGigDay = Math.max(0, Math.round(Number(targetState.day) || 0));
   targetState.lectureGig = {
     ...lectureGig,
     phase: "result",
+    reachedNightBoundary: Boolean(reachedNightBoundary),
     resultTitle: `${title} 사례비 ${formatMoney(pay)}`,
     resultLines: [
       `계좌로 ${formatMoney(pay)}이 바로 들어왔다.`,
@@ -3341,6 +3608,11 @@ function finishHomeLectureGig(targetState = state) {
     return false;
   }
 
+  const reachedNightBoundary = Boolean(
+    targetState.lectureGig?.reachedNightBoundary
+    || hasPendingNightAutoSleep(targetState)
+    || targetState.timeSlot >= DAY_END_TIME_SLOT
+  );
   targetState.lectureGig = null;
   targetState.scene = "room";
   targetState.phoneView = "home";
@@ -3349,7 +3621,7 @@ function finishHomeLectureGig(targetState = state) {
     refreshPhoneHomePreviewForState(targetState);
   }
 
-  if (targetState.timeSlot >= DAY_END_TIME_SLOT) {
+  if (reachedNightBoundary && targetState === state) {
     advanceDayOrFinish();
     return true;
   }
@@ -3361,35 +3633,139 @@ function finishHomeLectureGig(targetState = state) {
   return true;
 }
 
+const NIGHT_AUTO_SLEEP_START_SLOT = 44;
+const NIGHT_AUTO_SLEEP_START_MINUTES = NIGHT_AUTO_SLEEP_START_SLOT * TIME_SLOT_MINUTES;
+const AI_RESEARCHER_BASE_INCOME = 300000000;
+
+function hasPendingNightAutoSleep(targetState = state) {
+  return Boolean(targetState?.nightAutoSleep?.pending);
+}
+
+function clearNightAutoSleepState(targetState = state) {
+  if (!targetState || typeof targetState !== "object") {
+    return;
+  }
+  targetState.nightAutoSleep = null;
+}
+
+function getAbsoluteDayMinutes(targetState = state) {
+  const timeSlot = Math.max(0, Math.round(Number(targetState?.timeSlot) || 0));
+  const minuteOffset = Math.max(0, Math.round(Number(targetState?.timeMinuteOffset) || 0));
+  return (timeSlot * TIME_SLOT_MINUTES) + minuteOffset;
+}
+
+function setAbsoluteDayMinutes(totalMinutes = 0, targetState = state) {
+  if (!targetState || typeof targetState !== "object") {
+    return;
+  }
+
+  const safeMinutes = Math.max(0, Math.round(Number(totalMinutes) || 0));
+  const dayEndMinutes = DAY_END_TIME_SLOT * TIME_SLOT_MINUTES;
+  const clampedMinutes = Math.min(dayEndMinutes, safeMinutes);
+  targetState.timeSlot = Math.min(DAY_END_TIME_SLOT, Math.floor(clampedMinutes / TIME_SLOT_MINUTES));
+  targetState.timeMinuteOffset = targetState.timeSlot >= DAY_END_TIME_SLOT
+    ? 0
+    : Math.max(0, clampedMinutes % TIME_SLOT_MINUTES);
+}
+
+function queueNightAutoSleep(targetState = state, source = "") {
+  if (!targetState || typeof targetState !== "object") {
+    return null;
+  }
+
+  const previous = targetState.nightAutoSleep && typeof targetState.nightAutoSleep === "object"
+    ? targetState.nightAutoSleep
+    : {};
+  targetState.timeSlot = NIGHT_AUTO_SLEEP_START_SLOT;
+  targetState.timeMinuteOffset = 0;
+  targetState.nightAutoSleep = {
+    ...previous,
+    pending: true,
+    source: String(source || previous.source || "").trim(),
+    triggeredDay: Math.max(1, Math.round(Number(targetState.day) || 1)),
+    triggeredSlot: NIGHT_AUTO_SLEEP_START_SLOT,
+    title: "밤이 되어 집으로 돌아갔다",
+    lines: [
+      "밤 10시가 넘자 거리는 그대로 멈춘 듯 어두워졌다.",
+      "더 돌아다니지 못하고 집으로 돌아가 잠을 잤다.",
+      "다음 턴은 아침 8시, 집 안에서 다시 시작된다.",
+    ],
+  };
+  return targetState.nightAutoSleep;
+}
+
+function advanceClockByMinutes(minutes = 0, { source = "" } = {}, targetState = state) {
+  const normalizedMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+  if (!normalizedMinutes) {
+    return false;
+  }
+
+  if (hasPendingNightAutoSleep(targetState)) {
+    return true;
+  }
+
+  if (
+    (Number(targetState?.timeSlot) || 0) >= NIGHT_AUTO_SLEEP_START_SLOT
+    && (Number(targetState?.timeSlot) || 0) < DAY_END_TIME_SLOT
+  ) {
+    queueNightAutoSleep(targetState, source);
+    return true;
+  }
+
+  const currentMinutes = getAbsoluteDayMinutes(targetState);
+  const dayEndMinutes = DAY_END_TIME_SLOT * TIME_SLOT_MINUTES;
+  let nextMinutes = Math.min(dayEndMinutes, currentMinutes + normalizedMinutes);
+  const reachedNightAutoSleep = currentMinutes < NIGHT_AUTO_SLEEP_START_MINUTES
+    && nextMinutes >= NIGHT_AUTO_SLEEP_START_MINUTES;
+
+  if (reachedNightAutoSleep) {
+    nextMinutes = NIGHT_AUTO_SLEEP_START_MINUTES;
+  }
+
+  const elapsedMinutes = Math.max(0, nextMinutes - currentMinutes);
+  setAbsoluteDayMinutes(nextMinutes, targetState);
+
+  if (applyHungerTimePassage(elapsedMinutes, targetState)) {
+    if (reachedNightAutoSleep) {
+      queueNightAutoSleep(targetState, source);
+    }
+    return false;
+  }
+
+  if (reachedNightAutoSleep) {
+    queueNightAutoSleep(targetState, source);
+    return true;
+  }
+
+  if (targetState.timeSlot >= DAY_END_TIME_SLOT) {
+    targetState.timeMinuteOffset = 0;
+  }
+
+  return targetState.timeSlot >= DAY_END_TIME_SLOT;
+}
+
 function spendTimeSlots(slots = 0) {
   const normalized = Math.max(0, Math.round(slots));
   if (!normalized) {
     return false;
   }
 
-  state.timeSlot = Math.min(DAY_END_TIME_SLOT, state.timeSlot + normalized);
-  if (state.timeSlot >= DAY_END_TIME_SLOT) {
-    state.timeMinuteOffset = 0;
-  }
-  if (applyHungerTimePassage(normalized * TIME_SLOT_MINUTES, state)) {
-    return false;
-  }
-  return state.timeSlot >= DAY_END_TIME_SLOT;
+  return advanceClockByMinutes(normalized * TIME_SLOT_MINUTES, {
+    source: "spend-time-slots",
+  }, state);
 }
 
 function advanceTimeToSlot(targetSlot) {
-  const nextSlot = Math.max(state.timeSlot, Math.round(targetSlot));
-  if (nextSlot <= state.timeSlot) {
+  const nextSlot = Math.max(Math.round(Number(state.timeSlot) || 0), Math.round(targetSlot));
+  const currentMinutes = getAbsoluteDayMinutes(state);
+  const targetMinutes = Math.max(currentMinutes, nextSlot * TIME_SLOT_MINUTES);
+  if (targetMinutes <= currentMinutes) {
     return false;
   }
 
-  const elapsedSlots = nextSlot - state.timeSlot;
-  state.timeSlot = Math.min(DAY_END_TIME_SLOT, nextSlot);
-  state.timeMinuteOffset = 0;
-  if (applyHungerTimePassage(elapsedSlots * TIME_SLOT_MINUTES, state)) {
-    return false;
-  }
-  return state.timeSlot >= DAY_END_TIME_SLOT;
+  return advanceClockByMinutes(targetMinutes - currentMinutes, {
+    source: "advance-time-to-slot",
+  }, state);
 }
 
 function spendMinorTime(minutes = 1) {
@@ -3398,23 +3774,9 @@ function spendMinorTime(minutes = 1) {
     return false;
   }
 
-  state.timeMinuteOffset = Math.max(0, Number(state.timeMinuteOffset) || 0) + normalizedMinutes;
-
-  while (state.timeMinuteOffset >= 30) {
-    state.timeMinuteOffset -= 30;
-    state.timeSlot = Math.min(DAY_END_TIME_SLOT, state.timeSlot + 1);
-
-    if (state.timeSlot >= DAY_END_TIME_SLOT) {
-      state.timeMinuteOffset = 0;
-      break;
-    }
-  }
-
-  if (applyHungerTimePassage(normalizedMinutes, state)) {
-    return false;
-  }
-
-  return state.timeSlot >= DAY_END_TIME_SLOT;
+  return advanceClockByMinutes(normalizedMinutes, {
+    source: "spend-minor-time",
+  }, state);
 }
 
 function spendPhoneInteractionTime(minutes = PHONE_INTERACTION_MINUTES) {
@@ -5794,8 +6156,13 @@ function normalizeStateForCurrentRules() {
 
   if (typeof syncLottoRetailerState === "function") {
     const lottoState = syncLottoRetailerState(state);
+    if (state.scene === "lotto-pick" && !lottoState.pickSession) {
+      state.scene = "outside";
+    }
     if (state.scene === "lotto-result" && !lottoState.lastDrawSummary) {
       state.scene = "room";
+    } else if (state.scene === "room" && lottoState.lastDrawSummary && !state.turnBriefing) {
+      state.scene = "lotto-result";
     }
   }
 
@@ -5972,6 +6339,15 @@ const ACTION_HANDLERS = {
     advanceStoryStep();
     renderGame();
   },
+  beginStandardIntro() {
+    state.scene = "prologue";
+    state.storyKey = "intro";
+    state.storyStep = 0;
+    state.timeSlot = PROLOGUE_TIME_SLOTS.introWake;
+    state.timeMinuteOffset = 0;
+    state.prologueIntro = createDefaultPrologueIntroState(state);
+    renderGame();
+  },
   goToLivingRoom() {
     prepareDay();
   },
@@ -6021,6 +6397,19 @@ const ACTION_HANDLERS = {
   "open-bus-timetable-app"() {
     openBusPhoneSurface("bus/timetable");
   },
+  "open-bank-app"() {
+    if (!state.hasPhone) {
+      renderGame();
+      return;
+    }
+
+    if (typeof openPhoneRoute === "function") {
+      openPhoneRoute("bank/home", state);
+    } else {
+      state.phoneView = "bank/home";
+    }
+    renderGame();
+  },
   "study-office-prep"() {
     gainCareerPrep("office", {
       badge: "이력서 정리",
@@ -6047,6 +6436,12 @@ const ACTION_HANDLERS = {
         locationLabel: typeof getCurrentLocationLabel === "function" ? getCurrentLocationLabel(state) : "",
       },
     });
+  },
+  "write-ai-study-book"() {
+    publishAiStudyBook();
+  },
+  "study-ai-major"() {
+    studyAiMajor();
   },
   "take-computer-cert"() {
     earnCareerCertification("computerCert", {
@@ -6625,6 +7020,14 @@ function startGame(selectedTierIdOverride = "") {
   if (typeof applySpoonStartPackage === "function") {
     applySpoonStartPackage(state, selectedTierId);
   }
+  const originIntroSteps = typeof getSpoonStartOriginIntroSteps === "function"
+    ? getSpoonStartOriginIntroSteps(state)
+    : [];
+  state.storyKey = Array.isArray(originIntroSteps) && originIntroSteps.length
+    ? "originIntro"
+    : "intro";
+  state.storyStep = 0;
+  state.prologueIntro = createDefaultPrologueIntroState(state);
   if (typeof ensureJobOffersReady === "function") {
     ensureJobOffersReady(state);
   }
@@ -6668,7 +7071,18 @@ function startStory(storyKey) {
 
 function getActiveStorySteps(targetState = state) {
   const storyData = getDayStoryData(targetState?.day || getCurrentDayNumber());
-  return targetState?.storyKey === "phoneUnlock" ? storyData.phoneUnlockSteps : storyData.introSteps;
+  if (targetState?.storyKey === "phoneUnlock") {
+    return storyData.phoneUnlockSteps;
+  }
+
+  if (targetState?.storyKey === "originIntro" && typeof getSpoonStartOriginIntroSteps === "function") {
+    const introSteps = getSpoonStartOriginIntroSteps(targetState);
+    if (Array.isArray(introSteps) && introSteps.length) {
+      return introSteps;
+    }
+  }
+
+  return storyData.introSteps;
 }
 
 function handlePrologueOption(action) {
@@ -7887,6 +8301,154 @@ function patchProgressionRoute(routeKey, patch = {}, targetState = state) {
   return next;
 }
 
+function getCareerRouteProgress(targetState = state) {
+  const route = targetState?.progression?.routes?.career;
+  const snapshot = route && typeof route === "object" ? route : {};
+  return {
+    ...snapshot,
+    aiStudyBookPublished: Boolean(snapshot.aiStudyBookPublished),
+    aiDepartmentEstablished: Boolean(snapshot.aiDepartmentEstablished),
+    aiStudyTurns: Math.max(0, Math.round(Number(snapshot.aiStudyTurns) || 0)),
+  };
+}
+
+function publishAiStudyBook() {
+  const careerRoute = getCareerRouteProgress(state);
+  if (careerRoute.aiStudyBookPublished) {
+    state.headline = {
+      badge: "AI 서적 집필",
+      text: "이미 도서관에서 인공지능 공부 서적을 만들어 둔 상태다.",
+    };
+    renderGame();
+    return;
+  }
+
+  runStudyDistrictEvent({
+    badge: "AI 서적 집필",
+    text: "도서관 자료를 뒤져 인공지능 공부 서적을 만들었다.",
+    memoryTitle: "도서관에서 AI 공부 서적을 만들었다",
+    memoryBody: "논문과 강의 노트를 묶어 인공지능 공부 서적을 완성했다. 이 책을 계기로 대학에서 새 전공 이야기가 돌기 시작했다.",
+    prepKey: "academic",
+    prepGain: 1,
+    intelligenceDelta: 4,
+    energyDelta: -12,
+    happinessDelta: 2,
+    routeKey: "career",
+    routePatch: {
+      activeRouteId: "ai",
+      activeRouteLabel: "AI 루트",
+      discoveredRouteIds: [...new Set([...(Array.isArray(careerRoute.discoveredRouteIds) ? careerRoute.discoveredRouteIds : []), "ai"])],
+      aiStudyBookPublished: true,
+      aiStudyBookDay: state.day,
+    },
+    unlockEventId: "ai-study-book",
+    slots: 2,
+    tags: ["도서관", "AI", "집필"],
+  });
+}
+
+function studyAiMajor() {
+  const careerRoute = getCareerRouteProgress(state);
+  if (!careerRoute.aiStudyBookPublished) {
+    state.headline = {
+      badge: "AI 학과 미개방",
+      text: "먼저 도서관에서 인공지능 공부 서적을 만들어야 대학에 인공지능학과가 신설된다.",
+    };
+    renderGame();
+    return;
+  }
+
+  const isFirstDepartmentStudy = !careerRoute.aiDepartmentEstablished;
+  const nextStudyTurns = careerRoute.aiStudyTurns + 1;
+
+  runStudyDistrictEvent({
+    badge: isFirstDepartmentStudy ? "AI 학과 신설" : "AI 학과 공부",
+    text: isFirstDepartmentStudy
+      ? "인공지능 공부가 화제가 되어 대학에 인공지능학과가 신설됐다."
+      : "인공지능학과 세미나와 실습을 따라가며 AI 공부를 이어 갔다.",
+    memoryTitle: isFirstDepartmentStudy
+      ? "대학에 인공지능학과가 생겼다"
+      : "인공지능학과에서 공부했다",
+    memoryBody: isFirstDepartmentStudy
+      ? "도서관에서 만든 AI 공부 서적이 퍼지면서 대학에 인공지능학과가 열렸다. 이제 연구직 루트가 본격적으로 보이기 시작한다."
+      : "인공지능학과 강의와 세미나를 따라가며 연구직으로 가는 감각을 익혔다.",
+    prepKey: "academic",
+    prepGain: 1,
+    intelligenceDelta: 5,
+    energyDelta: -12,
+    happinessDelta: isFirstDepartmentStudy ? 4 : 2,
+    routeKey: "career",
+    routePatch: {
+      activeRouteId: "ai",
+      activeRouteLabel: "AI 루트",
+      discoveredRouteIds: [...new Set([...(Array.isArray(careerRoute.discoveredRouteIds) ? careerRoute.discoveredRouteIds : []), "ai"])],
+      aiDepartmentEstablished: true,
+      aiDepartmentDay: careerRoute.aiDepartmentEstablished
+        ? careerRoute.aiDepartmentDay || state.day
+        : state.day,
+      aiStudyTurns: nextStudyTurns,
+    },
+    unlockEventId: isFirstDepartmentStudy ? "ai-department-opened" : "ai-major-study",
+    slots: 2,
+    tags: ["대학", "AI", "연구"],
+  });
+}
+
+function resolveAiResearcherBaseIncome(targetState = state) {
+  if (getCareerEmploymentPostingId(targetState) !== "ai-researcher") {
+    return null;
+  }
+
+  const amount = AI_RESEARCHER_BASE_INCOME;
+  const title = "AI 연구원 기본금 입금";
+  const body = `인공지능 연구원 기본금 ${formatMoney(amount)}이 계좌로 들어왔다.`;
+  const lines = [
+    "인공지능 연구실 프로젝트가 오늘도 기본금을 지급했다.",
+    `기본금 ${formatMoney(amount)}이 계좌로 입금됐다.`,
+  ];
+
+  if (typeof earnBankBalance === "function") {
+    earnBankBalance(amount, {
+      title,
+      type: "income",
+      direction: "in",
+      note: "AI 연구원 기본금",
+    }, targetState);
+  } else if (typeof patchBankDomainState === "function") {
+    const bankState = typeof getBankDomainState === "function"
+      ? getBankDomainState(targetState)
+      : { balance: 0 };
+    patchBankDomainState(targetState, {
+      balance: Math.max(0, Number(bankState.balance) || 0) + amount,
+    });
+    if (typeof recordBankTransaction === "function") {
+      recordBankTransaction({
+        title,
+        amount,
+        type: "income",
+        direction: "in",
+        note: "AI 연구원 기본금",
+      }, targetState);
+    }
+  } else if (typeof earnCash === "function") {
+    earnCash(amount, targetState);
+  } else {
+    targetState.money = Math.max(0, Number(targetState.money) || 0) + amount;
+  }
+
+  if (targetState === state && typeof showMoneyEffect === "function") {
+    showMoneyEffect(amount, { destination: "bank" });
+  }
+
+  return {
+    amount,
+    badge: "AI 기본금",
+    title: "AI 연구원 기본금",
+    body,
+    lines,
+  };
+}
+
 function runStudyDistrictEvent({
   badge = "학습 구역",
   text = "",
@@ -8541,6 +9103,10 @@ const MCDONALDS_MENU_CATALOG = Object.freeze({
 });
 
 const LOTTO_TICKET_PRICE = 1000;
+const LOTTO_TICKET_DAILY_LIMIT = 5;
+const LOTTO_PICK_NUMBER_COUNT = 6;
+const LOTTO_PICK_NUMBER_MAX = 45;
+const LOTTO_PICK_OPTION_COUNT = 3;
 const LOTTO_RETAILER_PRIZE_TABLE = Object.freeze([
   Object.freeze({
     id: "miss",
@@ -8598,10 +9164,201 @@ const LOTTO_RETAILER_PRIZE_TABLE = Object.freeze([
   }),
 ]);
 
+const LOTTO_MATCH_PRIZE_RULES = Object.freeze({
+  first: Object.freeze({
+    id: "first",
+    rankLabel: "1등",
+    payout: 5000000000,
+    badge: "로또 1등",
+    guide: "번호 6개 전부 일치",
+    headlineText: "당첨 기계가 멎을 만큼 큰 금액이 찍혔다. 이번 회차는 인생 역전이다.",
+    memoryBody: "로또 1등에 당첨돼 어마어마한 당첨금을 받았다.",
+  }),
+  second: Object.freeze({
+    id: "second",
+    rankLabel: "2등",
+    payout: 300000000,
+    badge: "로또 2등",
+    guide: "번호 5개 + 보너스 일치",
+    headlineText: "보너스 번호까지 맞아 인생이 흔들릴 만큼 큰 당첨금을 받았다.",
+    memoryBody: "로또 2등에 당첨돼 큰 목돈이 생겼다.",
+  }),
+  third: Object.freeze({
+    id: "third",
+    rankLabel: "3등",
+    payout: 5000000,
+    badge: "로또 3등",
+    guide: "번호 5개 일치",
+    headlineText: "다섯 개가 맞아 한동안 숨통이 트일 정도의 당첨금을 받았다.",
+    memoryBody: "로또 3등에 당첨돼 생활 자금이 한 번에 넉넉해졌다.",
+  }),
+  fourth: Object.freeze({
+    id: "fourth",
+    rankLabel: "4등",
+    payout: 50000,
+    badge: "로또 4등",
+    guide: "번호 4개 일치",
+    headlineText: "네 개가 맞아 식비 걱정을 덜 만큼은 건졌다.",
+    memoryBody: "로또 번호 네 개가 맞아 생각보다 괜찮은 수익이 생겼다.",
+  }),
+  fifth: Object.freeze({
+    id: "fifth",
+    rankLabel: "5등",
+    payout: 5000,
+    badge: "로또 5등",
+    guide: "번호 3개 일치",
+    headlineText: "번호 세 개가 맞아 소액 당첨금을 챙겼다.",
+    memoryBody: "로또 번호 세 개가 맞아 소소한 당첨금을 받았다.",
+  }),
+  miss: Object.freeze({
+    id: "miss",
+    rankLabel: "낙첨",
+    payout: 0,
+    badge: "로또 낙첨",
+    guide: "일치 2개 이하",
+    headlineText: "번호가 크게 비껴갔다. 이번 회차는 다음 기회를 노려야 한다.",
+    memoryBody: "로또를 샀지만 번호가 맞지 않았다.",
+  }),
+});
+
 function createDefaultLottoRetailerState() {
   return {
     pendingTickets: [],
     lastDrawSummary: null,
+    pickSession: null,
+    dailyPurchaseDay: 0,
+    dailyPurchaseCount: 0,
+  };
+}
+
+function normalizeLottoNumberSet(numbers = []) {
+  const values = Array.isArray(numbers)
+    ? numbers
+      .map((value) => Math.round(Number(value) || 0))
+      .filter((value) => value >= 1 && value <= LOTTO_PICK_NUMBER_MAX)
+    : [];
+  return [...new Set(values)].sort((left, right) => left - right).slice(0, LOTTO_PICK_NUMBER_COUNT);
+}
+
+function formatLottoNumberSet(numbers = []) {
+  const normalized = normalizeLottoNumberSet(numbers);
+  if (!normalized.length) {
+    return "-";
+  }
+  return normalized.map((value) => String(value).padStart(2, "0")).join(", ");
+}
+
+function drawUniqueLottoNumbers(count = LOTTO_PICK_NUMBER_COUNT, maxNumber = LOTTO_PICK_NUMBER_MAX) {
+  const pool = Array.from({ length: maxNumber }, (_, index) => index + 1);
+  const picks = [];
+
+  while (pool.length && picks.length < count) {
+    const drawIndex = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(drawIndex, 1)[0]);
+  }
+
+  return picks.sort((left, right) => left - right);
+}
+
+function drawLottoBonusNumber(winningNumbers = []) {
+  const blocked = new Set(normalizeLottoNumberSet(winningNumbers));
+  const pool = Array.from({ length: LOTTO_PICK_NUMBER_MAX }, (_, index) => index + 1)
+    .filter((value) => !blocked.has(value));
+  if (!pool.length) {
+    return 0;
+  }
+  return pool[Math.floor(Math.random() * pool.length)] || 0;
+}
+
+function createLottoPickCandidate(index = 0) {
+  return {
+    id: `lotto-pick-${Date.now()}-${index + 1}-${Math.random().toString(36).slice(2, 6)}`,
+    numbers: drawUniqueLottoNumbers(),
+  };
+}
+
+function normalizeLottoPickCandidate(candidate = null, index = 0) {
+  const numbers = normalizeLottoNumberSet(candidate?.numbers);
+  return {
+    id: String(candidate?.id || `lotto-pick-${index + 1}`).trim() || `lotto-pick-${index + 1}`,
+    numbers: numbers.length === LOTTO_PICK_NUMBER_COUNT ? numbers : drawUniqueLottoNumbers(),
+  };
+}
+
+function createLottoPickSession(targetState = state) {
+  const today = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  return {
+    day: today,
+    locationId: typeof getCurrentLocationId === "function"
+      ? getCurrentLocationId(targetState) || "lotto-retailer-interior"
+      : "lotto-retailer-interior",
+    candidates: Array.from({ length: LOTTO_PICK_OPTION_COUNT }, (_, index) => createLottoPickCandidate(index)),
+  };
+}
+
+function getLottoRetailerPurchaseSnapshot(targetState = state) {
+  const lottoState = syncLottoRetailerState(targetState);
+  const today = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  const purchaseDay = Math.max(0, Math.round(Number(lottoState.dailyPurchaseDay) || 0));
+  const purchaseCount = purchaseDay === today
+    ? Math.max(0, Math.round(Number(lottoState.dailyPurchaseCount) || 0))
+    : 0;
+  return {
+    today,
+    purchaseDay,
+    purchaseCount,
+    remaining: Math.max(0, LOTTO_TICKET_DAILY_LIMIT - purchaseCount),
+  };
+}
+
+function getImmediateLottoPrizeRule(matchCount = 0, bonusMatched = false) {
+  if (matchCount >= 6) {
+    return LOTTO_MATCH_PRIZE_RULES.first;
+  }
+  if (matchCount === 5 && bonusMatched) {
+    return LOTTO_MATCH_PRIZE_RULES.second;
+  }
+  if (matchCount === 5) {
+    return LOTTO_MATCH_PRIZE_RULES.third;
+  }
+  if (matchCount === 4) {
+    return LOTTO_MATCH_PRIZE_RULES.fourth;
+  }
+  if (matchCount === 3) {
+    return LOTTO_MATCH_PRIZE_RULES.fifth;
+  }
+  return LOTTO_MATCH_PRIZE_RULES.miss;
+}
+
+function buildLottoPrizeGuideLines() {
+  return [
+    `1등 6개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.first.payout)}`,
+    `2등 5개+보너스 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.second.payout)}`,
+    `3등 5개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.third.payout)}`,
+    `4등 4개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.fourth.payout)}`,
+    `5등 3개 일치 ${formatMoney(LOTTO_MATCH_PRIZE_RULES.fifth.payout)}`,
+  ];
+}
+
+function normalizeLottoPickSession(session = null, targetState = state) {
+  if (!session || typeof session !== "object") {
+    return null;
+  }
+
+  const today = Math.max(1, Math.round(Number(targetState?.day) || 1));
+  const day = Math.max(1, Math.round(Number(session.day) || today));
+  const candidates = Array.isArray(session.candidates)
+    ? session.candidates.map((candidate, index) => normalizeLottoPickCandidate(candidate, index))
+    : [];
+
+  if (day !== today || !candidates.length) {
+    return null;
+  }
+
+  return {
+    day,
+    locationId: String(session.locationId || "lotto-retailer-interior").trim() || "lotto-retailer-interior",
+    candidates,
   };
 }
 
@@ -8638,6 +9395,9 @@ function syncLottoRetailerState(targetState = state) {
           lines: [...(lottoState.lastDrawSummary.lines || [])],
         }
       : defaults.lastDrawSummary,
+    pickSession: normalizeLottoPickSession(lottoState.pickSession, targetState),
+    dailyPurchaseDay: Math.max(0, Math.round(Number(lottoState.dailyPurchaseDay) || 0)),
+    dailyPurchaseCount: Math.max(0, Math.round(Number(lottoState.dailyPurchaseCount) || 0)),
   };
 
   return targetState.lottoRetailer;
@@ -8661,6 +9421,201 @@ function queueLottoRetailerTicket(targetState = state) {
   lottoState.pendingTickets.push(ticket);
   lottoState.lastDrawSummary = null;
   return ticket;
+}
+
+function openLottoRetailerPickSession(targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  const purchaseSnapshot = getLottoRetailerPurchaseSnapshot(targetState);
+  if (purchaseSnapshot.remaining <= 0) {
+    targetState.headline = {
+      badge: "로또 제한",
+      text: `하루에 ${LOTTO_TICKET_DAILY_LIMIT}장까지만 살 수 있다. 내일 다시 오자.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof canAfford === "function" && !canAfford(LOTTO_TICKET_PRICE, targetState)) {
+    targetState.headline = {
+      badge: "구매 실패",
+      text: `로또 한 장 가격 ${formatMoney(LOTTO_TICKET_PRICE)}이 부족하다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  const lottoState = syncLottoRetailerState(targetState);
+  lottoState.lastDrawSummary = null;
+  lottoState.pickSession = createLottoPickSession(targetState);
+  targetState.scene = "lotto-pick";
+  renderGame();
+  return true;
+}
+
+function rerollLottoRetailerPickSession(targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  const lottoState = syncLottoRetailerState(targetState);
+  lottoState.pickSession = createLottoPickSession(targetState);
+  targetState.scene = "lotto-pick";
+  renderGame();
+  return true;
+}
+
+function buildImmediateLottoDrawSummary(chosenNumbers = [], targetState = state) {
+  const normalizedNumbers = normalizeLottoNumberSet(chosenNumbers);
+  const winningNumbers = drawUniqueLottoNumbers();
+  const bonusNumber = drawLottoBonusNumber(winningNumbers);
+  const matchedNumbers = normalizedNumbers.filter((value) => winningNumbers.includes(value));
+  const bonusMatched = normalizedNumbers.includes(bonusNumber);
+  const prizeRule = getImmediateLottoPrizeRule(matchedNumbers.length, bonusMatched);
+  const payout = Math.max(0, Number(prizeRule?.payout) || 0);
+  const net = payout - LOTTO_TICKET_PRICE;
+  const currentLocationId = typeof getCurrentLocationId === "function"
+    ? getCurrentLocationId(targetState) || "lotto-retailer-interior"
+    : "lotto-retailer-interior";
+  const locationId = currentLocationId === "lotto-retailer" ? "lotto-retailer-interior" : currentLocationId;
+  const lines = [
+    `고른 번호: ${formatLottoNumberSet(normalizedNumbers)}`,
+    `당첨 번호: ${formatLottoNumberSet(winningNumbers)} + 보너스 ${String(bonusNumber).padStart(2, "0")}`,
+    `일치 번호: ${matchedNumbers.length ? formatLottoNumberSet(matchedNumbers) : "없음"}${bonusMatched ? " / 보너스 일치" : ""}`,
+    payout > 0
+      ? `${prizeRule.rankLabel} 당첨. ${formatMoney(payout)}을 바로 받았다.`
+      : "이번 회차는 낙첨이다.",
+    `복권값 포함 순손익: ${net >= 0 ? "+" : "-"}${formatMoney(Math.abs(net))}`,
+    `등수 안내: ${buildLottoPrizeGuideLines().join(" / ")}`,
+  ];
+
+  if (prizeRule?.headlineText) {
+    lines.push(prizeRule.headlineText);
+  }
+
+  return {
+    badge: prizeRule?.badge || "로또 결과",
+    title: payout > 0 ? `${prizeRule.rankLabel} 당첨` : "로또 낙첨",
+    lines,
+    payout,
+    net,
+    ticketCount: 1,
+    returnScene: "outside",
+    returnLocationId: locationId,
+    chosenNumbers: [...normalizedNumbers],
+    winningNumbers: [...winningNumbers],
+    bonusNumber,
+    prizeId: prizeRule?.id || "miss",
+  };
+}
+
+function confirmLottoRetailerPick(candidateIndex = 0, targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  const lottoState = syncLottoRetailerState(targetState);
+  const pickSession = lottoState.pickSession;
+  const candidate = Array.isArray(pickSession?.candidates)
+    ? pickSession.candidates[Math.max(0, Math.round(Number(candidateIndex) || 0))]
+    : null;
+
+  if (!candidate) {
+    targetState.scene = "outside";
+    renderGame();
+    return false;
+  }
+
+  const purchaseSnapshot = getLottoRetailerPurchaseSnapshot(targetState);
+  if (purchaseSnapshot.remaining <= 0) {
+    lottoState.pickSession = null;
+    targetState.scene = "outside";
+    targetState.headline = {
+      badge: "로또 제한",
+      text: `하루에 ${LOTTO_TICKET_DAILY_LIMIT}장까지만 살 수 있다. 내일 다시 오자.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof canAfford === "function" && !canAfford(LOTTO_TICKET_PRICE, targetState)) {
+    targetState.headline = {
+      badge: "구매 실패",
+      text: `로또 한 장 가격 ${formatMoney(LOTTO_TICKET_PRICE)}이 부족하다.`,
+    };
+    renderGame();
+    return false;
+  }
+
+  if (typeof spendCash === "function" && !spendCash(LOTTO_TICKET_PRICE, targetState)) {
+    targetState.headline = {
+      badge: "구매 실패",
+      text: "현금을 꺼내려다 계산이 꼬였다.",
+    };
+    renderGame();
+    return false;
+  }
+
+  const summary = buildImmediateLottoDrawSummary(candidate.numbers, targetState);
+  const today = Math.max(1, Math.round(Number(targetState.day) || 1));
+  lottoState.dailyPurchaseDay = today;
+  lottoState.dailyPurchaseCount = purchaseSnapshot.purchaseCount + 1;
+  lottoState.pickSession = null;
+  summary.returnScene = "outside";
+  summary.returnLocationId = typeof getCurrentLocationId === "function"
+    ? (getCurrentLocationId(targetState) || "lotto-retailer-interior")
+    : "lotto-retailer-interior";
+
+  lottoState.lastDrawSummary = summary;
+
+  if (summary.payout > 0) {
+    if (typeof earnCash === "function") {
+      earnCash(summary.payout, targetState);
+    } else {
+      targetState.money = Math.max(0, Number(targetState.money) || 0) + summary.payout;
+    }
+    if (typeof showMoneyEffect === "function") {
+      showMoneyEffect(summary.payout);
+    }
+  }
+
+  if (typeof recordActionMemory === "function") {
+    recordActionMemory(
+      summary.payout > 0 ? "로또 즉시 추첨에 당첨됐다" : "로또 즉시 추첨이 낙첨으로 끝났다",
+      summary.payout > 0
+        ? `${summary.title} 결과로 ${formatMoney(summary.payout)}을 챙겼다.`
+        : "번호를 맞춰 봤지만 이번 회차는 꽝이었다.",
+      {
+        type: "gambling",
+        source: "배금역 로또판매장",
+        tags: ["로또", "즉시추첨", summary.prizeId || "miss"].filter(Boolean),
+      },
+    );
+  }
+
+  targetState.headline = {
+    badge: summary.badge || "로또 결과",
+    text: summary.lines[summary.lines.length - 1] || summary.title,
+  };
+  targetState.scene = "lotto-result";
+
+  spendMinorTime(PHONE_INTERACTION_MINUTES);
+  renderGame();
+  return true;
+}
+
+function cancelLottoRetailerPickSession(targetState = state) {
+  if (!targetState) {
+    return false;
+  }
+
+  const lottoState = syncLottoRetailerState(targetState);
+  lottoState.pickSession = null;
+  targetState.scene = "outside";
+  renderGame();
+  return true;
 }
 
 function resolvePendingLottoRetailerTickets(targetState = state) {
@@ -8721,6 +9676,8 @@ function resolvePendingLottoRetailerTickets(targetState = state) {
       : `이번엔 전부 꽝이다. 복권값 ${formatMoney(totalCost)}만 빠져나갔다.`,
   ];
 
+  lines.push(`등수 안내: ${buildLottoPrizeGuideLines().join(" / ")}`);
+
   if (bestResult?.headlineText && totalPayout > 0) {
     lines.push(bestResult.headlineText);
   }
@@ -8732,6 +9689,10 @@ function resolvePendingLottoRetailerTickets(targetState = state) {
     payout: totalPayout,
     net,
     ticketCount: dueTickets.length,
+    returnScene: "room",
+    returnLocationId: typeof getResolvedHomeLocationId === "function"
+      ? getResolvedHomeLocationId(targetState)
+      : "",
   };
 
   lottoState.lastDrawSummary = summary;
@@ -8759,8 +9720,32 @@ function resolvePendingLottoRetailerTickets(targetState = state) {
 
 function dismissLottoRetailerResult(targetState = state) {
   const lottoState = syncLottoRetailerState(targetState);
+  const summary = lottoState.lastDrawSummary && typeof lottoState.lastDrawSummary === "object"
+    ? lottoState.lastDrawSummary
+    : null;
   lottoState.lastDrawSummary = null;
-  targetState.scene = "room";
+
+  const returnScene = String(summary?.returnScene || "room").trim() || "room";
+  const returnLocationId = String(summary?.returnLocationId || "").trim();
+  if (returnScene === "outside" && returnLocationId) {
+    const worldState = typeof syncWorldState === "function"
+      ? syncWorldState(targetState)
+      : (targetState.world || {});
+    worldState.currentLocation = returnLocationId;
+    worldState.currentDistrict = typeof getWorldLocationDistrictId === "function"
+      ? getWorldLocationDistrictId(returnLocationId, targetState.day)
+      : worldState.currentDistrict;
+    targetState.world = worldState;
+    targetState.scene = "outside";
+  } else {
+    targetState.scene = "room";
+  }
+
+  if (hasPendingNightAutoSleep(targetState) && targetState === state) {
+    advanceDayOrFinish();
+    return;
+  }
+
   renderGame();
 }
 
@@ -9008,6 +9993,8 @@ function visitMcDonaldsMenu(actionId, targetState = state) {
 }
 
 function buyLottoRetailerTicket(targetState = state) {
+  return openLottoRetailerPickSession(targetState);
+
   if (!targetState) {
     return false;
   }
@@ -9750,6 +10737,28 @@ function prepareDayState(targetState = state) {
         text: bankLoanResolution.body || (bankLoanResolution.lines?.[0] || ""),
       };
     }
+  }
+
+  const aiBaseIncomeSummary = typeof resolveAiResearcherBaseIncome === "function"
+    ? resolveAiResearcherBaseIncome(targetState)
+    : null;
+  if (aiBaseIncomeSummary) {
+    turnBriefingEntries.push(normalizeTurnBriefingEntry({
+      id: `ai-base-income-${targetState.day}`,
+      day: targetState.day,
+      badge: aiBaseIncomeSummary.badge || "AI 기본금",
+      title: aiBaseIncomeSummary.title || "AI 연구원 기본금",
+      speaker: "?ㅼ쓬???붿빟",
+      tags: ["AI", "기본금", "연구원"],
+      lines: aiBaseIncomeSummary.lines || [],
+    }, targetState.day, turnBriefingEntries.length));
+    if (!targetState.headline?.text) {
+      targetState.headline = {
+        badge: aiBaseIncomeSummary.badge || "AI 기본금",
+        text: aiBaseIncomeSummary.body || (aiBaseIncomeSummary.lines?.[0] || ""),
+      };
+    }
+    refreshPhoneHomePreviewForState(targetState);
   }
 
   if (lottoSummary) {
@@ -11059,6 +12068,13 @@ function finalizeWorldArrival(targetLocation = "", config = {}) {
     });
   }
 
+  if (typeof tryStartSocialScamEvent === "function") {
+    tryStartSocialScamEvent("world-arrival", {
+      locationId: resolvedTargetLocation,
+      locationLabel: locationMap[resolvedTargetLocation].label || resolvedTargetLocation,
+    }, targetState);
+  }
+
   if (render && targetState === state) {
     if (typeof hideCityMapOverlay === "function") {
       hideCityMapOverlay();
@@ -11525,7 +12541,7 @@ function spendEnergy(amount) {
   state.energy = Math.max(0, state.energy - amount);
 }
 
-function advanceDayOrFinish({ recover = true } = {}) {
+function completeDayAdvance({ recover = true } = {}) {
   if (state.day >= MAX_DAYS) {
     finishRun();
     return;
@@ -11546,7 +12562,43 @@ function advanceDayOrFinish({ recover = true } = {}) {
   if (typeof closeInventoryPanel === "function") {
     closeInventoryPanel(state);
   }
+  clearNightAutoSleepState(state);
   prepareDay();
+}
+
+function startNightAutoSleepScene({ recover = true } = {}) {
+  const pendingState = queueNightAutoSleep(state, state.nightAutoSleep?.source || "night-auto-sleep");
+  state.scene = "night-auto-sleep";
+  state.phoneMinimized = true;
+  state.phoneStageExpanded = false;
+  state.phoneView = "home";
+  state.nightAutoSleep = {
+    ...(pendingState || {}),
+    pending: true,
+    recover,
+  };
+  renderGame();
+}
+
+function confirmNightAutoSleep() {
+  if (!hasPendingNightAutoSleep(state)) {
+    state.scene = "room";
+    renderGame();
+    return;
+  }
+
+  const recover = state.nightAutoSleep?.recover !== false;
+  clearNightAutoSleepState(state);
+  completeDayAdvance({ recover });
+}
+
+function advanceDayOrFinish({ recover = true } = {}) {
+  if (hasPendingNightAutoSleep(state)) {
+    startNightAutoSleepScene({ recover });
+    return;
+  }
+
+  completeDayAdvance({ recover });
 }
 
 function finishRun() {

@@ -29,6 +29,10 @@ function getJobRequirementLabel(requirement = {}) {
       : prepKey;
   }
 
+  if (type === "progression-route-flag") {
+    return explicitLabel || String(requirement.flag || requirement.flagKey || "진행도");
+  }
+
   if (type === "equipped-item") {
     const itemId = String(requirement.itemId || "").trim();
     const definition = typeof getInventoryItemDefinition === "function"
@@ -126,6 +130,22 @@ function evaluateJobRequirement(requirement = {}, targetState = state) {
       tagLabel: `${label} ${current}/${minimum}`,
       satisfiedLabel: `${label} ${current}/${minimum}`,
       unmetLabel: `${label} ${minimum}`,
+    };
+  }
+
+  if (type === "progression-route-flag") {
+    const routeKey = String(requirement.routeKey || "").trim();
+    const flagKey = String(requirement.flag || requirement.flagKey || "").trim();
+    const routeState = targetState?.progression?.routes?.[routeKey];
+    const unlocked = Boolean(routeState && typeof routeState === "object" && routeState[flagKey]);
+
+    return {
+      ok: unlocked,
+      type,
+      label,
+      tagLabel: unlocked ? `${label} 완료` : `${label} 필요`,
+      satisfiedLabel: `${label} 완료`,
+      unmetLabel: label,
     };
   }
 

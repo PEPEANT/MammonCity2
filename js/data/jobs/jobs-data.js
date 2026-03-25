@@ -7,7 +7,6 @@ const STARTING_JOB_IDS = [
   "warehouse",
   "cleaning",
 ];
-
 const JOB_SCENE_BACKGROUNDS = {
   delivery: {
     className: "custom-location-bg",
@@ -654,6 +653,40 @@ const CAREER_JOB_POSTINGS = [
     baseChance: 0.16,
     description: "배금연구소에서 데이터 정리와 실험 보조를 맡는 연구직 루트다. 대학 졸업과 높은 학업 준비가 없으면 면접에서 계속 떨어진다.",
   },
+  {
+    id: "ai-researcher",
+    title: "인공지능 연구원",
+    emoji: "AI",
+    tone: "mint",
+    categoryLabel: "연구직",
+    payMin: 820000,
+    payMax: 1180000,
+    shiftStartSlot: 20,
+    shiftDurationSlots: 10,
+    prepKey: "academic",
+    requiredPrep: 5,
+    requiredCerts: ["universityDegree", "computerCert"],
+    requirements: [
+      {
+        type: "stat-min",
+        statKey: "intelligence",
+        min: 45,
+      },
+      {
+        type: "equipped-item",
+        itemId: "outfit-suit",
+        label: "정장 슈트",
+      },
+      {
+        type: "progression-route-flag",
+        routeKey: "career",
+        flag: "aiDepartmentEstablished",
+        label: "인공지능학과",
+      },
+    ],
+    baseChance: 0.08,
+    description: "도서관에서 만든 AI 공부 서적과 대학 인공지능학과 루트를 밟은 뒤 도전할 수 있는 최상위 연구직이다. 기본 연봉 대신 매턴 기본금이 들어오는 특수 채용이다.",
+  },
 ];
 
 const CAREER_JOB_POSTING_LOOKUP = Object.fromEntries(
@@ -676,6 +709,13 @@ if (CAREER_JOB_POSTING_LOOKUP["baegeum-electronics-office"]) {
 
 if (CAREER_JOB_POSTING_LOOKUP["baegeum-research-lab"]) {
   Object.assign(CAREER_JOB_POSTING_LOOKUP["baegeum-research-lab"], {
+    sceneBackground: JOB_SCENE_BACKGROUNDS.research,
+    minigame: JOB_MINIGAME_DEFINITIONS.research,
+  });
+}
+
+if (CAREER_JOB_POSTING_LOOKUP["ai-researcher"]) {
+  Object.assign(CAREER_JOB_POSTING_LOOKUP["ai-researcher"], {
     sceneBackground: JOB_SCENE_BACKGROUNDS.research,
     minigame: JOB_MINIGAME_DEFINITIONS.research,
   });
@@ -730,6 +770,11 @@ const JOB_MINIGAME_TRIGGER_RULES = {
   },
   "baegeum-research-lab": {
     label: "연구실",
+    locationIds: ["research-lab-interior"],
+    requiredShiftPhase: "active",
+  },
+  "ai-researcher": {
+    label: "AI 연구동",
     locationIds: ["research-lab-interior"],
     requiredShiftPhase: "active",
   },

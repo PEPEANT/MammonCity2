@@ -50,4 +50,25 @@ const CHARACTER_ART = {
   casinoGuide: {
     default: "assets/characters/npc/casino-guide/default.png",
   },
+  cityKnitCommuter: {
+    default: "assets/characters/npc/city-knit-commuter/default.png",
+  },
+  stationAltStudent: {
+    default: "assets/characters/npc/station-alt-student/default.png",
+  },
+  smartCasualCommuter: {
+    default: "assets/characters/npc/smart-casual-commuter/default.png",
+  },
+  campusHoodieStudent: {
+    default: "assets/characters/npc/campus-hoodie-student/default.png",
+  },
+  campusGlassesStudent: {
+    default: "assets/characters/npc/campus-glasses-student/default.png",
+  },
+  cultRecruiter: {
+    default: "assets/characters/npc/cult-recruiter/default.png",
+  },
+  romanceScammer: {
+    default: "assets/characters/npc/romance-scammer/default.png",
+  },
 };

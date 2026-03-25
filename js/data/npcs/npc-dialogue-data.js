@@ -779,4 +779,274 @@ const NPC_DIALOGUES = {
       },
     },
   },
+  "city-knit-commuter": {
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        title: "베이지 니트 차림 통근자가 손목시계를 슬쩍 확인한다",
+        lines: [
+          "\"슬슬 움직여야 덜 막히는데, 사람은 더 많아지네요.\"",
+          "차분한 목소리인데도 발끝은 다음 동선을 먼저 생각하는 것처럼 조금 바쁘다.",
+        ],
+        choices: [
+          { label: "오늘 출근길 분위기를 묻는다", next: "commute" },
+          { label: "짧게 인사하고 지나간다", next: "leave" },
+        ],
+      },
+      commute: {
+        lines: [
+          "\"요즘은 지각보다 사람이 너무 많아서 지치는 쪽이 더 크죠.\"",
+          "그녀는 웃으면서도 사거리 신호가 바뀌는 쪽을 한 번 더 살핀다.",
+        ],
+        choices: [
+          {
+            label: "고개를 끄덕이고 보내준다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "출근길 한마디",
+                text: "니트 차림 통근자가 짧은 한숨과 함께 다시 사람 흐름 속으로 섞여든다.",
+              },
+              memory: {
+                type: "npc",
+                title: "사거리에서 통근자와 짧게 말을 섞었다",
+                body: "출근길 피로를 웃어넘기려는 담백한 말투가 이상하게 오래 남았다.",
+                tags: ["NPC", "통근", "사거리"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "그녀는 가볍게 목례만 남기고 사람들 사이로 천천히 걸음을 옮긴다.",
+        ],
+        choices: [
+          {
+            label: "사거리를 다시 둘러본다",
+            end: true,
+          },
+        ],
+      },
+    },
+  },
+  "station-alt-student": {
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        title: "체크스커트 차림 학생이 이어폰 한쪽을 빼고 전광판을 올려다본다",
+        lines: [
+          "\"다음 차가 바로 오는 줄 알았는데 살짝 비었네요.\"",
+          "음악을 듣고 있었던 것 같은데도 주변 소음에는 꽤 익숙해 보인다.",
+        ],
+        choices: [
+          { label: "역 앞은 늘 이런지 묻는다", next: "station" },
+          { label: "방해하지 않고 지나간다", next: "leave" },
+        ],
+      },
+      station: {
+        lines: [
+          "\"사람 많을 때는 금방 지나가고, 한산할 때는 더 길게 느껴져요.\"",
+          "학생은 이어폰 줄을 정리하며 역 안쪽보다 바깥 공기가 더 낫다고 중얼거린다.",
+        ],
+        choices: [
+          {
+            label: "고개를 끄덕이며 인사한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "역앞 분위기",
+                text: "체크스커트 학생이 짧게 웃고는 다시 전광판 쪽으로 시선을 돌린다.",
+              },
+              memory: {
+                type: "npc",
+                title: "역 앞 학생과 전광판 아래에서 말을 섞었다",
+                body: "이어폰 너머로도 사람 흐름을 읽는 눈치가 꽤 빠른 학생이었다.",
+                tags: ["NPC", "역앞", "학생"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "학생은 이어폰을 다시 끼고 발끝으로 박자를 세듯 기다림을 이어간다.",
+        ],
+        choices: [
+          {
+            label: "역 앞을 다시 둘러본다",
+            end: true,
+          },
+        ],
+      },
+    },
+  },
+  "smart-casual-commuter": {
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        title: "가죽재킷 차림 통근자가 골목 대신 큰길 쪽 사람 흐름을 골라 본다",
+        lines: [
+          "\"오늘은 덜 막히는 길로 가야겠네요.\"",
+          "목소리는 담담한데 발걸음은 이미 다음 코너를 계산하는 것처럼 또렷하다.",
+        ],
+        choices: [
+          { label: "중심가 사람 흐름이 어떤지 묻는다", next: "downtown" },
+          { label: "눈인사만 하고 지나간다", next: "leave" },
+        ],
+      },
+      downtown: {
+        lines: [
+          "\"점심 지나면 더 복잡해져요. 그래도 큰길이 마음은 편하죠.\"",
+          "그녀는 재킷 소매를 한 번 정리하고는 복잡한 간판 쪽을 흘깃 본다.",
+        ],
+        choices: [
+          {
+            label: "무사히 다녀오라고 말한다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "큰길 선택",
+                text: "가죽재킷 통근자가 고개를 끄덕이고는 중심가 쪽 보행 흐름에 자연스럽게 합류한다.",
+              },
+              memory: {
+                type: "npc",
+                title: "중심가 입구에서 통근자와 말을 나눴다",
+                body: "복잡한 거리에서도 자기가 설 길을 먼저 정하는 사람처럼 보였다.",
+                tags: ["NPC", "중심가", "통근"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "그녀는 손만 가볍게 들어 보이고는 큰길 쪽으로 보폭을 넓힌다.",
+        ],
+        choices: [
+          {
+            label: "거리를 다시 둘러본다",
+            end: true,
+          },
+        ],
+      },
+    },
+  },
+  "campus-hoodie-student": {
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        title: "후드티 차림 대학생이 벤치 옆에서 느린 걸음으로 캠퍼스를 훑어본다",
+        lines: [
+          "\"강의 하나 비면 공원부터 돌게 되더라구요.\"",
+          "쉬는 중인 듯하지만, 눈빛은 다음 일정까지 계산하고 있는 것처럼 또렷하다.",
+        ],
+        choices: [
+          { label: "캠퍼스 공원 분위기를 묻는다", next: "park" },
+          { label: "쉬는 시간 방해하지 않고 지나간다", next: "leave" },
+        ],
+      },
+      park: {
+        lines: [
+          "\"여기는 조용한데 완전히 멈춰 있진 않아서 좋아요.\"",
+          "학생은 후드 주머니에 손을 넣은 채로도 주변 대화를 꽤 세심하게 듣고 있다.",
+        ],
+        choices: [
+          {
+            label: "잘 쉬라고 말하고 보내준다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "캠퍼스 쉼표",
+                text: "후드티 대학생이 작은 미소만 남기고 공원 산책로 쪽으로 발길을 돌린다.",
+              },
+              memory: {
+                type: "npc",
+                title: "캠퍼스 공원에서 후드티 대학생을 만났다",
+                body: "쉬는 중에도 주변 흐름을 놓치지 않는 캠퍼스 특유의 긴장감이 느껴졌다.",
+                tags: ["NPC", "캠퍼스", "휴식"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "학생은 한쪽 어깨를 으쓱하고는 벤치가 많은 쪽 길로 천천히 걸어간다.",
+        ],
+        choices: [
+          {
+            label: "공원을 다시 둘러본다",
+            end: true,
+          },
+        ],
+      },
+    },
+  },
+  "campus-glasses-student": {
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        title: "안경을 고쳐 쓰는 대학생이 가방끈을 붙든 채 강의동 쪽을 바라본다",
+        lines: [
+          "\"읽을 건 많은데 시간은 늘 애매하게 모자라네요.\"",
+          "가볍게 웃지만 눈은 이미 다음 할 일을 정리하는 사람처럼 빠르게 움직인다.",
+        ],
+        choices: [
+          { label: "요즘 무엇을 공부하는지 묻는다", next: "study" },
+          { label: "고개만 끄덕이고 지나간다", next: "leave" },
+        ],
+      },
+      study: {
+        lines: [
+          "\"정해진 건 없는데, 계속 읽다 보면 길이 조금씩 보이는 것 같아요.\"",
+          "학생은 안경테를 올리며 대학가에선 그런 막연한 감각도 꽤 중요하다고 말한다.",
+        ],
+        choices: [
+          {
+            label: "천천히 해도 된다고 말해준다",
+            end: true,
+            effects: {
+              headline: {
+                badge: "공부의 속도",
+                text: "안경 쓴 대학생이 작게 웃고는 책가방을 고쳐 메며 강의동 쪽으로 돌아선다.",
+              },
+              memory: {
+                type: "npc",
+                title: "대학가에서 공부 얘기를 나눴다",
+                body: "정답보다 방향을 먼저 찾으려는 말이 의외로 오래 마음에 남았다.",
+                tags: ["NPC", "대학가", "공부"],
+              },
+              npcRelation: {
+                affinityDelta: 1,
+              },
+            },
+          },
+        ],
+      },
+      leave: {
+        lines: [
+          "학생은 안경을 한번 추켜올리고는 가방을 고쳐 멘 채 강의동 쪽으로 걸어간다.",
+        ],
+        choices: [
+          {
+            label: "대학가를 다시 둘러본다",
+            end: true,
+          },
+        ],
+      },
+    },
+  },
 };

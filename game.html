@@ -6,6 +6,23 @@
   <title>Mammon City Host</title>
   <link rel="icon" href="data:,">
   <style>
+    :root {
+      color-scheme: dark;
+      --host-bg: #070a12;
+      --host-panel: rgba(10, 16, 29, 0.88);
+      --host-panel-strong: rgba(16, 24, 41, 0.96);
+      --host-line: rgba(164, 183, 215, 0.16);
+      --host-line-strong: rgba(164, 183, 215, 0.26);
+      --host-text: #edf3ff;
+      --host-muted: #95a7c7;
+      --host-accent: #89b4ff;
+      --host-accent-soft: rgba(137, 180, 255, 0.18);
+      --host-success: #76d09a;
+      --host-warn: #f1c27d;
+      --host-danger: #ff8b8b;
+      --host-shadow: 0 28px 64px rgba(0, 0, 0, 0.42);
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -16,16 +33,262 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #06070d;
+      background:
+        radial-gradient(circle at top, rgba(90, 130, 200, 0.18), transparent 36%),
+        linear-gradient(180deg, #101521 0%, var(--host-bg) 100%);
+      color: var(--host-text);
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
     }
 
-    .host-panel {
-      position: fixed;
-      inset: 0;
+    .host-shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      overflow: hidden;
+    }
+
+    .host-sidebar {
+      position: relative;
+      z-index: 2;
+      width: min(360px, calc(100vw - 36px));
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
       background:
-        radial-gradient(circle at top, rgba(255, 215, 0, 0.12), transparent 32%),
-        linear-gradient(180deg, #0f111c 0%, #06070d 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+        var(--host-panel);
+      border-right: 1px solid var(--host-line);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--host-shadow);
+      transition: transform 0.24s ease, opacity 0.24s ease;
+    }
+
+    .host-shell.is-collapsed .host-sidebar {
+      transform: translateX(calc(-100% - 18px));
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .host-sidebar-toggle {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 3;
+      border: 1px solid var(--host-line-strong);
+      background: rgba(10, 16, 29, 0.84);
+      color: var(--host-text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
+    }
+
+    .host-shell:not(.is-collapsed) .host-sidebar-toggle {
+      left: calc(min(360px, calc(100vw - 36px)) + 18px);
+    }
+
+    .host-card {
+      background: var(--host-panel-strong);
+      border: 1px solid var(--host-line);
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .host-card--header {
+      gap: 10px;
+    }
+
+    .host-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--host-accent);
+      text-transform: uppercase;
+    }
+
+    .host-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .host-title {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .host-subtitle {
+      color: var(--host-muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .host-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--host-accent-soft);
+      color: var(--host-text);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .host-badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--host-warn);
+      box-shadow: 0 0 0 6px rgba(241, 194, 125, 0.12);
+    }
+
+    .host-badge.is-ready .host-badge-dot {
+      background: var(--host-success);
+      box-shadow: 0 0 0 6px rgba(118, 208, 154, 0.12);
+    }
+
+    .host-badge.is-error .host-badge-dot {
+      background: var(--host-danger);
+      box-shadow: 0 0 0 6px rgba(255, 139, 139, 0.12);
+    }
+
+    .host-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .host-grid--actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .host-field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .host-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--host-muted);
+    }
+
+    .host-input,
+    .host-select,
+    .host-button {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--host-line-strong);
+      background: rgba(8, 13, 24, 0.92);
+      color: var(--host-text);
+      padding: 12px 13px;
+      font: inherit;
+      transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+
+    .host-input:focus,
+    .host-select:focus {
+      outline: none;
+      border-color: rgba(137, 180, 255, 0.56);
+      box-shadow: 0 0 0 3px rgba(137, 180, 255, 0.12);
+    }
+
+    .host-button {
+      cursor: pointer;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .host-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(137, 180, 255, 0.42);
+    }
+
+    .host-button:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    .host-button--primary {
+      background:
+        linear-gradient(180deg, rgba(137, 180, 255, 0.22), rgba(137, 180, 255, 0.08)),
+        rgba(8, 13, 24, 0.92);
+    }
+
+    .host-button--accent {
+      background:
+        linear-gradient(180deg, rgba(118, 208, 154, 0.2), rgba(118, 208, 154, 0.08)),
+        rgba(8, 13, 24, 0.92);
+      border-color: rgba(118, 208, 154, 0.28);
+    }
+
+    .host-button--danger {
+      background:
+        linear-gradient(180deg, rgba(255, 139, 139, 0.2), rgba(255, 139, 139, 0.08)),
+        rgba(8, 13, 24, 0.92);
+      border-color: rgba(255, 139, 139, 0.3);
+    }
+
+    .host-meta-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .host-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .host-meta-key {
+      font-size: 12px;
+      color: var(--host-muted);
+    }
+
+    .host-meta-value {
+      font-size: 13px;
+      font-weight: 700;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .host-stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      padding: 18px;
+    }
+
+    .host-stage::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      pointer-events: none;
     }
 
     .host-frame {
@@ -33,34 +296,444 @@
       height: 100%;
       border: 0;
       display: block;
+      border-radius: 28px;
       background: #000;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.38);
+    }
+
+    .host-note {
+      color: var(--host-muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 980px) {
+      .host-sidebar {
+        position: absolute;
+        inset: 14px auto 14px 14px;
+        width: min(340px, calc(100vw - 28px));
+        border-radius: 24px;
+      }
+
+      .host-shell:not(.is-collapsed) .host-sidebar-toggle {
+        left: auto;
+        right: 18px;
+      }
+
+      .host-shell.is-collapsed .host-sidebar-toggle {
+        left: auto;
+        right: 18px;
+      }
+
+      .host-stage {
+        padding: 14px;
+      }
+
+      .host-stage::before {
+        inset: 14px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .host-grid--actions {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .host-title {
+        font-size: 21px;
+      }
+
+      .host-sidebar-toggle {
+        padding: 9px 12px;
+      }
     }
   </style>
 </head>
 <body>
-  <main class="host-panel" aria-label="Game Host Panel">
-    <iframe
-      id="game-host-frame"
-      class="host-frame"
-      title="Mammon City"
-      allow="fullscreen"
-      referrerpolicy="same-origin"
-    ></iframe>
+  <main class="host-shell" id="host-shell">
+    <aside class="host-sidebar" id="host-sidebar" aria-label="호스트 설정 패널">
+      <section class="host-card host-card--header">
+        <div class="host-kicker">Host Control</div>
+        <div class="host-title-row">
+          <div class="host-title">Mammon City Host</div>
+          <div class="host-badge" id="host-connection-badge">
+            <span class="host-badge-dot" aria-hidden="true"></span>
+            <span id="host-connection-text">게임 연결 대기</span>
+          </div>
+        </div>
+        <div class="host-subtitle">
+          호스트 페이지에서 바로 시작 수저를 골라 새 게임을 열 수 있게 다시 정리했습니다.
+        </div>
+      </section>
+
+      <section class="host-card">
+        <div class="host-kicker">Start Setup</div>
+        <div class="host-field">
+          <label class="host-label" for="host-player-name">닉네임</label>
+          <input id="host-player-name" class="host-input" type="text" maxlength="20" placeholder="닉네임 입력">
+        </div>
+        <div class="host-field">
+          <label class="host-label" for="host-spoon-select">시작 수저</label>
+          <select id="host-spoon-select" class="host-select">
+            <option value="gold">금수저</option>
+            <option value="silver">은수저</option>
+            <option value="dirt">흙수저</option>
+            <option value="random">랜덤</option>
+          </select>
+        </div>
+        <div class="host-grid host-grid--actions">
+          <button id="host-start-button" class="host-button host-button--primary" type="button">선택 수저로 새 게임</button>
+          <button id="host-random-button" class="host-button" type="button">랜덤 시작</button>
+          <button id="host-continue-button" class="host-button host-button--accent" type="button">이어하기</button>
+          <button id="host-clear-save-button" class="host-button host-button--danger" type="button">세이브 초기화</button>
+        </div>
+        <div class="host-note">
+          선택 수저로 새 게임은 저장을 지우고 바로 해당 수저로 시작합니다. 랜덤은 추첨 대신 즉시 랜덤 출생으로 열립니다.
+        </div>
+      </section>
+
+      <section class="host-card">
+        <div class="host-kicker">Session</div>
+        <div class="host-meta-list">
+          <div class="host-meta-row">
+            <div class="host-meta-key">현재 수저</div>
+            <div id="host-status-spoon" class="host-meta-value">미연결</div>
+          </div>
+          <div class="host-meta-row">
+            <div class="host-meta-key">현재 장소</div>
+            <div id="host-status-location" class="host-meta-value">미연결</div>
+          </div>
+          <div class="host-meta-row">
+            <div class="host-meta-key">턴 / 시간</div>
+            <div id="host-status-turn" class="host-meta-value">-</div>
+          </div>
+          <div class="host-meta-row">
+            <div class="host-meta-key">씬</div>
+            <div id="host-status-scene" class="host-meta-value">-</div>
+          </div>
+          <div class="host-meta-row">
+            <div class="host-meta-key">세이브 상태</div>
+            <div id="host-status-save" class="host-meta-value">확인 중</div>
+          </div>
+        </div>
+        <div class="host-grid host-grid--actions">
+          <button id="host-reload-button" class="host-button" type="button">게임 새로고침</button>
+          <button id="host-dev-panel-button" class="host-button" type="button">개발 패널 토글</button>
+        </div>
+      </section>
+    </aside>
+
+    <button id="host-sidebar-toggle" class="host-sidebar-toggle" type="button" aria-expanded="true">
+      설정 접기
+    </button>
+
+    <section class="host-stage" aria-label="게임 화면">
+      <iframe
+        id="game-host-frame"
+        class="host-frame"
+        title="Mammon City"
+        allow="fullscreen"
+        referrerpolicy="same-origin"
+      ></iframe>
+    </section>
   </main>
 
   <script>
+    const HOST_SAVE_KEY = "mammoncity.save";
     const frame = document.getElementById("game-host-frame");
+    const hostShell = document.getElementById("host-shell");
+    const sidebarToggleButton = document.getElementById("host-sidebar-toggle");
+    const hostNameInput = document.getElementById("host-player-name");
+    const hostSpoonSelect = document.getElementById("host-spoon-select");
+    const hostStartButton = document.getElementById("host-start-button");
+    const hostRandomButton = document.getElementById("host-random-button");
+    const hostContinueButton = document.getElementById("host-continue-button");
+    const hostClearSaveButton = document.getElementById("host-clear-save-button");
+    const hostReloadButton = document.getElementById("host-reload-button");
+    const hostDevPanelButton = document.getElementById("host-dev-panel-button");
+    const connectionBadge = document.getElementById("host-connection-badge");
+    const connectionText = document.getElementById("host-connection-text");
+    const statusSpoon = document.getElementById("host-status-spoon");
+    const statusLocation = document.getElementById("host-status-location");
+    const statusTurn = document.getElementById("host-status-turn");
+    const statusScene = document.getElementById("host-status-scene");
+    const statusSave = document.getElementById("host-status-save");
+
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash || "";
+    const hostState = {
+      frameReady: false,
+      autoStartPending: params.get("autostart") === "1",
+      statusTimerId: 0,
+    };
 
-    if (!params.has("dev")) {
-      params.set("dev", "1");
+    if (params.get("name")) {
+      hostNameInput.value = params.get("name");
     }
 
-    const query = params.toString();
-    const target = `./index.html${query ? `?${query}` : ""}${hash}`;
+    if (["gold", "silver", "dirt", "random"].includes(params.get("spoon"))) {
+      hostSpoonSelect.value = params.get("spoon");
+    }
 
-    frame.src = target;
+    function buildFrameTarget() {
+      const forwarded = new URLSearchParams(window.location.search);
+      forwarded.delete("spoon");
+      forwarded.delete("name");
+      forwarded.delete("autostart");
+      if (!forwarded.has("dev")) {
+        forwarded.set("dev", "1");
+      }
+      forwarded.set("host", "1");
+      const query = forwarded.toString();
+      return `./index.html${query ? `?${query}` : ""}${hash}`;
+    }
+
+    function getGameWindow() {
+      try {
+        const gameWindow = frame.contentWindow;
+        if (!gameWindow || typeof gameWindow.startGame !== "function") {
+          return null;
+        }
+        return gameWindow;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function readGameSnapshot(gameWindow) {
+      if (!gameWindow || typeof gameWindow.eval !== "function") {
+        return null;
+      }
+
+      try {
+        const snapshot = gameWindow.eval(`(() => {
+          if (typeof state === "undefined" || !state) {
+            return null;
+          }
+
+          return {
+            playerName: state.playerName || "",
+            scene: state.scene || "",
+            day: state.day || 1,
+            timeSlot: state.timeSlot || 0,
+            timeMinuteOffset: state.timeMinuteOffset || 0,
+            spoonLabel: typeof getStartingOriginLabel === "function"
+              ? getStartingOriginLabel(state)
+              : (state.startingOrigin?.label || ""),
+            locationLabel: typeof getCurrentLocationLabel === "function"
+              ? getCurrentLocationLabel(state)
+              : (state.world?.currentLocation || "")
+          };
+        })()`);
+
+        return snapshot && typeof snapshot === "object" ? snapshot : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function setConnectionState(mode = "loading", message = "게임 연결 대기") {
+      connectionBadge.classList.toggle("is-ready", mode === "ready");
+      connectionBadge.classList.toggle("is-error", mode === "error");
+      connectionText.textContent = message;
+    }
+
+    function getSaveExists() {
+      try {
+        return Boolean(window.localStorage.getItem(HOST_SAVE_KEY));
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function setGameName() {
+      const gameWindow = getGameWindow();
+      if (!gameWindow?.ui?.nameInput) {
+        return false;
+      }
+
+      const nextName = String(hostNameInput.value || "").trim() || "호스트";
+      if (gameWindow.ui.nameInput.value !== nextName) {
+        gameWindow.ui.nameInput.value = nextName;
+        gameWindow.ui.nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+
+      return true;
+    }
+
+    function formatSceneLabel(sceneId = "") {
+      const normalized = String(sceneId || "").trim();
+      if (!normalized) {
+        return "-";
+      }
+      return normalized
+        .split("-")
+        .map((part) => part ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : "")
+        .join(" ");
+    }
+
+    function syncStatusFromGame() {
+      const gameWindow = getGameWindow();
+      const snapshot = readGameSnapshot(gameWindow);
+      const saveExists = getSaveExists();
+      hostContinueButton.disabled = !saveExists;
+      statusSave.textContent = saveExists ? "세이브 있음" : "세이브 없음";
+
+      if (!snapshot) {
+        hostState.frameReady = false;
+        setConnectionState("loading", "게임 연결 대기");
+        statusSpoon.textContent = "미연결";
+        statusLocation.textContent = "미연결";
+        statusTurn.textContent = "-";
+        statusScene.textContent = "-";
+        return;
+      }
+
+      hostState.frameReady = true;
+      setConnectionState("ready", "게임 연결됨");
+
+      const turnLabel = `${snapshot.day || 1}턴 / ${
+        typeof gameWindow.formatClockTime === "function"
+          ? gameWindow.formatClockTime(snapshot.timeSlot, snapshot.timeMinuteOffset)
+          : "--:--"
+      }`;
+
+      statusSpoon.textContent = snapshot.spoonLabel || "미정";
+      statusLocation.textContent = snapshot.locationLabel || "-";
+      statusTurn.textContent = turnLabel;
+      statusScene.textContent = formatSceneLabel(snapshot.scene);
+
+      if (!hostNameInput.value.trim() && gameWindow.ui?.nameInput?.value) {
+        hostNameInput.value = gameWindow.ui.nameInput.value;
+      }
+    }
+
+    function startStatusPolling() {
+      if (hostState.statusTimerId) {
+        clearInterval(hostState.statusTimerId);
+      }
+      hostState.statusTimerId = window.setInterval(syncStatusFromGame, 900);
+      syncStatusFromGame();
+    }
+
+    function waitForFrameReady(attempt = 0) {
+      const gameWindow = getGameWindow();
+      const snapshot = readGameSnapshot(gameWindow);
+      if (snapshot) {
+        syncStatusFromGame();
+        if (hostState.autoStartPending) {
+          hostState.autoStartPending = false;
+          startSelectedGame(hostSpoonSelect.value);
+        }
+        return;
+      }
+
+      if (attempt >= 40) {
+        setConnectionState("error", "게임 연결 실패");
+        return;
+      }
+
+      window.setTimeout(() => waitForFrameReady(attempt + 1), 250);
+    }
+
+    function reloadFrame() {
+      hostState.frameReady = false;
+      setConnectionState("loading", "게임 다시 불러오는 중");
+      frame.src = buildFrameTarget();
+    }
+
+    function startSelectedGame(spoonId = hostSpoonSelect.value) {
+      const gameWindow = getGameWindow();
+      if (!gameWindow) {
+        reloadFrame();
+        return;
+      }
+
+      setGameName();
+      const normalizedSpoonId = String(spoonId || "").trim().toLowerCase();
+      gameWindow.startGame(normalizedSpoonId === "random" ? "" : normalizedSpoonId);
+      syncStatusFromGame();
+    }
+
+    function continueSavedGameFromHost() {
+      const gameWindow = getGameWindow();
+      if (!gameWindow?.continueSavedGame) {
+        return;
+      }
+      gameWindow.continueSavedGame();
+      syncStatusFromGame();
+    }
+
+    function clearSaveFromHost() {
+      const confirmed = window.confirm("현재 세이브를 지우고 시작 화면으로 돌릴까요?");
+      if (!confirmed) {
+        return;
+      }
+
+      const gameWindow = getGameWindow();
+      try {
+        window.localStorage.removeItem(HOST_SAVE_KEY);
+      } catch (error) {
+        console.warn("[host] save clear failed", error);
+      }
+
+      if (gameWindow) {
+        if (typeof gameWindow.clearSavedState === "function") {
+          gameWindow.clearSavedState();
+        }
+        if ("pendingSavedState" in gameWindow) {
+          gameWindow.pendingSavedState = null;
+        }
+        if (typeof gameWindow.showStartScreen === "function") {
+          gameWindow.showStartScreen(false);
+        }
+      }
+
+      syncStatusFromGame();
+    }
+
+    function toggleEmbeddedDevPanel() {
+      const gameWindow = getGameWindow();
+      const panel = gameWindow?.document?.getElementById("dev-panel");
+      if (!panel) {
+        return;
+      }
+
+      const nextVisible = gameWindow.getComputedStyle(panel).display === "none";
+      panel.style.display = nextVisible ? "flex" : "none";
+    }
+
+    sidebarToggleButton.addEventListener("click", () => {
+      const isCollapsed = hostShell.classList.toggle("is-collapsed");
+      sidebarToggleButton.textContent = isCollapsed ? "설정 열기" : "설정 접기";
+      sidebarToggleButton.setAttribute("aria-expanded", String(!isCollapsed));
+    });
+
+    hostNameInput.addEventListener("change", () => {
+      setGameName();
+      syncStatusFromGame();
+    });
+
+    hostStartButton.addEventListener("click", () => {
+      startSelectedGame(hostSpoonSelect.value);
+    });
+
+    hostRandomButton.addEventListener("click", () => {
+      startSelectedGame("random");
+    });
+
+    hostContinueButton.addEventListener("click", continueSavedGameFromHost);
+    hostClearSaveButton.addEventListener("click", clearSaveFromHost);
+    hostReloadButton.addEventListener("click", reloadFrame);
+    hostDevPanelButton.addEventListener("click", toggleEmbeddedDevPanel);
+
+    frame.addEventListener("load", () => {
+      setConnectionState("loading", "게임 연결 중");
+      waitForFrameReady();
+    });
+
+    reloadFrame();
+    startStatusPolling();
   </script>
 </body>
 </html>

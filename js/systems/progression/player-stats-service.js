@@ -376,6 +376,7 @@ function getPlayerHardGateStatuses(targetState = state) {
   const hasSuit = hasEquippedInventoryItem("outfit-suit", targetState);
   const hasPremiumPhone = getPlayerPhoneTier(targetState) >= 2;
   const intelligence = getPlayerNumericStatValue("intelligence", targetState);
+  const careerRoute = targetState?.progression?.routes?.career || {};
 
   return [
     { label: "정장 세트", ready: hasSuit },
@@ -387,6 +388,7 @@ function getPlayerHardGateStatuses(targetState = state) {
     { label: "생산직 면접", ready: Boolean(certifications.universityDegree) && (prepState.labor || 0) >= 0 },
     { label: "사무직 면접", ready: hasSuit && Boolean(certifications.universityDegree) && Boolean(certifications.computerCert) && intelligence >= 20 && (prepState.office || 0) >= 3 },
     { label: "연구직 면접", ready: hasSuit && Boolean(certifications.universityDegree) && Boolean(certifications.computerCert) && intelligence >= 30 && (prepState.academic || 0) >= 4 },
+    { label: "AI 연구원 면접", ready: hasSuit && Boolean(certifications.universityDegree) && Boolean(certifications.computerCert) && Boolean(careerRoute.aiDepartmentEstablished) && intelligence >= 45 && (prepState.academic || 0) >= 5 },
   ];
 }
 

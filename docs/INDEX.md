@@ -46,6 +46,9 @@
 - [early-progression.md](./early-progression.md)  
   현재 플레이 가능한 초반 진행 구조 문서.
 
+- [mcdonalds-job-structure.md](./mcdonalds-job-structure.md)  
+  맥도날드 외부/카운터/주방 3단 장소와 2포지션 알바 구조를 정리한 문서.
+
 - [memory-system.md](./memory-system.md)  
   기억 버튼, 기록 규칙, 유지 범위를 설명하는 문서.
 
@@ -78,6 +81,15 @@
 - [workplace-shift-loop-plan.md](./workplace-shift-loop-plan.md)  
   오늘 구현 범위를 `근무지 도착형 출근 루프` 기준으로 자른 실행 계획 문서.
 
+- [night-auto-sleep-plan.md](./night-auto-sleep-plan.md)  
+  `22:00 자동 취침 -> 검은 화면 연출 -> 다음 턴 방 시작` 흐름과 주식/코인 보유분 처리 원칙을 먼저 정리한 실행 계획 문서.
+
+- [alb-no-rejection-design.md](./alb-no-rejection-design.md)  
+  단기알바에서 `합격/불합격 RNG`를 걷어내고 에너지/장비 게이트 중심으로 읽히게 만드는 기준 문서.
+
+- [social-scam-events-plan.md](./social-scam-events-plan.md)  
+  사이비 권유와 번호 접근 사기를 바깥 월드의 선제 접근 이벤트로 묶는 구현 계획 문서.
+
 ## 설계 아이디어 문서
 
 - [design/bank-loans-and-collateral.md](./design/bank-loans-and-collateral.md)  
@@ -100,6 +112,9 @@
 
 - [design/happiness-system.md](./design/happiness-system.md)  
   행복도 단일 수치와 `우울한 상태` 파생 규칙, 연애/결혼/랭킹 연결 설계.
+
+- [design/hud-money-display.md](./design/hud-money-display.md)  
+  좌측 HUD의 현금/계좌 표기를 `10만`, `1.2억`처럼 줄여 보여주는 축약 표시 설계 문서.
 
 - [design/inventory.md](./design/inventory.md)  
   인벤토리/보유품 시스템의 현재 구현 기준 문서.

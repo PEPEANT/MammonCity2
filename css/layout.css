@@ -560,7 +560,7 @@ body {
 ═══════════════════════════════════════════════════════ */
 #game {
   --gw: min(720px, 100vw, calc(100vh * 1.5));
-  --phone-shell-width: clamp(196px, 18vw, 228px);
+  --phone-shell-width: clamp(220px, 20vw, 264px);
   --phone-panel-width: calc(var(--phone-shell-width) + 28px);
   width: var(--gw);
   height: calc(var(--gw) * 2 / 3);  /* 3:2 비율 */
@@ -1105,8 +1105,8 @@ body {
 @media (max-width: 600px) {
   #game {
     --gw: 100vw;
-    --phone-shell-width: clamp(136px, 34vw, 164px);
-    --phone-panel-width: calc(var(--phone-shell-width) + 16px);
+    --phone-shell-width: clamp(156px, 38vw, 188px);
+    --phone-panel-width: calc(var(--phone-shell-width) + 18px);
     border-radius: 0;
     box-shadow: none;
   }

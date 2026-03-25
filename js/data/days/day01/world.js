@@ -86,6 +86,26 @@ const DAY01_WORLD_ALLEY_NPC_POOL = [
     approachBadge: "스친 대화",
     approachText: "가까이 다가가자 아주머니는 통화를 마무리하며 바삐 발걸음을 옮긴다.",
   },
+  createWorldWanderNpc({
+    id: "city-knit-commuter",
+    weight: 2,
+    tag: "통근",
+    src: CHARACTER_ART.cityKnitCommuter.default,
+    alt: "골목 통근자",
+    left: 79,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "베이지 니트 차림 통근자가 골목 입구에서 손목시계를 한번 더 확인한다",
+    sceneLines: [
+      "사거리 쪽으로 나가기 전에 사람 흐름이 얼마나 붙는지 미리 재보는 듯한 눈치다.",
+      "가볍게 말을 걸면 받아주겠지만 오래 머물 사람은 아니라는 분위기가 먼저 든다.",
+    ],
+    headlineBadge: "출근길 골목",
+    headlineText: "니트 차림 통근자가 골목 입구에서 사거리 쪽 사람 흐름을 가늠해 본다.",
+    approachBadge: "짧은 목례",
+    approachText: "통근자는 짧게 목례하고는 곧장 큰길 쪽으로 보폭을 넓힌다.",
+    memoryBody: "골목 입구에서 니트 차림 통근자와 짧게 눈을 마주쳤다.",
+  }),
 ];
 
 function createWorldWanderNpc({
@@ -189,6 +209,46 @@ const DAY01_WORLD_TERMINAL_NPC_POOL = [
     approachText: "여자는 전단 한 장만 쥐여준 채 다시 승객 무리 쪽으로 몸을 돌린다.",
     memoryBody: "터미널 앞을 한 바퀴 돌다가 전단을 나눠주는 홍보원과 스쳤다.",
   }),
+  createWorldWanderNpc({
+    id: "station-alt-student",
+    weight: 3,
+    tag: "학생",
+    src: CHARACTER_ART.stationAltStudent.default,
+    alt: "터미널 체크스커트 학생",
+    left: 78,
+    bottom: 8,
+    height: 90,
+    sceneTitle: "체크스커트 차림 학생이 터미널 전광판 아래서 이어폰 줄을 정리한다",
+    sceneLines: [
+      "음악을 듣고 있었던 것 같은데도 도착 시간과 사람 흐름은 꽤 또렷하게 읽고 있다.",
+      "말을 걸면 받아주겠지만 오래 붙들리진 않을 것 같은 산뜻한 분위기다.",
+    ],
+    headlineBadge: "이어폰 학생",
+    headlineText: "체크스커트 학생이 전광판 아래에서 이어폰 한쪽을 빼고 사람 흐름을 살핀다.",
+    approachBadge: "짧은 시선",
+    approachText: "학생은 한쪽 이어폰을 뺀 채 반응했다가 다시 전광판 쪽으로 시선을 돌린다.",
+    memoryBody: "터미널 앞 전광판 아래에서 체크스커트 학생과 잠깐 말을 섞었다.",
+  }),
+  createWorldWanderNpc({
+    id: "city-knit-commuter",
+    weight: 2,
+    tag: "통근",
+    src: CHARACTER_ART.cityKnitCommuter.default,
+    alt: "터미널 니트 통근자",
+    left: 61,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "니트 차림 통근자가 버스 홈 끝에서 시계와 노선표를 번갈아 본다",
+    sceneLines: [
+      "기다리는 시간조차 허투루 쓰지 않으려는 사람처럼 동선 계산이 빠르다.",
+      "짧게 말을 건네면 출근길 한마디 정도는 받아줄 것 같은 표정이다.",
+    ],
+    headlineBadge: "통근 체크",
+    headlineText: "니트 차림 통근자가 시계와 노선표를 번갈아 보며 출근길을 정리한다.",
+    approachBadge: "출근길 한숨",
+    approachText: "통근자는 작게 웃고는 다음 버스 홈 쪽으로 한 걸음 옮긴다.",
+    memoryBody: "터미널에서 출근길을 계산하던 니트 차림 통근자와 스쳤다.",
+  }),
 ];
 
 const DAY01_WORLD_CROSSROADS_NPC_POOL = [
@@ -251,6 +311,46 @@ const DAY01_WORLD_CROSSROADS_NPC_POOL = [
     approachBadge: "상가 제안",
     approachText: "여자는 오늘 행사가 많다며 전단 한 장을 건네고 곧 다른 행인에게 말을 붙인다.",
     memoryBody: "사거리에서 상가 홍보를 하는 여자와 잠깐 스쳐 지나갔다.",
+  }),
+  createWorldWanderNpc({
+    id: "city-knit-commuter",
+    weight: 3,
+    tag: "통근",
+    src: CHARACTER_ART.cityKnitCommuter.default,
+    alt: "사거리 니트 통근자",
+    left: 60,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "니트 차림 통근자가 사거리 모퉁이에서 신호가 바뀌기만 조용히 기다린다",
+    sceneLines: [
+      "급하게 서두르기보다 타이밍을 먼저 읽는 사람처럼 발끝만 작게 움직인다.",
+      "짧은 말 정도는 나눌 수 있지만 시선은 이미 다음 동선을 계산하고 있다.",
+    ],
+    headlineBadge: "신호 읽기",
+    headlineText: "니트 차림 통근자가 사거리 신호와 보행 흐름을 차분히 재고 있다.",
+    approachBadge: "차분한 반응",
+    approachText: "통근자는 짧게 웃고는 신호가 바뀌자 곧장 큰길 쪽으로 걸어간다.",
+    memoryBody: "사거리에서 신호를 기다리던 니트 차림 통근자와 잠깐 말을 나눴다.",
+  }),
+  createWorldWanderNpc({
+    id: "smart-casual-commuter",
+    weight: 2,
+    tag: "직장인",
+    src: CHARACTER_ART.smartCasualCommuter.default,
+    alt: "사거리 가죽재킷 통근자",
+    left: 86,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "가죽재킷 차림 통근자가 사거리 바깥쪽 큰길 흐름을 먼저 훑어본다",
+    sceneLines: [
+      "복잡한 골목보단 넓은 길을 고르는 타입처럼 발걸음이 단단하다.",
+      "말을 걸면 받아주지만 오래 머물기보다 바로 방향을 정할 사람처럼 보인다.",
+    ],
+    headlineBadge: "큰길 선택",
+    headlineText: "가죽재킷 통근자가 사거리에서 어느 길이 덜 막히는지 먼저 계산한다.",
+    approachBadge: "보폭 정리",
+    approachText: "통근자는 가볍게 눈인사만 남기고 큰길 쪽 보폭을 다시 맞춘다.",
+    memoryBody: "사거리 끝에서 큰길을 고르던 가죽재킷 통근자와 눈을 마주쳤다.",
   }),
 ];
 
@@ -315,6 +415,46 @@ const DAY01_WORLD_STATION_FRONT_NPC_POOL = [
     approachText: "그는 오늘은 말을 길게 하고 싶지 않다는 듯 고개만 천천히 끄덕인다.",
     memoryBody: "역 앞 벤치 끝에 앉은 사람의 시선이 이상하게 오래 남았다.",
   }),
+  createWorldWanderNpc({
+    id: "station-alt-student",
+    weight: 3,
+    tag: "학생",
+    src: CHARACTER_ART.stationAltStudent.default,
+    alt: "역앞 체크스커트 학생",
+    left: 79,
+    bottom: 8,
+    height: 90,
+    sceneTitle: "체크스커트 학생이 역 앞 전단대 옆에서 이어폰을 만지작거린다",
+    sceneLines: [
+      "역 안쪽보다 바깥 공기가 낫다는 듯 사람 흐름만 따라 시선을 옮기고 있다.",
+      "짧은 대화는 괜찮지만 오래 붙들리면 바로 발길을 뺄 것 같은 분위기다.",
+    ],
+    headlineBadge: "역앞 학생",
+    headlineText: "체크스커트 학생이 역 앞 전단대 옆에서 이어폰 한쪽을 빼고 서 있다.",
+    approachBadge: "짧은 눈맞춤",
+    approachText: "학생은 한쪽 이어폰을 뺀 채 대답하고는 다시 역 출구 쪽으로 시선을 옮긴다.",
+    memoryBody: "역 앞 전단대 옆에서 체크스커트 학생과 가볍게 말을 섞었다.",
+  }),
+  createWorldWanderNpc({
+    id: "smart-casual-commuter",
+    weight: 2,
+    tag: "통근",
+    src: CHARACTER_ART.smartCasualCommuter.default,
+    alt: "역앞 가죽재킷 통근자",
+    left: 60,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "가죽재킷 통근자가 역 앞 사람 흐름을 보며 어느 출구로 빠질지 재본다",
+    sceneLines: [
+      "지하철역보다 바깥 거리 동선을 더 빨리 읽는 사람처럼 표정이 또렷하다.",
+      "가볍게 말을 걸면 받아주겠지만 오래 붙들리면 곧 발걸음을 옮길 것만 같다.",
+    ],
+    headlineBadge: "출구 계산",
+    headlineText: "가죽재킷 통근자가 역 앞 인파를 보며 가장 빠른 출구를 골라 본다.",
+    approachBadge: "짧은 답장",
+    approachText: "통근자는 짧게 받아주고는 바로 큰길 출구 쪽으로 몸을 튼다.",
+    memoryBody: "역 앞 인파 속에서 출구를 고르던 가죽재킷 통근자와 스쳤다.",
+  }),
 ];
 
 const DAY01_WORLD_DOWNTOWN_NPC_POOL = [
@@ -377,6 +517,46 @@ const DAY01_WORLD_DOWNTOWN_NPC_POOL = [
     approachBadge: "피곤한 한숨",
     approachText: "남자는 오늘은 일 이야기까지 하고 싶지 않다는 듯 어깨만 한번 으쓱한다.",
     memoryBody: "중심가를 서성이다 피곤한 얼굴의 직장인과 잠깐 스쳤다.",
+  }),
+  createWorldWanderNpc({
+    id: "city-knit-commuter",
+    weight: 2,
+    tag: "통근",
+    src: CHARACTER_ART.cityKnitCommuter.default,
+    alt: "중심가 니트 통근자",
+    left: 70,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "니트 차림 통근자가 간판 불빛 사이에서 다음 골목보다 큰길을 먼저 살핀다",
+    sceneLines: [
+      "복잡한 중심가에서도 한 걸음 늦추고 흐름을 읽는 타입처럼 차분하다.",
+      "짧은 말 정도는 괜찮지만 멈춰 서 있을 사람은 아니라는 분위기가 선명하다.",
+    ],
+    headlineBadge: "중심가 동선",
+    headlineText: "니트 차림 통근자가 중심가 인파 속에서 덜 복잡한 길을 골라 본다.",
+    approachBadge: "짧은 미소",
+    approachText: "통근자는 짧게 미소 짓고는 다시 큰길 쪽으로 보폭을 맞춘다.",
+    memoryBody: "중심가에서 덜 붐비는 길을 찾던 니트 차림 통근자와 스쳤다.",
+  }),
+  createWorldWanderNpc({
+    id: "smart-casual-commuter",
+    weight: 3,
+    tag: "직장인",
+    src: CHARACTER_ART.smartCasualCommuter.default,
+    alt: "중심가 가죽재킷 통근자",
+    left: 84,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "가죽재킷 통근자가 간판 그림자 아래에서 사람 흐름을 가볍게 가른다",
+    sceneLines: [
+      "붐비는 거리와 자신이 설 자리를 구분하는 데 익숙한 사람처럼 걸음이 단단하다.",
+      "말을 붙이면 받아주겠지만 오래 멈추지는 않을 것 같은 분위기가 있다.",
+    ],
+    headlineBadge: "거리 보폭",
+    headlineText: "가죽재킷 통근자가 간판 불빛 아래서 사람 흐름을 비껴 걸어간다.",
+    approachBadge: "큰길 감각",
+    approachText: "통근자는 짧게 반응하고는 간판 불빛이 많은 쪽 보도로 자연스럽게 섞여든다.",
+    memoryBody: "중심가 간판 불빛 아래에서 가죽재킷 통근자와 잠깐 마주쳤다.",
   }),
 ];
 
@@ -441,6 +621,46 @@ const DAY01_WORLD_UNIVERSITY_NPC_POOL = [
     approachText: "상담원은 안내문 위치만 짚어주고 다음 학생 쪽으로 발걸음을 옮긴다.",
     memoryBody: "대학가를 걷다 취업지원 안내를 하는 사람과 잠깐 스쳐 지나갔다.",
   }),
+  createWorldWanderNpc({
+    id: "campus-hoodie-student",
+    weight: 3,
+    tag: "대학생",
+    src: CHARACTER_ART.campusHoodieStudent.default,
+    alt: "대학가 후드티 학생",
+    left: 62,
+    bottom: 8,
+    height: 90,
+    sceneTitle: "후드티 차림 대학생이 강의동 입구 근처에서 느린 걸음으로 사람 흐름을 본다",
+    sceneLines: [
+      "쉬는 시간 같지만 다음 일정까지 이미 계산해 둔 사람처럼 시선이 또렷하다.",
+      "짧은 대화는 괜찮아 보여도 오래 붙들리면 바로 강의동 쪽으로 빠질 것 같다.",
+    ],
+    headlineBadge: "후드티 학생",
+    headlineText: "후드티 차림 대학생이 대학가 길목에서 잠깐 숨을 고르며 사람 흐름을 살핀다.",
+    approachBadge: "쉬는 시간",
+    approachText: "학생은 후드 주머니에 손을 넣은 채 짧게 반응하고는 다시 길목을 걷는다.",
+    memoryBody: "대학가 길목에서 후드티 차림 대학생과 잠깐 말을 나눴다.",
+  }),
+  createWorldWanderNpc({
+    id: "campus-glasses-student",
+    weight: 3,
+    tag: "대학생",
+    src: CHARACTER_ART.campusGlassesStudent.default,
+    alt: "대학가 안경 학생",
+    left: 86,
+    bottom: 7,
+    height: 90,
+    sceneTitle: "안경을 고쳐 쓰는 대학생이 가방끈을 붙들고 강의동 쪽을 힐끗 본다",
+    sceneLines: [
+      "공부와 이동 사이에 걸쳐 선 사람처럼 발을 멈추면서도 시선은 분주하다.",
+      "가볍게 말을 걸면 받아주겠지만 금방 다시 자기 루트로 돌아갈 것 같은 눈치다.",
+    ],
+    headlineBadge: "공부 동선",
+    headlineText: "안경 쓴 대학생이 대학가 길목에서 다음 강의와 이동 동선을 정리한다.",
+    approachBadge: "짧은 대화",
+    approachText: "학생은 안경을 한번 올리고는 다시 강의동 쪽으로 몸을 돌린다.",
+    memoryBody: "대학가에서 가방끈을 고쳐 메던 안경 쓴 대학생과 말을 섞었다.",
+  }),
 ];
 
 const DAY01_WORLD_CAMPUS_PARK_NPC_POOL = [
@@ -504,6 +724,46 @@ const DAY01_WORLD_CAMPUS_PARK_NPC_POOL = [
     approachText: "그는 오늘 공기에는 조급함보다 기다림이 더 많이 섞여 있다고 짧게 말한다.",
     memoryBody: "캠퍼스 공원을 돌다가 느린 리듬을 가진 버스커와 스쳐 지나갔다.",
   }),
+  createWorldWanderNpc({
+    id: "campus-hoodie-student",
+    weight: 2,
+    tag: "대학생",
+    src: CHARACTER_ART.campusHoodieStudent.default,
+    alt: "공원 후드티 학생",
+    left: 64,
+    bottom: 8,
+    height: 90,
+    sceneTitle: "후드티 차림 대학생이 공원 벤치 옆에서 천천히 산책로를 둘러본다",
+    sceneLines: [
+      "쉬는 시간 같지만 주변 대화와 사람 흐름을 놓치지 않는 시선이 먼저 느껴진다.",
+      "가볍게 말을 걸면 받아주겠지만 오래 머물기보다 다시 산책로를 탈 것 같은 분위기다.",
+    ],
+    headlineBadge: "공원 산책",
+    headlineText: "후드티 차림 대학생이 캠퍼스 공원 벤치 옆에서 사람 흐름을 가볍게 본다.",
+    approachBadge: "짧은 휴식",
+    approachText: "학생은 웃으며 반응하고는 다시 산책로 쪽으로 천천히 걸음을 옮긴다.",
+    memoryBody: "캠퍼스 공원 벤치 근처에서 후드티 차림 대학생과 잠깐 말을 섞었다.",
+  }),
+  createWorldWanderNpc({
+    id: "campus-glasses-student",
+    weight: 3,
+    tag: "대학생",
+    src: CHARACTER_ART.campusGlassesStudent.default,
+    alt: "공원 안경 학생",
+    left: 88,
+    bottom: 7,
+    height: 90,
+    sceneTitle: "안경을 고쳐 쓰는 대학생이 공원 가장자리에서 가방끈을 쥔 채 멈춰 선다",
+    sceneLines: [
+      "읽을 거리와 다음 일정이 머릿속에서 같이 움직이는 사람처럼 눈빛이 바쁘다.",
+      "짧은 대화 정도는 괜찮아 보여도 금방 다시 자기 리듬으로 돌아갈 것 같은 분위기다.",
+    ],
+    headlineBadge: "공부 쉼표",
+    headlineText: "안경 쓴 대학생이 캠퍼스 공원 가장자리에서 짧게 숨을 고르며 서 있다.",
+    approachBadge: "짧은 끄덕임",
+    approachText: "학생은 안경을 한번 올리고는 다시 공원 바깥 강의동 쪽을 본다.",
+    memoryBody: "캠퍼스 공원에서 안경 쓴 대학생과 잠깐 공부 얘기를 나눴다.",
+  }),
 ];
 
 const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
@@ -546,6 +806,46 @@ const DAY01_WORLD_OFFICE_PLAZA_NPC_POOL = [
     approachBadge: "짧은 응답",
     approachText: "오늘도 계약직 문의가 많다며 여자는 다시 안내 데스크 쪽으로 몸을 돌린다.",
     memoryBody: "배금디지털단지 안내 데스크 앞에서 채용담당처럼 보이는 사람을 봤다.",
+  }),
+  createWorldWanderNpc({
+    id: "smart-casual-commuter",
+    weight: 2,
+    tag: "직장인",
+    src: CHARACTER_ART.smartCasualCommuter.default,
+    alt: "디지털단지 가죽재킷 통근자",
+    left: 60,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "가죽재킷 통근자가 정문 게이트 앞에서 어느 건물로 먼저 들어갈지 계산한다",
+    sceneLines: [
+      "사무동과 연구동 사이에서 동선을 고르는 데 익숙한 사람처럼 걸음이 단단하다.",
+      "말을 붙이면 받아주겠지만 오래 머물기보다 바로 움직일 사람처럼 보인다.",
+    ],
+    headlineBadge: "게이트 동선",
+    headlineText: "가죽재킷 통근자가 디지털단지 정문 게이트 앞에서 안쪽 건물 순서를 재고 있다.",
+    approachBadge: "짧은 확인",
+    approachText: "통근자는 짧게 반응하고는 곧장 게이트 안쪽 큰길로 걸어 들어간다.",
+    memoryBody: "디지털단지 정문에서 건물 순서를 재던 가죽재킷 통근자와 스쳤다.",
+  }),
+  createWorldWanderNpc({
+    id: "city-knit-commuter",
+    weight: 2,
+    tag: "통근",
+    src: CHARACTER_ART.cityKnitCommuter.default,
+    alt: "디지털단지 니트 통근자",
+    left: 78,
+    bottom: 6,
+    height: 90,
+    sceneTitle: "니트 차림 통근자가 보안 게이트 옆에서 사원증과 시계를 번갈아 확인한다",
+    sceneLines: [
+      "시간을 아끼려는 사람인데도 조급하기보다 동선을 정갈하게 맞추는 타입처럼 보인다.",
+      "짧게 말을 걸면 받아주지만 곧장 업무 모드로 돌아갈 것 같은 분위기다.",
+    ],
+    headlineBadge: "사원증 체크",
+    headlineText: "니트 차림 통근자가 정문 보안 게이트 옆에서 사원증과 시간을 다시 맞춘다.",
+    approachBadge: "출근 준비",
+    approachText: "통근자는 목례만 남기고 게이트 안쪽 보행선에 자연스럽게 합류한다.",
+    memoryBody: "디지털단지 정문에서 사원증을 확인하던 니트 차림 통근자와 잠깐 마주쳤다.",
   }),
 ];
 
@@ -1843,6 +2143,10 @@ const DAY01_WORLD_LOCATIONS = {
         action: "study-academic-prep",
       },
       {
+        title: "인공지능 공부 서적 만들기",
+        action: "write-ai-study-book",
+      },
+      {
         title: "버스 정류장으로 돌아가기",
         action: "move",
         targetLocation: "bus-stop-map",
@@ -1898,6 +2202,10 @@ const DAY01_WORLD_LOCATIONS = {
       {
         title: "졸업 심사 받기",
         action: "graduate-university",
+      },
+      {
+        title: "인공지능학과 공부하기",
+        action: "study-ai-major",
       },
       {
         title: "캠퍼스 공원으로 가기",
@@ -1974,6 +2282,15 @@ DAY01_WORLD_LOCATIONS["silver-home-front"] = {
     },
   ],
 };
+
+DAY01_WORLD_LOCATIONS["silver-home-front"].label = "배금아파트 로비 앞";
+DAY01_WORLD_LOCATIONS["silver-home-front"].speaker = "배금아파트 로비 앞";
+DAY01_WORLD_LOCATIONS["silver-home-front"].title = "아파트 로비 문이 열리자 단정한 공기와 함께 집 앞 풍경이 바로 이어진다";
+DAY01_WORLD_LOCATIONS["silver-home-front"].lines = [
+  "한강뷰 아파트 로비를 지나면 곧바로 배금시의 일상과 맞닿은 주거 구역이 펼쳐진다.",
+  "다시 집으로 들어가 방으로 올라가거나, 버스 정류장과 시내 쪽으로 걸어 나갈 수 있다.",
+];
+DAY01_WORLD_LOCATIONS["silver-home-front"].tags = ["집앞", "주거", "아파트"];
 
 DAY01_WORLD_LOCATIONS["golden-home-front"] = {
   label: "배금복합빌딩 앞",
@@ -2205,6 +2522,10 @@ DAY01_WORLD_LOCATIONS.library.options = [
     action: "study-academic-prep",
   },
   {
+    title: "인공지능 공부 서적 만들기",
+    action: "write-ai-study-book",
+  },
+  {
     title: "학습 구역으로 돌아가기",
     action: "move",
     targetLocation: "study-hub",
@@ -2244,6 +2565,7 @@ DAY01_WORLD.initialUnlockedLocations = [
   "station-front",
   "station-interior",
   "station-seoul-route",
+  "lotto-retailer",
   "downtown",
   "baegeum-hospital",
   "convenience-store",
@@ -2507,6 +2829,63 @@ DAY01_WORLD_LOCATIONS.mcdonalds.mapNode = {
   order: 140,
 };
 
+Object.assign(DAY01_WORLD_LOCATIONS["baegeum-hospital"], {
+  label: "배금은행 금융센터",
+  speaker: "배금은행 금융센터",
+  title: "유리 자동문 너머로 번호표 기계와 상담 창구가 차분하게 돌아간다",
+  lines: [
+    "1층 창구 쪽에는 입출금과 대출 안내 전광판이 반듯하게 켜져 있다.",
+    "건물 상층에는 외모 상담실도 함께 있어, 은행 업무를 보러 왔다가도 괜히 시선이 끌린다.",
+  ],
+  tags: ["은행", "금융", "상업 구역"],
+  options: [
+    {
+      title: "스마트폰으로 계좌를 확인한다",
+      action: "open-bank-app",
+    },
+    {
+      title: "상층 상담실로 올라가 외모 시술 상담을 받는다",
+      action: "get-plastic-surgery",
+    },
+    {
+      title: "배금 사거리로 돌아간다",
+      action: "move",
+      targetLocation: "city-crossroads",
+    },
+  ],
+});
+
+DAY01_WORLD_LOCATIONS["baegeum-hospital"].mapNode = {
+  x: 52,
+  y: 45,
+  icon: "🏦",
+  shortLabel: "배금은행",
+  note: "중앙 상권 쪽에 붙어 있는 금융센터. 상층 상담실로 올라가 외모 시술 상담도 가능하다.",
+  zoneTone: "commercial",
+  order: 120,
+};
+
+Object.assign(DAY01_WORLD_LOCATIONS["lotto-retailer-interior"], {
+  title: "창구 앞에서 번호를 고르고 바로 로또 추첨을 확인할 수 있다",
+  lines: [
+    "번호표 옆 안내판에는 오늘의 로또 규칙과 즉시 추첨 안내가 붙어 있다.",
+    "1등은 6개 일치, 2등은 5개와 보너스, 3등은 5개, 4등은 4개, 5등은 3개 일치다.",
+  ],
+  options: [
+    {
+      title: "로또 번호 고르고 바로 추첨하기",
+      action: "buy-lotto-ticket",
+    },
+    {
+      title: "판매장 밖으로 나간다",
+      action: "move",
+      targetLocation: "lotto-retailer",
+      travelMinutes: 2,
+      keepVisible: true,
+    },
+  ],
+});
+
 DAY01_WORLD_LOCATIONS["silver-home-front"].mapNode = {
   x: 10,
   y: 84,
@@ -2515,6 +2894,11 @@ DAY01_WORLD_LOCATIONS["silver-home-front"].mapNode = {
   note: "배금아파트 로비를 거쳐 나오는 주거 구역 출입점.",
   zoneTone: "residential",
   order: 11,
+};
+DAY01_WORLD_LOCATIONS["silver-home-front"].mapNode = {
+  ...DAY01_WORLD_LOCATIONS["silver-home-front"].mapNode,
+  shortLabel: "로비 앞",
+  note: "배금아파트 로비를 거쳐 들어오는 한강뷰 아파트 주거 구역 출입문",
 };
 DAY01_WORLD_LOCATIONS["golden-home-front"].mapNode = {
   x: 23,
