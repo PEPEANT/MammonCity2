@@ -231,6 +231,125 @@ function patchNpcRelation(npcId = "", patch = {}, targetState = state) {
   return targetState.npcs.relations[normalizedNpcId];
 }
 
+function getNpcDiscomfortThreshold(npcId = "", targetState = state) {
+  const appearanceState = syncAppearanceState(targetState);
+  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
+    ? getPlayerAppearanceLevel(targetState)
+    : 1;
+  let threshold = appearanceLevel <= 1 ? 2 : (appearanceLevel === 2 ? 3 : 5);
+
+  if (appearanceState.attractiveness >= 70) {
+    threshold += 1;
+  } else if (appearanceState.attractiveness <= 10) {
+    threshold = Math.max(1, threshold - 1);
+  }
+
+  return Math.max(1, threshold);
+}
+
+function getNpcDiscomfortDeltaForDialogue(npcId = "", targetState = state) {
+  const appearanceState = syncAppearanceState(targetState);
+  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
+    ? getPlayerAppearanceLevel(targetState)
+    : 1;
+
+  if (appearanceLevel <= 1) {
+    return appearanceState.attractiveness <= 10 ? 3 : 2;
+  }
+
+  if (appearanceLevel === 2) {
+    return appearanceState.attractiveness <= 35 ? 2 : 1;
+  }
+
+  return appearanceState.attractiveness < 55 ? 1 : 0;
+}
+
+function isNpcAvoidingPlayer(npcId = "", targetState = state) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return false;
+  }
+
+  const relation = getNpcRelation(normalizedNpcId, targetState);
+  return Number(relation.annoyance || 0) >= getNpcDiscomfortThreshold(normalizedNpcId, targetState);
+}
+
+function applyNpcDialogueDiscomfort(npcId = "", targetState = state, options = {}) {
+  const normalizedNpcId = String(npcId || "").trim();
+  if (!normalizedNpcId) {
+    return {
+      npcId: "",
+      annoyance: 0,
+      annoyanceDelta: 0,
+      threshold: getNpcDiscomfortThreshold("", targetState),
+      avoidingPlayer: false,
+    };
+  }
+
+  const annoyanceDelta = Number.isFinite(options.annoyanceDelta)
+    ? Number(options.annoyanceDelta)
+    : getNpcDiscomfortDeltaForDialogue(normalizedNpcId, targetState);
+  const relation = annoyanceDelta > 0
+    ? patchNpcRelation(normalizedNpcId, {
+        annoyanceDelta,
+        lastSeenDay: Number(targetState?.day || 0),
+      }, targetState)
+    : getNpcRelation(normalizedNpcId, targetState);
+  const threshold = getNpcDiscomfortThreshold(normalizedNpcId, targetState);
+
+  return {
+    npcId: normalizedNpcId,
+    annoyance: Number(relation.annoyance || 0),
+    annoyanceDelta: Math.max(0, annoyanceDelta),
+    threshold,
+    avoidingPlayer: Number(relation.annoyance || 0) >= threshold,
+  };
+}
+
+function getNpcAvoidanceReaction(npcId = "", targetState = state, context = {}) {
+  const normalizedNpcId = String(npcId || "").trim();
+  const presentation = normalizedNpcId
+    ? getNpcPresentation(normalizedNpcId, targetState, {
+        ...context,
+        source: context.source || "npc-avoidance",
+      })
+    : null;
+  const npcName = presentation?.name
+    || (typeof getNpcConfig === "function" ? getNpcConfig(normalizedNpcId)?.name : "")
+    || "상대";
+  const relation = normalizedNpcId
+    ? getNpcRelation(normalizedNpcId, targetState)
+    : createDefaultNpcRelationState();
+  const threshold = getNpcDiscomfortThreshold(normalizedNpcId, targetState);
+  const appearanceLevel = typeof getPlayerAppearanceLevel === "function"
+    ? getPlayerAppearanceLevel(targetState)
+    : 1;
+  const locationId = String(context.locationId || "").trim();
+  const day = Number(targetState?.day || 0);
+  const locationLabel = String(context.locationLabel || "").trim()
+    || (typeof getDayWorldLocationMap === "function"
+      ? getDayWorldLocationMap(day)?.[locationId]?.label || ""
+      : "")
+    || "거리";
+  const severeAvoidance = Number(relation.annoyance || 0) >= threshold + 1 || appearanceLevel <= 1;
+
+  return {
+    badge: severeAvoidance ? "불쾌감 누적" : "차가운 반응",
+    text: severeAvoidance
+      ? `${npcName}이 불쾌한 표정을 감추지 못하고 서둘러 자리를 피한다.`
+      : `${npcName}이 더는 말을 섞고 싶지 않다는 듯 거리를 둔다.`,
+    title: `${locationLabel}에서 ${npcName}이 거리를 둔다`,
+    lines: [
+      severeAvoidance
+        ? `${npcName}은 당신을 보자마자 표정을 굳히고 발걸음을 돌린다.`
+        : `${npcName}은 시선을 피한 채 짧게 손사래를 치고 멀어진다.`,
+      appearanceLevel <= 1
+        ? "외모가 낮을수록 이런 불쾌감이 더 빠르게 쌓인다. 외모를 올리면 다시 대화가 열릴 여지가 생긴다."
+        : "상대의 불쾌감이 누적돼 지금은 대화를 이어가기 어렵다.",
+    ],
+  };
+}
+
 function getPlayerOriginAppearanceProfileId(targetState = state) {
   const tierId = String(targetState?.startingOrigin?.tierId || "").trim().toLowerCase();
 

@@ -2472,9 +2472,9 @@ function renderRoomScene() {
     kind: "player",
     src: CHARACTER_ART?.player?.standing || "",
     alt: "player-room",
-    left: 72,
-    bottom: 4,
-    height: 86,
+    left: 50,
+    bottom: 2,
+    height: 92,
     zIndex: 2,
     ...(spoonRoomActorLayout || {}),
   };
@@ -3767,11 +3767,7 @@ function showRankingScreen(myEntry, allEntries, options = {}) {
   if (ui.rankingMyCard) {
     ui.rankingMyCard.classList.toggle("is-preview", previewMode);
     if (previewMode) {
-      ui.rankingMyCard.innerHTML = `
-        <div class="ranking-my-label">랭킹 미리보기</div>
-        <div class="ranking-my-name">시작 전에 현재 상위 랭킹을 확인할 수 있습니다.</div>
-        <div class="ranking-preview-note">게임을 끝내면 내 결과도 이 화면에 함께 표시됩니다.</div>
-      `;
+      ui.rankingMyCard.innerHTML = ``;
     } else if (safeMyEntry) {
       ui.rankingMyCard.innerHTML = `
         <div class="ranking-my-label">내 결과</div>

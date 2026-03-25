@@ -5558,6 +5558,7 @@ function approachAlleyNpc() {
 
 function startNpcInteraction(npcId, source = "actor-click") {
   const locationId = getCurrentLocationId(state);
+  const locationLabel = getCurrentLocationLabel();
   const activeNpc = getActiveAlleyNpcConfig(state);
   const npcConfig = activeNpc?.id === npcId
     ? activeNpc
@@ -5569,6 +5570,44 @@ function startNpcInteraction(npcId, source = "actor-click") {
     );
 
   if (!npcId) {
+    return false;
+  }
+
+  if (typeof isNpcAvoidingPlayer === "function" && isNpcAvoidingPlayer(npcId, state)) {
+    const avoidanceReaction = typeof getNpcAvoidanceReaction === "function"
+      ? getNpcAvoidanceReaction(npcId, state, {
+          locationId,
+          locationLabel,
+          source,
+        })
+      : null;
+
+    if (activeNpc?.id === npcId && typeof clearAlleyNpcState === "function") {
+      clearAlleyNpcState(state);
+    }
+    if (typeof setLocationWanderNpcId === "function") {
+      setLocationWanderNpcId(locationId, "", state);
+    }
+    if (typeof clearAmbientNpcCache === "function") {
+      clearAmbientNpcCache(locationId, state);
+    }
+
+    state.headline = {
+      badge: avoidanceReaction?.badge || "불쾌한 반응",
+      text: avoidanceReaction?.text || "상대가 시선을 피하고 빠르게 자리를 뜬다.",
+    };
+    setLocationWanderResult(
+      locationId,
+      avoidanceReaction?.title || `${locationLabel}에서 어색한 침묵만 남았다`,
+      Array.isArray(avoidanceReaction?.lines) && avoidanceReaction.lines.length
+        ? avoidanceReaction.lines
+        : [
+            "상대는 더 이상 말을 섞고 싶지 않다는 듯 눈길을 피한다.",
+            "외모가 낮을수록 이런 불쾌감이 더 빨리 쌓여 대화가 막히기 쉽다.",
+          ],
+      state,
+    );
+    renderGame();
     return false;
   }
 

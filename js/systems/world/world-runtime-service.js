@@ -581,24 +581,7 @@ function getLocationCrowdTargetCount(locationId = "", targetState = state, optio
   if (!rawPool.length) {
     return 0;
   }
-
-  const normalizedLocationId = String(locationId || "").trim();
-  const focusNpcId = String(options.focusNpcId || "").trim();
-  if (focusNpcId) {
-    return 1;
-  }
-
-  if (isResidentialHomeFrontLocation(normalizedLocationId)) {
-    return 1;
-  }
-
-  if (["city-crossroads", "station-front", "downtown", "library", "university-district"].includes(normalizedLocationId)) {
-    return Math.min(rawPool.length, 2);
-  }
-
-  const timeBand = getWorldTimeBand(targetState);
-  const baseCount = timeBand === "night" ? 1 : 2;
-  return Math.max(1, Math.min(rawPool.length, baseCount));
+  return 1;
 }
 
 function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrentLocationId(targetState)) {
@@ -613,6 +596,9 @@ function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrent
   const timeBand = getWorldTimeBand(targetState);
   const applyAdjustments = (entries = []) => entries.map((entry) => {
     const metadata = getWorldNpcMetadata(entry.id);
+    const avoidingPlayer = typeof isNpcAvoidingPlayer === "function"
+      ? isNpcAvoidingPlayer(entry.id, targetState)
+      : false;
     let weight = Math.max(0, Number(entry.weight) || 0);
 
     if (appearanceLevel >= 2 && metadata.gender === "female") {
@@ -624,11 +610,18 @@ function getAdjustedLocationNpcPool(targetState = state, locationId = getCurrent
     if (Array.isArray(metadata.timeBands) && metadata.timeBands.includes(timeBand)) {
       weight *= 1.15;
     }
+    if (avoidingPlayer) {
+      weight = 0;
+    }
 
     return {
       ...entry,
       weight,
-      metadata,
+      metadata: {
+        ...metadata,
+        talkable: metadata.talkable !== false && !avoidingPlayer,
+        avoidsPlayer: avoidingPlayer,
+      },
     };
   });
 
@@ -719,6 +712,22 @@ function cloneAmbientNpcSnapshot(snapshot = null) {
         }))
       : [],
   };
+}
+
+function clearAmbientNpcCache(locationId = "", targetState = state) {
+  const worldState = syncWorldState(targetState);
+  if (!worldState.ambientNpcCache || typeof worldState.ambientNpcCache !== "object") {
+    worldState.ambientNpcCache = {};
+  }
+
+  const normalizedLocationId = String(locationId || "").trim();
+  if (!normalizedLocationId) {
+    worldState.ambientNpcCache = {};
+    return worldState.ambientNpcCache;
+  }
+
+  delete worldState.ambientNpcCache[normalizedLocationId];
+  return worldState.ambientNpcCache;
 }
 
 function pickWeightedEntries(entries = [], count = 1) {

@@ -205,6 +205,10 @@ function endNpcDialogue(targetState = state, { headline = null } = {}) {
   const activeNpcId = dialogueState.npcId;
   const returnScene = dialogueState.returnScene || "outside";
   const returnLocationId = dialogueState.returnLocationId || "";
+  const discomfortResult = activeNpcId && typeof applyNpcDialogueDiscomfort === "function"
+    ? applyNpcDialogueDiscomfort(activeNpcId, targetState)
+    : null;
+  const blockedByDiscomfort = Boolean(discomfortResult?.avoidingPlayer);
 
   if (headline && typeof headline === "object") {
     targetState.headline = {
@@ -227,9 +231,40 @@ function endNpcDialogue(targetState = state, { headline = null } = {}) {
     const worldState = syncWorldState(targetState);
     if (returnLocationId) {
       worldState.currentLocation = returnLocationId;
+      if (typeof setLocationWanderNpcId === "function") {
+        setLocationWanderNpcId(returnLocationId, "", targetState);
+      }
+      if (typeof clearAmbientNpcCache === "function") {
+        clearAmbientNpcCache(returnLocationId, targetState);
+      }
     }
     if (worldState.alleyNpcId === activeNpcId && typeof clearAlleyNpcState === "function") {
       clearAlleyNpcState(targetState);
+    }
+    if (blockedByDiscomfort) {
+      const avoidanceReaction = typeof getNpcAvoidanceReaction === "function"
+        ? getNpcAvoidanceReaction(activeNpcId, targetState, {
+            locationId: returnLocationId,
+            source: dialogueState.source || "dialogue-end",
+          })
+        : null;
+      targetState.headline = {
+        badge: avoidanceReaction?.badge || "불쾌감 누적",
+        text: avoidanceReaction?.text || "상대가 표정을 굳힌 채 서둘러 자리를 뜬다.",
+      };
+      if (returnLocationId && typeof setLocationWanderResult === "function") {
+        setLocationWanderResult(
+          returnLocationId,
+          avoidanceReaction?.title || "상대가 자리를 피했다",
+          Array.isArray(avoidanceReaction?.lines) && avoidanceReaction.lines.length
+            ? avoidanceReaction.lines
+            : [
+                "상대는 불쾌한 기색을 숨기지 않고 빠르게 멀어진다.",
+                "외모가 낮을수록 불쾌감이 더 빨리 누적돼 다시 말을 걸기 어려워진다.",
+              ],
+          targetState,
+        );
+      }
     }
   }
 
