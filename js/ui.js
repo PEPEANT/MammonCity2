@@ -1299,11 +1299,18 @@ const sceneImagePreloadState = window.sceneImagePreloadState || {
 window.sceneImagePreloadState = sceneImagePreloadState;
 
 function normalizeSceneImageUrl(url = "") {
-  return String(url || "").trim();
+  return String(url || "").trim().replace(/\\/g, "/");
 }
 
 function isSceneImageUrl(url = "") {
   return /\.(png|jpe?g|webp|avif|gif|svg)([?#].*)?$/i.test(String(url || "").trim());
+}
+
+function isDisabledSceneBackgroundImageUrl(url = "") {
+  const normalizedUrl = normalizeSceneImageUrl(url).toLowerCase();
+  return normalizedUrl.startsWith("assets/backgrounds/")
+    || normalizedUrl.startsWith("assets/days/")
+    || normalizedUrl.startsWith("assets/_incoming/backgrounds/");
 }
 
 function collectSceneImageUrlsFromSource(source, bucket = []) {
@@ -1333,7 +1340,7 @@ function collectSceneImageUrlsFromSource(source, bucket = []) {
 
 function preloadSceneImage(url = "", options = {}) {
   const normalizedUrl = normalizeSceneImageUrl(url);
-  if (!normalizedUrl || !isSceneImageUrl(normalizedUrl)) {
+  if (!normalizedUrl || !isSceneImageUrl(normalizedUrl) || isDisabledSceneBackgroundImageUrl(normalizedUrl)) {
     return Promise.resolve(false);
   }
 
@@ -1395,7 +1402,7 @@ function preloadSceneImages(urls = [], options = {}) {
   const normalizedUrls = [...new Set(
     (Array.isArray(urls) ? urls : [urls])
       .map((entry) => normalizeSceneImageUrl(entry))
-      .filter((entry) => entry && isSceneImageUrl(entry))
+      .filter((entry) => entry && isSceneImageUrl(entry) && !isDisabledSceneBackgroundImageUrl(entry))
   )];
 
   normalizedUrls.forEach((url) => {
@@ -1436,11 +1443,12 @@ function scheduleSceneImageWarmup(targetState = state) {
 }
 
 function applySceneBackgroundConfig(backgroundConfig = null) {
-  if (!ui.bg || !backgroundConfig?.image) {
+  const backgroundImageUrl = normalizeSceneImageUrl(backgroundConfig?.image || "");
+  if (!ui.bg || !backgroundImageUrl || isDisabledSceneBackgroundImageUrl(backgroundImageUrl)) {
     return false;
   }
 
-  preloadSceneImage(backgroundConfig.image, { priority: "high" });
+  preloadSceneImage(backgroundImageUrl, { priority: "high" });
 
   const overlay = backgroundConfig.overlay
     || "linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%)";
@@ -1450,7 +1458,7 @@ function applySceneBackgroundConfig(backgroundConfig = null) {
   const color = backgroundConfig.color || "";
 
   ui.bg.className = backgroundConfig.className || "custom-location-bg";
-  ui.bg.style.background = `${overlay}, url('${backgroundConfig.image}') ${position} / ${size} ${repeat}${color ? ` ${color}` : ""}`;
+  ui.bg.style.background = `${overlay}, url('${backgroundImageUrl}') ${position} / ${size} ${repeat}${color ? ` ${color}` : ""}`;
   ui.bg.style.transition = "none";
   return true;
 }
@@ -1474,6 +1482,10 @@ function applySceneBackgroundSnapshot(snapshot = null) {
   const className = typeof snapshot.className === "string" ? snapshot.className : "";
   const background = typeof snapshot.background === "string" ? snapshot.background : "";
   if (!className && !background) {
+    return false;
+  }
+
+  if (/url\(/i.test(background)) {
     return false;
   }
 

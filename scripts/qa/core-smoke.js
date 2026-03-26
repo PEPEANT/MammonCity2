@@ -141,9 +141,7 @@ for (const check of textChecks) {
   }
 }
 
-const requiredAssetPaths = [
-  "assets/backgrounds/day01/baegeum-hospital-recovery.png",
-];
+const requiredAssetPaths = [];
 
 for (const relativePath of requiredAssetPaths) {
   if (fs.existsSync(path.join(repoRoot, relativePath))) {

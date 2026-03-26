@@ -596,15 +596,15 @@ body {
 
 #bg.day-1-room-01 {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
-    url('../assets/days/day01/room-01.png') center / cover no-repeat;
+    linear-gradient(180deg, rgba(16, 12, 10, 0.18) 0%, rgba(6, 5, 4, 0.38) 100%),
+    linear-gradient(135deg, #4f3c31 0%, #705847 42%, #8d7460 100%);
   transition: none;
 }
 
 #bg.day-1-room-02 {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 100%),
-    url('../assets/days/day01/room-02.png') center / cover no-repeat;
+    linear-gradient(180deg, rgba(12, 16, 24, 0.16) 0%, rgba(7, 10, 16, 0.34) 100%),
+    linear-gradient(135deg, #4c5667 0%, #687589 42%, #8391a6 100%);
   transition: none;
 }
 
@@ -617,8 +617,8 @@ body {
 
 #bg.day-1-cleanup {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%),
-    url('../assets/days/day01/cleanup.png') center / cover no-repeat;
+    linear-gradient(180deg, rgba(12, 18, 12, 0.16) 0%, rgba(8, 12, 8, 0.3) 100%),
+    linear-gradient(135deg, #516448 0%, #728565 44%, #94a387 100%);
   transition: none;
 }
 
@@ -1080,8 +1080,9 @@ body {
   position: absolute;
   inset: 0;
   background:
-    var(--start-origin-screen-overlay, linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.62) 100%)),
-    url('../assets/days/day00/intro.jpg') center / cover no-repeat;
+    var(--start-origin-screen-overlay, linear-gradient(180deg, rgba(3, 7, 16, 0.26) 0%, rgba(4, 8, 18, 0.7) 100%)),
+    radial-gradient(circle at top, rgba(119, 163, 255, 0.22), transparent 34%),
+    linear-gradient(160deg, #131924 0%, #0c1320 42%, #080c14 100%);
   z-index: 200;
   display: flex;
   justify-content: center;

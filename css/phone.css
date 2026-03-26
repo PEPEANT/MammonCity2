@@ -302,41 +302,58 @@
   background: currentColor;
 }
 
+/* ── 지도 버튼 아이콘: 접힌 지도 ── */
 #city-map-toggle-btn .phone-control-icon {
   position: relative;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 16px;
   font-size: 0;
-  color: #f7fbff;
+  color: #c8e4ff;
 }
 
 #city-map-toggle-btn .phone-control-icon::before,
 #city-map-toggle-btn .phone-control-icon::after {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 4px;
 }
 
+/* 접힌 지도 본체: 3단 패널 + 지형 색상 */
 #city-map-toggle-btn .phone-control-icon::before {
+  inset: 0;
+  border-radius: 2px;
   background:
-    linear-gradient(105deg, rgba(113, 211, 255, 0.32) 0 31%, transparent 31% 34%, rgba(115, 214, 168, 0.26) 34% 64%, transparent 64% 67%, rgba(255, 211, 104, 0.24) 67% 100%),
-    linear-gradient(180deg, rgba(29, 48, 79, 0.92) 0%, rgba(12, 21, 39, 1) 100%);
-  border: 2px solid currentColor;
+    /* 접힘 크리스 선 2개 */
+    linear-gradient(90deg,
+      transparent 0 calc(33% - 1px),
+      rgba(255, 255, 255, 0.38) calc(33% - 1px) calc(33% + 1px),
+      transparent calc(33% + 1px) calc(67% - 1px),
+      rgba(255, 255, 255, 0.24) calc(67% - 1px) calc(67% + 1px),
+      transparent calc(67% + 1px) 100%
+    ),
+    /* 지형 구역: 녹지 / 도심 / 주거 */
+    linear-gradient(148deg,
+      rgba(48, 108, 62, 0.65) 0 36%,
+      rgba(20, 55, 108, 0.65) 36% 65%,
+      rgba(84, 60, 30, 0.54) 65% 100%
+    ),
+    rgba(9, 20, 44, 0.97);
+  border: 1.5px solid rgba(138, 198, 255, 0.70);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(78, 126, 255, 0.14);
-  transform: perspective(26px) rotateY(-15deg);
-  transform-origin: center;
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.26);
 }
 
+/* 위치 핀: 빨간 글로우 닷 */
 #city-map-toggle-btn .phone-control-icon::after {
-  inset: 5px 4px 5px 4px;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 24% 50%, rgba(255, 255, 255, 0.92) 0 1.5px, transparent 1.5px),
-    linear-gradient(90deg, transparent 0 18%, rgba(255, 255, 255, 0.88) 18% 74%, transparent 74% 100%);
-  opacity: 0.95;
+  width: 4px;
+  height: 4px;
+  top: 2px;
+  right: 4px;
+  border-radius: 50%;
+  background: #ff3355;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.60),
+    0 0 5px 1px rgba(255, 38, 70, 0.90);
 }
 
 #phone-stage-btn::before {
@@ -467,63 +484,101 @@
   transform: translateY(-2px) scale(1.04);
 }
 
+/* ── 접힌 상태 지도 버튼: 미니 시티맵 카드 ── */
 #phone-panel.is-hidden-panel #city-map-toggle-btn {
   position: relative;
   width: 50px;
   height: 76px;
   flex: 0 0 50px;
   padding: 0;
-  border-radius: 14px;
-  background: linear-gradient(160deg, #25425f 0%, #15263e 58%, #0b1728 100%);
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background:
+    /* 도로 격자 (가로) */
+    linear-gradient(180deg,
+      transparent 0 21%, rgba(255, 255, 255, 0.14) 21% 25%,
+      transparent 25% 51%, rgba(255, 255, 255, 0.11) 51% 55%,
+      transparent 55% 79%, rgba(255, 255, 255, 0.08) 79% 83%,
+      transparent 83% 100%
+    ),
+    /* 도로 격자 (세로) */
+    linear-gradient(90deg,
+      transparent 0 26%, rgba(255, 255, 255, 0.14) 26% 30%,
+      transparent 30% 60%, rgba(255, 255, 255, 0.11) 60% 64%,
+      transparent 64% 100%
+    ),
+    /* 지형 구역 */
+    linear-gradient(155deg,
+      rgba(36, 90, 56, 0.70) 0 28%,
+      rgba(16, 48, 96, 0.70) 28% 62%,
+      rgba(72, 52, 28, 0.60) 62% 100%
+    ),
+    rgba(7, 16, 34, 0.98);
+  border: 1.5px solid rgba(88, 158, 218, 0.46);
   box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 0 0 1px rgba(88, 180, 210, 0.12);
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
   overflow: hidden;
 }
 
+/* 아이콘 영역: 카드 전체에 펼침 */
 #phone-panel.is-hidden-panel #city-map-toggle-btn .phone-control-icon {
   position: absolute;
-  inset: 9px 6px 13px 6px;
+  inset: 0;
   width: auto;
   height: auto;
 }
 
+/* 추가 도로 디테일 레이어 */
 #phone-panel.is-hidden-panel #city-map-toggle-btn .phone-control-icon::before {
-  background:
-    linear-gradient(106deg, rgba(119, 228, 255, 0.28) 0 31%, transparent 31% 34%, rgba(115, 222, 173, 0.22) 34% 65%, transparent 65% 68%, rgba(255, 212, 110, 0.2) 68% 100%),
-    linear-gradient(180deg, rgba(27, 58, 87, 0.96) 0%, rgba(12, 24, 43, 0.98) 100%);
-  border-width: 1px;
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  border: none;
   transform: none;
+  box-shadow: none;
+  background:
+    linear-gradient(180deg,
+      transparent 0 38%, rgba(255, 255, 255, 0.22) 38% 42%,
+      transparent 42% 68%, rgba(255, 255, 255, 0.17) 68% 72%,
+      transparent 72% 100%
+    ),
+    linear-gradient(90deg,
+      transparent 0 38%, rgba(255, 255, 255, 0.22) 38% 42%,
+      transparent 42% 70%, rgba(255, 255, 255, 0.17) 70% 74%,
+      transparent 74% 100%
+    );
 }
 
+/* 중앙 위치 핀 */
 #phone-panel.is-hidden-panel #city-map-toggle-btn .phone-control-icon::after {
-  inset: 7px 6px 7px 6px;
-  background:
-    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.95) 0 2px, transparent 2px),
-    linear-gradient(90deg, transparent 0 20%, rgba(255, 255, 255, 0.9) 20% 78%, transparent 78% 100%);
+  content: "";
+  position: absolute;
+  inset: auto;
+  width: 9px;
+  height: 9px;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #ff3355;
+  box-shadow:
+    0 0 0 2.5px rgba(255, 255, 255, 0.68),
+    0 0 10px 4px rgba(255, 38, 70, 0.85),
+    0 0 20px 6px rgba(255, 38, 70, 0.30);
 }
 
 #phone-panel.is-hidden-panel #city-map-toggle-btn::before {
-  content: "";
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 18px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  content: none;
 }
 
 #phone-panel.is-hidden-panel #city-map-toggle-btn:hover {
-  border-color: rgba(110, 215, 255, 0.48);
+  border-color: rgba(100, 190, 255, 0.55);
   box-shadow:
-    0 10px 32px rgba(70, 170, 220, 0.28),
-    0 2px 8px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    0 10px 32px rgba(50, 150, 230, 0.32),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
   transform: translateY(-2px) scale(1.03);
 }
 
@@ -5100,8 +5155,8 @@
   }
 
   #city-map-toggle-btn .phone-control-icon {
-    width: 15px;
-    height: 15px;
+    width: 17px;
+    height: 12px;
   }
 
   #phone-back-btn .phone-control-icon {
